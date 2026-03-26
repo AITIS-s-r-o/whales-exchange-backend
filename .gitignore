@@ -361,3 +361,7 @@ MigrationBackup/
 /Utils/Tests/testdata
 !**/Input/**/Logs/
 TODO.md
+
+# ASP.NET configuration with passwords.
+*.secret.*.json
+*.secret.json
