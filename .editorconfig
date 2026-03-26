@@ -3375,7 +3375,6 @@ dotnet_diagnostic.xUnit1030.severity = warning
 # Tasks that are created and run from another context (not within the currently running method or delegate) should not be returned or awaited on. Doing so can result in deadlocks
 # because awaiting a Task does not result in the awaiter "joining" the effort such that access to the main thread is shared. If the awaited Task requires the main thread, and the
 # caller that is awaiting it is blocking the main thread, a deadlock will result.
-# Disable reason: Whale's Secret Core is not a UI application.
 dotnet_diagnostic.VSTHRD003.severity = none
 
 # VSTHRD111: Use .ConfigureAwait(bool)
