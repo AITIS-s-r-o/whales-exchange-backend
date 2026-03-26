@@ -359,3 +359,5 @@ TODO.md
 # ASP.NET configuration with passwords.
 *.secret.*.json
 *.secret.json
+
+WhalesExchangeBackend.xml
