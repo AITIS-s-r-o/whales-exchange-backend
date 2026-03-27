@@ -9,7 +9,7 @@ using WhalesExchangeBackend.Exceptions;
 namespace WhalesExchangeBackend.Data.Repository;
 
 /// <summary>
-/// Provider of access to countries in the database.
+/// Provider of access to swap providers in the database.
 /// </summary>
 [SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by ASP.NET Core DI as a singleton.")]
 internal class SwapProviderRepository : RepositoryBase
