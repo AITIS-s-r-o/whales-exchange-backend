@@ -364,3 +364,5 @@ WhalesExchangeBackend.xml
 
 # Database file.
 wex.db
+wex.db-shm
+wex.db-wal
