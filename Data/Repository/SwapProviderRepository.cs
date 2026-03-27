@@ -1,0 +1,129 @@
+using System;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using WhalesExchangeBackend.Exceptions;
+
+namespace WhalesExchangeBackend.Data.Repository;
+
+/// <summary>
+/// Provider of access to swap providers in the database.
+/// </summary>
+[SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by ASP.NET Core DI as a singleton.")]
+internal class SwapProviderRepository : RepositoryBase
+{
+    /// <summary>
+    /// Creates a new instance of the object.
+    /// </summary>
+    /// <param name="dbContextFactory">Factory for the database context.</param>
+    /// <param name="dbLocks">Collection of database repository locks.</param>
+    public SwapProviderRepository(ApplicationDbContextFactory dbContextFactory, DbLocks dbLocks) :
+        base(dbContextFactory, dbLocks, nameof(SwapProviderRepository))
+    {
+        this.log.Debug("*$");
+    }
+
+    /// <summary>
+    /// Inserts or updates a swap provider in the database.
+    /// </summary>
+    /// <param name="pubkey">Public key of the swap provider as a hex string.</param>
+    /// <param name="lastSeen">UTC time when the provider was last seen.</param>
+    /// <param name="poWBits">Amount of PoW the provider used for its profile.</param>
+    /// <param name="percentageFeeForward">Forward swap provider fee in percent.</param>
+    /// <param name="percentageFeeReverse">Reverse swap provider fee in percent.</param>
+    /// <param name="minAmountForwardSat">Minimum amount for a forward swap in satoshis.</param>
+    /// <param name="minAmountReverseSat">Minimum amount for a reverse swap in satoshis.</param>
+    /// <param name="maxAmountForwardSat">Maximum amount for a forward swap in satoshis.</param>
+    /// <param name="maxAmountReverseSat">Maximum amount for a reverse swap in satoshis.</param>
+    /// <param name="miningFeeForwardSat">Mining fee for forward swaps in satoshis.</param>
+    /// <param name="miningFeeReverseSat">Mining fee for reverse swaps in satoshis.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
+    public async Task UpsertAsync(string pubkey, DateTime lastSeen, int poWBits, decimal percentageFeeForward, decimal percentageFeeReverse, long minAmountForwardSat,
+        long minAmountReverseSat, long maxAmountForwardSat, long maxAmountReverseSat, long miningFeeForwardSat, long miningFeeReverseSat)
+    {
+        this.log.Debug($"* {nameof(pubkey)}='{pubkey}',{nameof(lastSeen)}={lastSeen},{nameof(poWBits)}={poWBits},{nameof(percentageFeeForward)}={percentageFeeForward},{
+            nameof(percentageFeeReverse)}={percentageFeeReverse},{nameof(minAmountForwardSat)}={minAmountForwardSat},{nameof(minAmountReverseSat)}={minAmountReverseSat},{
+            nameof(maxAmountForwardSat)}={maxAmountForwardSat},{nameof(maxAmountReverseSat)}={maxAmountReverseSat},{nameof(miningFeeForwardSat)}={miningFeeForwardSat},{
+            nameof(minAmountReverseSat)}={minAmountReverseSat}");
+
+        try
+        {
+            using ApplicationDbContext db = this.dbContextFactory.CreateDbContext();
+            using IDisposable dbLocked = await this.dbLock.EnterAsync().ConfigureAwait(false);
+            using IDbContextTransaction transaction = db.BeginTransaction();
+
+            DbSwapProvider? dbRecord = await db.SwapProviders.FindAsync(pubkey).ConfigureAwait(false);
+            if (dbRecord is null)
+            {
+                dbRecord = new(pubkey, lastSeen, poWBits: poWBits, percentageFeeForward: percentageFeeForward, percentageFeeReverse: percentageFeeReverse,
+                    minAmountForwardSat: minAmountForwardSat, minAmountReverseSat: minAmountReverseSat, maxAmountForwardSat: maxAmountForwardSat,
+                    maxAmountReverseSat: maxAmountReverseSat, miningFeeForwardSat: miningFeeForwardSat, miningFeeReverseSat: miningFeeReverseSat);
+
+                _ = db.SwapProviders.Add(dbRecord);
+            }
+            else
+            {
+                dbRecord.LastSeen = lastSeen;
+                dbRecord.PoWBits = poWBits;
+                dbRecord.PercentageFeeForward = percentageFeeForward;
+                dbRecord.PercentageFeeReverse = percentageFeeReverse;
+                dbRecord.MinAmountForwardSat = minAmountForwardSat;
+                dbRecord.MinAmountReverseSat = minAmountReverseSat;
+                dbRecord.MaxAmountForwardSat = maxAmountForwardSat;
+                dbRecord.MaxAmountReverseSat = maxAmountReverseSat;
+                dbRecord.MiningFeeForwardSat = miningFeeForwardSat;
+                dbRecord.MiningFeeReverseSat = miningFeeReverseSat;
+
+                _ = db.SwapProviders.Update(dbRecord);
+            }
+
+            _ = db.SaveChanges();
+            transaction.Commit();
+        }
+        catch (Exception e)
+        {
+            this.log.Error($"Upserting swap provider pubkey '{pubkey}' in the database failed with exception: {e}");
+            this.log.Debug("$<DB_EXCEPTION>");
+            throw new DatabaseException($"Upserting swap provider pubkey '{pubkey}' in the database failed.", e);
+        }
+
+        this.log.Debug("$");
+    }
+
+    /// <summary>
+    /// Gets list of swap providers that has been seen recently.
+    /// </summary>
+    /// <param name="lastSeenLimit">UTC timestamp after which all the returned providers must have been seen.</param>
+    /// <returns>Returns a list of swap providers.</returns>
+    /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
+    public async Task<DbSwapProvider[]> GetRecentAsync(DateTime lastSeenLimit)
+    {
+        this.log.Debug($"* {nameof(lastSeenLimit)}={lastSeenLimit}");
+
+        DbSwapProvider[] result;
+        try
+        {
+            using ApplicationDbContext db = this.dbContextFactory.CreateDbContext();
+            using IDisposable dbLocked = await this.dbLock.EnterAsync().ConfigureAwait(false);
+
+            result = await db.SwapProviders
+                .Where(c => c.LastSeen > lastSeenLimit)
+                .OrderBy(c => c.PercentageFeeReverse)
+                .ThenBy(c => c.Pubkey)
+                .ToArrayAsync()
+                .ConfigureAwait(false);
+        }
+        catch (Exception e)
+        {
+            this.log.Error($"Getting list of recent swap providers from the database failed with exception: {e}");
+            this.log.Debug("$<DB_EXCEPTION>");
+            throw new DatabaseException("Getting list of swap providers from the database failed.", e);
+        }
+
+        this.log.Debug($"$='{result}'");
+        return result;
+    }
+}
