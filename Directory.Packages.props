@@ -9,16 +9,7 @@
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" />
     <!-- Logging library for all C# projects. -->
     <PackageVersion Include="NLog" Version="5.5.1" />
-    <!-- C# code analysis. -->
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.0.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.Workspaces.MSBuild" Version="5.0.0" />
     <!-- Misc. -->
-    <PackageVersion Include="Autofac" Version="8.4.0" />
-    <PackageVersion Include="LZMA-SDK" Version="22.1.1" />
-    <PackageVersion Include="System.IO.Hashing" Version="10.0.0" />
-    <PackageVersion Include="Sodium.Core" Version="1.4.0" />
-    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.15.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.14.15" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Only" Version="17.14.15" />
     <!-- For tests. -->
@@ -35,7 +26,6 @@
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="10.0.0" />
     <!-- Whale's Secret -->
     <PackageVersion Include="WhalesSecret.ScriptApiLib" Version="1.0.1.20" />
   </ItemGroup>
