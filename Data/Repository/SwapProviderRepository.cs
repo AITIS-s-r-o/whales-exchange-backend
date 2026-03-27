@@ -118,7 +118,7 @@ internal class SwapProviderRepository : RepositoryBase
         }
         catch (Exception e)
         {
-            this.log.Error($"Getting list of swap providers from the database failed with exception: {e}");
+            this.log.Error($"Getting list of recent swap providers from the database failed with exception: {e}");
             this.log.Debug("$<DB_EXCEPTION>");
             throw new DatabaseException("Getting list of swap providers from the database failed.", e);
         }
