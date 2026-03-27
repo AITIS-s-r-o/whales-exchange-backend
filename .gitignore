@@ -361,3 +361,6 @@ TODO.md
 *.secret.json
 
 WhalesExchangeBackend.xml
+
+# Database file.
+wex.db
