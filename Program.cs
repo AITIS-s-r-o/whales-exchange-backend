@@ -57,7 +57,7 @@ public static class Program
 
             _ = builder.Services.AddCors(options =>
             {
-                options.AddPolicy("AllowAnyOriginPolicy", policy =>
+                options.AddDefaultPolicy(policy =>
                 {
                     _ = policy.AllowAnyOrigin();
                     _ = policy.AllowAnyMethod();
