@@ -91,15 +91,15 @@ internal class ConfigHelper
     /// <summary>
     /// Loads Electrum RPC configuration section from the application settings file.
     /// </summary>
-    /// <param name="electrumRpcConigurationSection">Section of the application settings file that contains Electrum RPC configuration.</param>
+    /// <param name="electrumRpcConfigurationSection">Section of the application settings file that contains Electrum RPC configuration.</param>
     /// <returns>SMTP configuration.</returns>
-    private ElectrumRpcConfig LoadElectrumRpcConfiguration(IConfigurationSection electrumRpcConigurationSection)
+    private ElectrumRpcConfig LoadElectrumRpcConfiguration(IConfigurationSection electrumRpcConfigurationSection)
     {
         this.log.Debug("*");
 
-        string uriStr = this.GetRequiredString(electrumRpcConigurationSection, SettingsElectrumRpcUriKey);
-        string username = this.GetRequiredString(electrumRpcConigurationSection, SettingsElectrumRpcUserKey);
-        string password = this.GetRequiredString(electrumRpcConigurationSection, SettingsElectrumRpcPassKey);
+        string uriStr = this.GetRequiredString(electrumRpcConfigurationSection, SettingsElectrumRpcUriKey);
+        string username = this.GetRequiredString(electrumRpcConfigurationSection, SettingsElectrumRpcUserKey);
+        string password = this.GetRequiredString(electrumRpcConfigurationSection, SettingsElectrumRpcPassKey);
 
         Uri uri = new(uriStr);
         ElectrumRpcConfig electrumRpcConfig = new(uri, user: username, pass: password);
