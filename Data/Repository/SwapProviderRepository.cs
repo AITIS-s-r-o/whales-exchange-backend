@@ -30,7 +30,7 @@ internal class SwapProviderRepository : RepositoryBase
     /// </summary>
     /// <param name="pubkey">Public key of the swap provider as a hex string.</param>
     /// <param name="lastSeen">UTC time when the provider was last seen.</param>
-    /// <param name="powBits">Amount of PoW the provider used for its profile.</param>
+    /// <param name="poWBits">Amount of PoW the provider used for its profile.</param>
     /// <param name="percentageFeeForward">Forward swap provider fee in percent.</param>
     /// <param name="percentageFeeReverse">Reverse swap provider fee in percent.</param>
     /// <param name="minAmountForwardSat">Minimum amount for a forward swap in satoshis.</param>
@@ -41,10 +41,10 @@ internal class SwapProviderRepository : RepositoryBase
     /// <param name="miningFeeReverseSat">Mining fee for reverse swaps in satoshis.</param>
     /// <returns><c>true</c> if a new record was inserted in the database, <c>false</c> if an existing record has been updated.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
-    public async Task<bool> UpsertAsync(string pubkey, DateTime lastSeen, int powBits, decimal percentageFeeForward, decimal percentageFeeReverse, long minAmountForwardSat,
+    public async Task<bool> UpsertAsync(string pubkey, DateTime lastSeen, int poWBits, decimal percentageFeeForward, decimal percentageFeeReverse, long minAmountForwardSat,
         long minAmountReverseSat, long maxAmountForwardSat, long maxAmountReverseSat, long miningFeeForwardSat, long miningFeeReverseSat)
     {
-        this.log.Debug($"* {nameof(pubkey)}='{pubkey}',{nameof(lastSeen)}={lastSeen},{nameof(powBits)}={powBits},{nameof(percentageFeeForward)}={percentageFeeForward},{
+        this.log.Debug($"* {nameof(pubkey)}='{pubkey}',{nameof(lastSeen)}={lastSeen},{nameof(poWBits)}={poWBits},{nameof(percentageFeeForward)}={percentageFeeForward},{
             nameof(percentageFeeReverse)}={percentageFeeReverse},{nameof(minAmountForwardSat)}={minAmountForwardSat},{nameof(minAmountReverseSat)}={minAmountReverseSat},{
             nameof(maxAmountForwardSat)}={maxAmountForwardSat},{nameof(maxAmountReverseSat)}={maxAmountReverseSat},{nameof(miningFeeForwardSat)}={miningFeeForwardSat},{
             nameof(minAmountReverseSat)}={minAmountReverseSat}");
@@ -59,7 +59,7 @@ internal class SwapProviderRepository : RepositoryBase
             DbSwapProvider? dbRecord = await db.SwapProviders.FindAsync(pubkey).ConfigureAwait(false);
             if (dbRecord is null)
             {
-                dbRecord = new(pubkey, lastSeen, poWBits: powBits, percentageFeeForward: percentageFeeForward, percentageFeeReverse: percentageFeeReverse,
+                dbRecord = new(pubkey, lastSeen, poWBits: poWBits, percentageFeeForward: percentageFeeForward, percentageFeeReverse: percentageFeeReverse,
                     minAmountForwardSat: minAmountForwardSat, minAmountReverseSat: minAmountReverseSat, maxAmountForwardSat: maxAmountForwardSat,
                     maxAmountReverseSat: maxAmountReverseSat, miningFeeForwardSat: miningFeeForwardSat, miningFeeReverseSat: miningFeeReverseSat);
 
@@ -69,7 +69,7 @@ internal class SwapProviderRepository : RepositoryBase
             else
             {
                 dbRecord.LastSeen = lastSeen;
-                dbRecord.PoWBits = powBits;
+                dbRecord.PoWBits = poWBits;
                 dbRecord.PercentageFeeForward = percentageFeeForward;
                 dbRecord.PercentageFeeReverse = percentageFeeReverse;
                 dbRecord.MinAmountForwardSat = minAmountForwardSat;
