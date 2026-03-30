@@ -30,7 +30,7 @@ internal class RestApiController : InternalControllerBase
     /// Creates a new instance of the object.
     /// </summary>
     /// <param name="httpContextAccessor">Provides access to the current <see cref="HttpContext"/>.</param>
-    /// <param name="swapProviderRepository">Provider of access to swap providers and their offers in the database..</param>
+    /// <param name="swapProviderRepository">Provider of access to swap providers and their offers in the database.</param>
     public RestApiController(IHttpContextAccessor httpContextAccessor, SwapProviderRepository swapProviderRepository)
     {
         HttpContext? context = httpContextAccessor.HttpContext;
