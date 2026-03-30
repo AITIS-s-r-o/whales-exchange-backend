@@ -35,6 +35,9 @@ internal class ElectrumRpcClient
     /// <summary>JSON options for (de)serialization of message for/from Electrum RPC server.</summary>
     private readonly JsonSerializerOptions jsonOptions;
 
+    /// <summary>Authentication header to send to the Electrum RPC server.</summary>
+    private readonly AuthenticationHeaderValue authHeader;
+
     /// <summary>ID of the last request message.</summary>
     private long lastRequestId;
 
@@ -57,6 +60,10 @@ internal class ElectrumRpcClient
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         };
 
+        byte[] credentialBytes = Encoding.ASCII.GetBytes($"{this.configHelper.ElectrumRpcConfig.User}:{this.configHelper.ElectrumRpcConfig.Pass}");
+        string base64Auth = Convert.ToBase64String(credentialBytes);
+        this.authHeader = new("Basic", base64Auth);
+
         this.log.Debug("$");
     }
 
@@ -68,6 +75,8 @@ internal class ElectrumRpcClient
     /// <param name="parameters">Array of parameters.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns>Electrum RPC response.</returns>
+    /// <exception cref="ElectrumRpcException ">Thrown when the Electrum server responded with an error.</exception>
+    /// <exception cref="OperationFailedException">Thrown when the operation failed except for error returned by the Electrum server.</exception>
     private async Task<TResult> CallAsync<TResult>(string method, Dictionary<string, object>? parameters, CancellationToken cancellationToken)
     {
         this.log.Debug($"* {nameof(method)}='{method}',|{nameof(parameters)}|={parameters?.Count}");
@@ -86,16 +95,12 @@ internal class ElectrumRpcClient
             string json = JsonSerializer.Serialize(request, this.jsonOptions);
             using StringContent content = new(json, Encoding.UTF8, "application/json");
 
-            byte[] credentialBytes = Encoding.ASCII.GetBytes($"{this.configHelper.ElectrumRpcConfig.User}:{this.configHelper.ElectrumRpcConfig.Pass}");
-            string base64Auth = Convert.ToBase64String(credentialBytes);
-            AuthenticationHeaderValue authHeader = new("Basic", base64Auth);
-
             using HttpRequestMessage httpRequest = new(HttpMethod.Post, this.configHelper.ElectrumRpcConfig.Uri)
             {
                 Content = content,
             };
 
-            httpRequest.Headers.Authorization = authHeader;
+            httpRequest.Headers.Authorization = this.authHeader;
 
             using HttpResponseMessage response = await this.httpClient.SendAsync(httpRequest, cancellationToken).ConfigureAwait(false);
             _ = response.EnsureSuccessStatusCode();
@@ -115,8 +120,9 @@ internal class ElectrumRpcClient
         {
             throw;
         }
-        catch (ElectrumRpcException)
+        catch (ElectrumRpcException e)
         {
+            this.log.Debug($"JSON RPC requested for method '{method}' failed with exception: {e}");
             throw;
         }
         catch (Exception e)
@@ -139,6 +145,8 @@ internal class ElectrumRpcClient
     /// <param name="queryTimeSec">Timeout for how long the relays should be queried for provider announcements.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns>List of electrum swap providers.</returns>
+    /// <exception cref="ElectrumRpcException ">Thrown when the Electrum server responded with an error.</exception>
+    /// <exception cref="OperationFailedException">Thrown when the operation failed except for error returned by the Electrum server.</exception>
     public async Task<ElectrumSwapProvider[]> GetSubmarineSwapProvidersAsync(int queryTimeSec, CancellationToken cancellationToken)
     {
         this.log.Debug($"* {nameof(queryTimeSec)}={queryTimeSec}");
