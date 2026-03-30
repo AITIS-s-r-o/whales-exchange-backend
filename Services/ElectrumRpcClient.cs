@@ -85,6 +85,7 @@ internal class ElectrumRpcClient
 
         long id = Interlocked.Increment(ref this.lastRequestId);
 
+        // With Electrum RPC, when no parameters are to be sent, we send empty array.
         object @params = Array.Empty<object>();
         if (parameters is not null)
             @params = parameters;
