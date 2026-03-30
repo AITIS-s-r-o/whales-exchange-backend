@@ -57,6 +57,7 @@ internal class RestApiController : InternalControllerBase
         IActionResult result;
         DateTime hourAgo = DateTime.UtcNow.AddHours(-1);
 
+        GetSwapProvidersResponse response;
         try
         {
             DbSwapProvider[] dbRecords = await this.swapProviderRepository.GetRecentAsync(hourAgo).ConfigureAwait(false);
@@ -67,14 +68,15 @@ internal class RestApiController : InternalControllerBase
                 .ThenBy(c => c.Pubkey)
                 .ToArray();
 
-            GetSwapProvidersResponse response = new(providers);
-            result = this.Ok(response);
+            response = new(providers);
         }
         catch (Exception e)
         {
             this.log.Error($"Exception occurred while getting list of swap providers: {e}");
-            result = this.StatusCode((int)HttpStatusCode.InternalServerError, e.Message);
+            response = new($"Getting list of swap providers from the databas failed. {e.Message}");
         }
+
+        result = this.Ok(response);
 
         this.log.Debug("$");
         return result;
