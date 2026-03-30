@@ -65,7 +65,7 @@ internal class SwapProviderFetcher : System.IAsyncDisposable
     }
 
     /// <summary>
-    /// Loop that refreshes exchange rates for selected currency pairs.
+    /// Loop that stores swap provider list in the database.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task SyncLoopAsync()
