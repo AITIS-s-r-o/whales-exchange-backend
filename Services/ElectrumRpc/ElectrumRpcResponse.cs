@@ -15,11 +15,11 @@ internal class ElectrumRpcResponse<T>
     [JsonPropertyName("id")]
     public int Id { get; }
 
-    /// <summary>Name of the RPC method to call.</summary>
+    /// <summary>Result of the RPC call if the call succeeded, or <c>null</c> if the call failed.</summary>
     [JsonPropertyName("result")]
     public T? Result { get; }
 
-    /// <summary>Parameters of the called method.</summary>
+    /// <summary>Description of the error of the call if the call failed, or <c>null</c> if the call succeeded.</summary>
     [JsonPropertyName("error")]
     public ElectrumRpcError? Error { get; }
 
@@ -28,8 +28,8 @@ internal class ElectrumRpcResponse<T>
     /// </summary>
     /// <param name="jsonRpc">JSON RPC version.</param>
     /// <param name="id">Identifier of the request.</param>
-    /// <param name="result">Name of the RPC method to call.</param>
-    /// <param name="error">Parameters of the called method.</param>
+    /// <param name="result">Result of the RPC call if the call succeeded, or <c>null</c> if the call failed.</param>
+    /// <param name="error">Description of the error of the call if the call failed, or <c>null</c> if the call succeeded.</param>
     public ElectrumRpcResponse(string jsonRpc, int id, T? result, ElectrumRpcError? error)
     {
         this.JsonRpc = jsonRpc;
