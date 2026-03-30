@@ -122,6 +122,10 @@ public static class Program
             // Database repositories provide access to individual tables of the database and are created on per-request basis.
             _ = builder.Services.AddSingleton<SwapProviderRepository>();
 
+            // Electrum RPC connectivity and related services.
+            _ = builder.Services.AddSingleton<ElectrumRpcClient>();
+            _ = builder.Services.AddSingleton<SwapProviderFetcher>();
+
             // These configuration files are used when "dotnet ef" command is executed.
             _ = builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: false);
 
@@ -183,6 +187,9 @@ public static class Program
                 using IServiceScope scope = context.RequestServices.CreateScope();
                 /* TODO */
             });
+
+            // Trigger instantiation of the swap provider fetcher.
+            _ = app.Services.GetRequiredService<SwapProviderFetcher>();
 
             // Initialize and seed database at startup.
             using (IServiceScope scope = app.Services.CreateScope())

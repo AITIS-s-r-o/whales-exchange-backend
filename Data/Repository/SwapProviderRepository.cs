@@ -9,7 +9,7 @@ using WhalesExchangeBackend.Exceptions;
 namespace WhalesExchangeBackend.Data.Repository;
 
 /// <summary>
-/// Provider of access to swap providers in the database.
+/// Provider of access to swap providers and their offers in the database.
 /// </summary>
 [SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by ASP.NET Core DI as a singleton.")]
 internal class SwapProviderRepository : RepositoryBase
@@ -39,9 +39,9 @@ internal class SwapProviderRepository : RepositoryBase
     /// <param name="maxAmountReverseSat">Maximum amount for a reverse swap in satoshis.</param>
     /// <param name="miningFeeForwardSat">Mining fee for forward swaps in satoshis.</param>
     /// <param name="miningFeeReverseSat">Mining fee for reverse swaps in satoshis.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    /// <returns><c>true</c> if a new record was inserted in the database, <c>false</c> if an existing record has been updated.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
-    public async Task UpsertAsync(string pubkey, DateTime lastSeen, int poWBits, decimal percentageFeeForward, decimal percentageFeeReverse, long minAmountForwardSat,
+    public async Task<bool> UpsertAsync(string pubkey, DateTime lastSeen, int poWBits, decimal percentageFeeForward, decimal percentageFeeReverse, long minAmountForwardSat,
         long minAmountReverseSat, long maxAmountForwardSat, long maxAmountReverseSat, long miningFeeForwardSat, long miningFeeReverseSat)
     {
         this.log.Debug($"* {nameof(pubkey)}='{pubkey}',{nameof(lastSeen)}={lastSeen},{nameof(poWBits)}={poWBits},{nameof(percentageFeeForward)}={percentageFeeForward},{
@@ -49,6 +49,7 @@ internal class SwapProviderRepository : RepositoryBase
             nameof(maxAmountForwardSat)}={maxAmountForwardSat},{nameof(maxAmountReverseSat)}={maxAmountReverseSat},{nameof(miningFeeForwardSat)}={miningFeeForwardSat},{
             nameof(minAmountReverseSat)}={minAmountReverseSat}");
 
+        bool result;
         try
         {
             using ApplicationDbContext db = this.dbContextFactory.CreateDbContext();
@@ -63,6 +64,7 @@ internal class SwapProviderRepository : RepositoryBase
                     maxAmountReverseSat: maxAmountReverseSat, miningFeeForwardSat: miningFeeForwardSat, miningFeeReverseSat: miningFeeReverseSat);
 
                 _ = db.SwapProviders.Add(dbRecord);
+                result = true;
             }
             else
             {
@@ -78,6 +80,7 @@ internal class SwapProviderRepository : RepositoryBase
                 dbRecord.MiningFeeReverseSat = miningFeeReverseSat;
 
                 _ = db.SwapProviders.Update(dbRecord);
+                result = false;
             }
 
             _ = db.SaveChanges();
@@ -90,7 +93,8 @@ internal class SwapProviderRepository : RepositoryBase
             throw new DatabaseException($"Upserting swap provider pubkey '{pubkey}' in the database failed.", e);
         }
 
-        this.log.Debug("$");
+        this.log.Debug($"$={result}");
+        return result;
     }
 
     /// <summary>
