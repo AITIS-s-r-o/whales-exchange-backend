@@ -13,12 +13,12 @@ using WhalesSecret.TradeScriptLib.Logging;
 namespace WhalesExchangeBackend.Services;
 
 /// <summary>
-/// Exchange rate service.
+/// Service that fetches a list of swap providers in repeated fashion.
 /// </summary>
 [SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by ASP.NET Core DI as a singleton.")]
 internal class SwapProviderFetcher : System.IAsyncDisposable
 {
-    /// <summary>Frequnecy with which the fetcher queries the list of providers from Electrum.</summary>
+    /// <summary>Frequency with which the fetcher queries the list of providers from Electrum.</summary>
     private static readonly TimeSpan fetchFrequency = TimeSpan.FromMinutes(1);
 
     /// <summary>Instance logger.</summary>
@@ -33,7 +33,7 @@ internal class SwapProviderFetcher : System.IAsyncDisposable
     /// <summary>Cancellation source announcing termination of the instance, i.e. disconnection.</summary>
     private readonly CancellationTokenSource shutdownTokenSource;
 
-    /// <summary>Background task periodically downloading latest exchange rates.</summary>
+    /// <summary>Background task periodically downloading latest swap providers.</summary>
     private readonly JoinableTask syncTask;
 
     /// <summary>Lock object to be used when accessing <see cref="disposedValue"/>.</summary>
@@ -65,7 +65,7 @@ internal class SwapProviderFetcher : System.IAsyncDisposable
     }
 
     /// <summary>
-    /// Loop that refreshes exchange rates for selected currency pairs.
+    /// Loop that stores swap provider list in the database.
     /// </summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task SyncLoopAsync()

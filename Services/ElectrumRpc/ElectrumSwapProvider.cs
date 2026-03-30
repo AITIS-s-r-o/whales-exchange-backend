@@ -61,8 +61,8 @@ internal class ElectrumSwapProvider
     /// <param name="pubkey">Provider's public key in hexadecimal string format.</param>
     /// <param name="poWBits">Number of proof of work bits in the provider's profile.</param>
     /// <param name="npub">Provider's public key in <c>npub*</c> format.</param>
-    public ElectrumSwapProvider(decimal percentageFee, long maxAmountForwardSat, long maxAmountReverseSat, long minAmountSat, long swapPrepayment, long miningFeeSat, long timestampSec,
-        string pubkey, int poWBits, string npub)
+    public ElectrumSwapProvider(decimal percentageFee, long maxAmountForwardSat, long maxAmountReverseSat, long minAmountSat, long swapPrepayment, long miningFeeSat,
+        long timestampSec, string pubkey, int poWBits, string npub)
     {
         this.PercentageFee = percentageFee;
         this.MaxAmountForwardSat = maxAmountForwardSat;
