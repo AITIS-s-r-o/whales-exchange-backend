@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -18,6 +19,7 @@ namespace WhalesExchangeBackend.Services;
 /// <summary>
 /// Client that communicates with Electrum RPC server.
 /// </summary>
+[SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by ASP.NET Core DI.")]
 internal class ElectrumRpcClient
 {
     /// <summary>Default query time for <c>get_submarine_swap_providers</c> call in seconds.</summary>

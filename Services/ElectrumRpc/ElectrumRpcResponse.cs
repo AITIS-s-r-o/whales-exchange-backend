@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace WhalesExchangeBackend.Services.ElectrumRpc;
@@ -6,6 +7,7 @@ namespace WhalesExchangeBackend.Services.ElectrumRpc;
 /// RPC response from Electrum RPC server.
 /// </summary>
 /// <typeparam name="T">Type of the JSON RPC result.</typeparam>
+[SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by JSON deserializer.")]
 internal class ElectrumRpcResponse<T>
 {
     /// <summary>JSON RPC version.</summary>

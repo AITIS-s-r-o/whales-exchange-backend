@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json.Serialization;
 
@@ -6,6 +7,7 @@ namespace WhalesExchangeBackend.Services.ElectrumRpc;
 /// <summary>
 /// Description of a swap provider coming from Electrum RPC.
 /// </summary>
+[SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by JSON deserializer.")]
 internal class ElectrumSwapProvider
 {
     /// <summary>Swap provider's fee in percent.</summary>
