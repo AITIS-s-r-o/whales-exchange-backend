@@ -5,6 +5,7 @@ namespace WhalesExchangeBackend.Services.ElectrumRpc;
 /// <summary>
 /// RPC response from Electrum RPC server.
 /// </summary>
+/// <typeparam name="T">Type of the JSON RPC result.</typeparam>
 internal class ElectrumRpcResponse<T>
 {
     /// <summary>JSON RPC version.</summary>
