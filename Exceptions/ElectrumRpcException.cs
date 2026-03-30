@@ -3,7 +3,7 @@ using System;
 namespace WhalesExchangeBackend.Exceptions;
 
 /// <summary>
-/// Exception for cases when a Electrum RPC call fails.
+/// Exception for cases when an Electrum RPC call fails.
 /// </summary>
 internal class ElectrumRpcException : Exception
 {
