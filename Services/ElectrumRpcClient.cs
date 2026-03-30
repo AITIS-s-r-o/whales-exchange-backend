@@ -20,8 +20,8 @@ namespace WhalesExchangeBackend.Services;
 /// </summary>
 internal class ElectrumRpcClient
 {
-    /// <summary>Default query time for <c>get_submarine_swap_providers</c> call.</summary>
-    private const int DefaultGetSubmarineSwapProvidersQueryTimeSec = 15;
+    /// <summary>Default query time for <c>get_submarine_swap_providers</c> call in seconds.</summary>
+    private const int DefaultGetSubmarineSwapProvidersQueryTimeSeconds = 15;
 
     /// <summary>Instance logger.</summary>
     private readonly WsLogger log = WsLogger.GetCurrentClassLogger();
@@ -63,7 +63,7 @@ internal class ElectrumRpcClient
     /// <summary>
     /// Calls an Electrum RPC method with parameters.
     /// </summary>
-    /// <typeparam name="TResult">The expected result type.</typeparam>
+    /// <typeparam name="TResult">Expected result type.</typeparam>
     /// <param name="method">RPC method name.</param>
     /// <param name="parameters">Array of parameters.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
@@ -131,7 +131,7 @@ internal class ElectrumRpcClient
 
     /// <inheritdoc cref="GetSubmarineSwapProvidersAsync(int, CancellationToken)"/>
     public Task<ElectrumSwapProvider[]> GetSubmarineSwapProvidersAsync(CancellationToken cancellationToken)
-        => this.GetSubmarineSwapProvidersAsync(queryTimeSec: DefaultGetSubmarineSwapProvidersQueryTimeSec, cancellationToken);
+        => this.GetSubmarineSwapProvidersAsync(queryTimeSec: DefaultGetSubmarineSwapProvidersQueryTimeSeconds, cancellationToken);
 
     /// <summary>
     /// Calls Electrum's <c>get_submarine_swap_providers</c> RPC method.

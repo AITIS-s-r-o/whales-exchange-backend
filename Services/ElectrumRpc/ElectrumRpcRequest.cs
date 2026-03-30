@@ -22,7 +22,7 @@ internal class ElectrumRpcRequest
     [JsonPropertyName("method")]
     public string Method { get; }
 
-    /// <summary>Parameters of the called method.</summary>
+    /// <summary>Parameters of the called method, or <c>null</c> if the request has no parameters.</summary>
     [JsonPropertyName("params")]
     public object? Params { get; }
 
@@ -31,7 +31,7 @@ internal class ElectrumRpcRequest
     /// </summary>
     /// <param name="id">Identifier of the request.</param>
     /// <param name="method">Name of the RPC method to call.</param>
-    /// <param name="params">Parameters of the called method.</param>
+    /// <param name="params">Parameters of the called method, or <c>null</c> if the request has no parameters.</param>
     public ElectrumRpcRequest(long id, string method, object? @params)
     {
         this.JsonRpc = JsonRpcVersion;
