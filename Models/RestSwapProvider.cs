@@ -7,6 +7,7 @@ namespace WhalesExchangeBackend.Models;
 /// <summary>
 /// Description of a swap provider in REST API.
 /// </summary>
+/// <remarks>In this class, "forward swap" means BTC->LN - i.e. the user sends on-chain, receives off-chain.</remarks>
 internal class RestSwapProvider
 {
     /// <summary>Public key of the swap provider as a hex string.</summary>

@@ -7,6 +7,7 @@ namespace WhalesExchangeBackend.Services.ElectrumRpc;
 /// <summary>
 /// Description of a swap provider coming from Electrum RPC.
 /// </summary>
+/// <remarks>In this class, Electrum swap names are used. "forward swap" means LN->BTC - i.e. the user sends off-chain, receives on-chain.</remarks>
 [SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by JSON deserializer.")]
 internal class ElectrumSwapProvider
 {

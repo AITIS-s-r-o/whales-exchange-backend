@@ -6,6 +6,7 @@ namespace WhalesExchangeBackend.Data;
 /// <summary>
 /// Description of a license in the database.
 /// </summary>
+/// <remarks>In this class, "forward swap" means BTC->LN - i.e. the user sends on-chain, receives off-chain.</remarks>
 internal class DbSwapProvider
 {
     /// <summary>Public key of the swap provider as a hex string.</summary>
