@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace WhalesExchangeBackend.Services.ElectrumRpc;
@@ -5,6 +6,7 @@ namespace WhalesExchangeBackend.Services.ElectrumRpc;
 /// <summary>
 /// Error of the Electrum RPC response.
 /// </summary>
+[SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by JSON deserializer.")]
 internal class ElectrumRpcError
 {
     /// <summary>Error code.</summary>

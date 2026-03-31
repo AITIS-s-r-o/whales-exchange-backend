@@ -97,9 +97,15 @@ internal class SwapProviderFetcher : System.IAsyncDisposable
                     foreach (ElectrumSwapProvider provider in providers)
                     {
                         DateTime lastSeen = provider.TimestampSec.FromUnixTimeSeconds();
+
+                        // Note that Electrum has inverted names of swap directions. Forward swap in Electrum is a swap where you send LN and obtain on-chain BTC, but that is
+                        // elsewhere called Reverse swap.
+                        long actualMaxForwardAmountSat = provider.MaxAmountReverseSat;
+                        long actualMaxReverseAmountSat = provider.MaxAmountForwardSat;
+
                         bool isNew = await this.swapProviderRepository.UpsertAsync(provider.Pubkey, lastSeen, provider.PoWBits, percentageFeeForward: provider.PercentageFee,
                             percentageFeeReverse: provider.PercentageFee, minAmountForwardSat: provider.MinAmountSat, minAmountReverseSat: provider.MinAmountSat,
-                            maxAmountForwardSat: provider.MaxAmountForwardSat, maxAmountReverseSat: provider.MaxAmountReverseSat, miningFeeForwardSat: provider.MiningFeeSat,
+                            maxAmountForwardSat: actualMaxForwardAmountSat, maxAmountReverseSat: actualMaxReverseAmountSat, miningFeeForwardSat: provider.MiningFeeSat,
                             miningFeeReverseSat: provider.MiningFeeSat).ConfigureAwait(false);
 
                         if (isNew) this.log.Debug($"New provider pubkey '{provider.Pubkey}' has been added to the database.");
