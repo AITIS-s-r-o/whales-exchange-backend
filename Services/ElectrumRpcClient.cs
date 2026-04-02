@@ -167,4 +167,40 @@ internal class ElectrumRpcClient
         this.log.Debug($"|$|={result.Length}");
         return result;
     }
+
+    /// <summary>
+    /// Calls Electrum's <c>wex_reverse_swap</c> RPC method.
+    /// </summary>
+    /// <param name="lnAmountSats">Amount to be sent by the user in satoshis.</param>
+    /// <param name="onChainAmountSats">Amount to be received by the user in satoshis.</param>
+    /// <param name="prepaymentSats">Lightning payment required by the swap provider in order to cover their mining fees. This is included in <paramref name="lnAmountSats"/>. This
+    /// part of the operation is not trustless; the provider is trusted to fail this payment if the swap fails.</param>
+    /// <param name="preimageHash">Hash of the preimage that will be used for the swap.</param>
+    /// <param name="claimPk">Public key that will be used in the onchain claim transaction for the swap.</param>
+    /// <param name="providerPk">Public key of the swap provider.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>Information about the initiated reverse swap.</returns>
+    /// <exception cref="ElectrumRpcException ">Thrown when the Electrum server responded with an error.</exception>
+    /// <exception cref="OperationFailedException">Thrown when the operation failed except for error returned by the Electrum server.</exception>
+    public async Task<ElectrumSwapData> ReverseSwapAsync(long lnAmountSats, long onChainAmountSats, long prepaymentSats, string preimageHash, string claimPk, string providerPk,
+        CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(lnAmountSats)}={lnAmountSats},{nameof(onChainAmountSats)}={onChainAmountSats},{nameof(prepaymentSats)}={prepaymentSats},{
+            nameof(preimageHash)}='{preimageHash}',{nameof(claimPk)}='{claimPk}',{nameof(providerPk)}='{providerPk}'");
+
+        Dictionary<string, object> parameters = new()
+        {
+            { "lightning_amount", lnAmountSats },
+            { "onchain_amount", onChainAmountSats },
+            { "prepayment", prepaymentSats},
+            { "hash", preimageHash },
+            { "claim_pk", claimPk },
+            { "provider_pk", providerPk },
+        };
+
+        ElectrumSwapData result = await this.CallAsync<ElectrumSwapData>(method: "wex_reverse_swap", parameters, cancellationToken).ConfigureAwait(false);
+
+        this.log.Debug($"$=`{result}`");
+        return result;
+    }
 }

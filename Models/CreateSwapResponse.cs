@@ -1,0 +1,32 @@
+using System.Text.Json.Serialization;
+using WhalesExchangeBackend.Controllers;
+
+namespace WhalesExchangeBackend.Models;
+
+/// <summary>
+/// Response to <see cref="RestApiController.GetSwapProvidersAsync"/> call.
+/// </summary>
+internal class CreateSwapResepose : RestResponseBase
+{
+    /// <summary>Response returned when creating or fetching a swap.</summary>
+    [JsonIgnore]
+    public SwapResponse SwapResponse => (SwapResponse)this.Data!;
+
+    /// <summary>
+    /// Creates a new instance of the object for the successful call.
+    /// </summary>
+    /// <param name="swapResponse">Response returned when creating or fetching a swap.</param>
+    public CreateSwapResepose(SwapResponse swapResponse) :
+        base(success: true, data: swapResponse, error: null)
+    {
+    }
+
+    /// <summary>
+    /// Creates a new instance of the object for the failed call.
+    /// </summary>
+    /// <param name="error">Error message.</param>
+    public CreateSwapResepose(string error) :
+        base(success: false, data: null, error)
+    {
+    }
+}
