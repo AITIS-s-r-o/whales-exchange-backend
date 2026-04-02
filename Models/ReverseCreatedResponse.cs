@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using WhalesExchangeBackend.Controllers;
 
@@ -6,6 +7,7 @@ namespace WhalesExchangeBackend.Models;
 /// <summary>
 /// Response to <see cref="RestApiController.CreateSwapAsync"/> call.
 /// </summary>
+[SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by the REST API controller.")]
 internal class ReverseCreatedResponse
 {
     /// <summary>Unique identifier of the created swap. Used for subsequent API calls (e.g. claim, status polling, WebSocket subscription).</summary>

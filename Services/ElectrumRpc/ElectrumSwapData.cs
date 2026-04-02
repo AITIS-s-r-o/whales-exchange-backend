@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json.Serialization;
 
@@ -6,6 +7,7 @@ namespace WhalesExchangeBackend.Services.ElectrumRpc;
 /// <summary>
 /// Represents the internal swap data stored by Electrum's submarine swap plugin.
 /// </summary>
+[SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by the REST API controller.")]
 internal class ElectrumSwapData
 {
     /// <summary><c>true</c> if this is a reverse swap (LN → BTC) from the client's point of view, <c>false</c> if it is a forward swap (BTC → LN).</summary>
