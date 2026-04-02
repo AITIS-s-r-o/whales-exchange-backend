@@ -83,13 +83,13 @@ internal class SwapProviderFetcher : System.IAsyncDisposable
                 {
                     providers = await this.electrumRpcClient.GetSubmarineSwapProvidersAsync(cancellationToken).ConfigureAwait(false);
                 }
-                catch (OperationFailedException ofe)
+                catch (OperationFailedException e)
                 {
-                    this.log.Error($"Getting list of Electrum submarine swap providers failed with exception: {ofe}");
+                    this.log.Error($"Getting list of Electrum submarine swap providers failed with exception: {e}");
                 }
-                catch (ElectrumRpcException ere)
+                catch (ElectrumRpcException e)
                 {
-                    this.log.Error($"Electrum server reported error when querying list of submarine swap providers: {ere}");
+                    this.log.Error($"Electrum server reported error when querying list of submarine swap providers: {e}");
                 }
 
                 if (providers is not null)
