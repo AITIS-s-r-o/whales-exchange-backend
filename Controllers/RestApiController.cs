@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -44,6 +43,9 @@ internal class RestApiController : InternalControllerBase
     /// <summary>Provider of access to swap providers and their offers in the database.</summary>
     private readonly SwapProviderRepository swapProviderRepository;
 
+    /// <summary>Provider of access to swaps in the database.</summary>
+    private readonly SwapRepository swapRepository;
+
     /// <summary>Client that communicates with Electrum RPC server.</summary>
     private readonly ElectrumRpcClient electrumRpcClient;
 
@@ -52,8 +54,10 @@ internal class RestApiController : InternalControllerBase
     /// </summary>
     /// <param name="httpContextAccessor">Provides access to the current <see cref="HttpContext"/>.</param>
     /// <param name="swapProviderRepository">Provider of access to swap providers and their offers in the database.</param>
+    /// <param name="swapRepository">Provider of access to swaps in the database.</param>
     /// <param name="electrumRpcClient">Client that communicates with Electrum RPC server.</param>
-    public RestApiController(IHttpContextAccessor httpContextAccessor, SwapProviderRepository swapProviderRepository, ElectrumRpcClient electrumRpcClient)
+    public RestApiController(IHttpContextAccessor httpContextAccessor, SwapProviderRepository swapProviderRepository, SwapRepository swapRepository,
+        ElectrumRpcClient electrumRpcClient)
     {
         this.httpContextAccessor = httpContextAccessor;
         HttpContext? context = this.httpContextAccessor.HttpContext;
@@ -63,6 +67,7 @@ internal class RestApiController : InternalControllerBase
         this.log = new(this.GetType().FullName!, $"{context.Connection.RemoteIpAddress}");
 
         this.swapProviderRepository = swapProviderRepository;
+        this.swapRepository = swapRepository;
         this.electrumRpcClient = electrumRpcClient;
 
         this.log.Debug("*$");
@@ -164,6 +169,8 @@ internal class RestApiController : InternalControllerBase
         if (context is null)
             throw new SanityCheckException("HTTP context is null.");
 
+        long? swapId = null;
+        bool failed = false;
         try
         {
             if ((type == ForwardSwapTypeStr) && (orderSide == ForwardSwapOrderSideStr))
@@ -184,6 +191,9 @@ internal class RestApiController : InternalControllerBase
                 {
                     if (claimPublicKey is not null)
                     {
+                        swapId = await this.swapRepository.InsertReverseAsync(providerPubkey: providerPk, amountToPaySats: invoiceAmount.Value,
+                            amountToReceiveSats: expectedAmount).ConfigureAwait(false);
+
                         long prepayment = 2 * provider.MiningFeeReverseSat;
                         ElectrumSwapData electrumSwapData = await this.electrumRpcClient.ReverseSwapAsync(lnAmountSats: invoiceAmount.Value, onChainAmountSats: expectedAmount,
                             prepaymentSats: prepayment, preimageHash: preimageHash, claimPk: claimPublicKey, providerPk: providerPk, context.RequestAborted).ConfigureAwait(false);
@@ -193,6 +203,9 @@ internal class RestApiController : InternalControllerBase
                             receiveAmountSats: electrumSwapData.OnChainAmountSats, redeemScript: electrumSwapData.RedeemScriptHex, lockupAddress: electrumSwapData.LockupAddress);
 
                         response = new(swapResponse);
+
+                        await this.swapRepository.MarkSwapAcceptedAsync(id: swapId.Value, electrumSwapData.LockupAddress, timeoutBlockHeight: electrumSwapData.Locktime)
+                            .ConfigureAwait(false);
                     }
                     else response = new($"'{nameof(claimPublicKey)}' is mandatory for reverse swaps.");
                 }
@@ -204,6 +217,12 @@ internal class RestApiController : InternalControllerBase
         {
             this.log.Error($"Exception occurred while creating a new swap: {e}");
             response = new($"Creating new swap failed. {e.Message}");
+            failed = true;
+        }
+
+        if (failed && (swapId is not null))
+        {
+            await this.swapRepository.MarkSwapRejectedAsync(swapId.Value).ConfigureAwait(false);
         }
 
         result = this.Ok(response);

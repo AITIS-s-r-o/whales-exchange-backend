@@ -192,7 +192,7 @@ internal class ElectrumRpcClient
         {
             { "lightning_amount", lnAmountSats },
             { "onchain_amount", onChainAmountSats },
-            { "prepayment", prepaymentSats},
+            { "prepayment", prepaymentSats },
             { "hash", preimageHash },
             { "claim_pk", claimPk },
             { "provider_pk", providerPk },
