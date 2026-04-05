@@ -6,7 +6,7 @@ namespace WhalesExchangeBackend.Models;
 /// <summary>
 /// Response to <see cref="RestApiController.GetSwapProvidersAsync"/> call.
 /// </summary>
-internal class CreateSwapResepose : RestResponseBase
+internal class CreateSwapResponse : RestResponseBase
 {
     /// <summary>Response returned when creating or fetching a swap.</summary>
     [JsonIgnore]
@@ -16,7 +16,7 @@ internal class CreateSwapResepose : RestResponseBase
     /// Creates a new instance of the object for the successful call.
     /// </summary>
     /// <param name="swapResponse">Response returned when creating or fetching a swap.</param>
-    public CreateSwapResepose(SwapResponse swapResponse) :
+    public CreateSwapResponse(SwapResponse swapResponse) :
         base(success: true, data: swapResponse, error: null)
     {
     }
@@ -25,7 +25,7 @@ internal class CreateSwapResepose : RestResponseBase
     /// Creates a new instance of the object for the failed call.
     /// </summary>
     /// <param name="error">Error message.</param>
-    public CreateSwapResepose(string error) :
+    public CreateSwapResponse(string error) :
         base(success: false, data: null, error)
     {
     }

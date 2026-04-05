@@ -130,7 +130,7 @@ internal class RestApiController : InternalControllerBase
             nameof(refundPublicKey)}='{refundPublicKey}'");
 
         IActionResult result;
-        CreateSwapResepose response;
+        CreateSwapResponse response;
 
         string providerPk = pairHash;
         DbSwapProvider? provider;
