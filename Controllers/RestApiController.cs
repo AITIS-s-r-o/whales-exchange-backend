@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -97,7 +96,7 @@ internal class RestApiController : InternalControllerBase
         catch (Exception e)
         {
             this.log.Error($"Exception occurred while getting list of swap providers: {e}");
-            response = new($"Getting list of swap providers from the databas failed. {e.Message}");
+            response = new($"Getting list of swap providers from the database failed. {e.Message}");
         }
 
         result = this.Ok(response);
