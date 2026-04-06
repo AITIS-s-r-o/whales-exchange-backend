@@ -130,4 +130,35 @@ internal class SwapProviderRepository : RepositoryBase
         this.log.Debug($"$='{result}'");
         return result;
     }
+
+    /// <summary>
+    /// Gets a swap providers by its pubkey.
+    /// </summary>
+    /// <param name="pubkey">Public key of a swap provider.</param>
+    /// <returns>Returns the given swap provider, or <c>null</c> if the given pubkey was not found.</returns>
+    /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
+    public async Task<DbSwapProvider?> GetByPubkeyAsync(string pubkey)
+    {
+        this.log.Debug($"* {nameof(pubkey)}='{pubkey}'");
+
+        DbSwapProvider? result;
+        try
+        {
+            using ApplicationDbContext db = this.dbContextFactory.CreateDbContext();
+            using IDisposable dbLocked = await this.dbLock.EnterAsync().ConfigureAwait(false);
+
+            result = await db.SwapProviders
+                .FindAsync(pubkey)
+                .ConfigureAwait(false);
+        }
+        catch (Exception e)
+        {
+            this.log.Error($"Getting swap provider with pubkey '{pubkey}' failed with exception: {e}");
+            this.log.Debug("$<DB_EXCEPTION>");
+            throw new DatabaseException($"Getting swap provider with pubkey '{pubkey}' failed.", e);
+        }
+
+        this.log.Debug($"$='{result}'");
+        return result;
+    }
 }
