@@ -135,6 +135,10 @@ internal class RestApiController : InternalControllerBase
             nameof(expectedAmount)}={expectedAmount},{nameof(preimageHash)}='{preimageHash}',{nameof(pairHash)}='{pairHash}',{nameof(claimPublicKey)}='{claimPublicKey}',{
             nameof(refundPublicKey)}='{refundPublicKey}'");
 
+        HttpContext? context = this.httpContextAccessor.HttpContext;
+        if (context is null)
+            throw new SanityCheckException("HTTP context is null.");
+
         IActionResult result;
         CreateSwapResponse response;
 
@@ -164,10 +168,6 @@ internal class RestApiController : InternalControllerBase
             this.log.Debug("$<PROVIDER_NOT_FOUND>");
             return result;
         }
-
-        HttpContext? context = this.httpContextAccessor.HttpContext;
-        if (context is null)
-            throw new SanityCheckException("HTTP context is null.");
 
         long? swapId = null;
         bool failed = false;
