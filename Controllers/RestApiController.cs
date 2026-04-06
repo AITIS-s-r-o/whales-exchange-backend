@@ -194,9 +194,9 @@ internal class RestApiController : InternalControllerBase
                         swapId = await this.swapRepository.InsertReverseAsync(providerPubkey: providerPk, amountToPaySats: invoiceAmount.Value,
                             amountToReceiveSats: expectedAmount).ConfigureAwait(false);
 
-                        long prepayment = 2 * provider.MiningFeeReverseSat;
+                        long prepaymentSats = 2 * provider.MiningFeeReverseSat;
                         ElectrumSwapData electrumSwapData = await this.electrumRpcClient.ReverseSwapAsync(lnAmountSats: invoiceAmount.Value, onChainAmountSats: expectedAmount,
-                            prepaymentSats: prepayment, preimageHash: preimageHash, claimPk: claimPublicKey, providerPk: providerPk, context.RequestAborted).ConfigureAwait(false);
+                            prepaymentSats: prepaymentSats, preimageHash: preimageHash, claimPk: claimPublicKey, providerPk: providerPk, context.RequestAborted).ConfigureAwait(false);
 
                         SwapResponse swapResponse = new(reverse: true, asset: "BTC", invoice: electrumSwapData.Invoice, feeInvoice: electrumSwapData.FeeInvoice,
                             timeoutBlockHeight: electrumSwapData.Locktime, sendAmountSats: electrumSwapData.LightningAmountSats,
