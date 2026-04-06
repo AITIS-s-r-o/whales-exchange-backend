@@ -19,10 +19,10 @@ internal class ClaimToOutput
     public long AmountSats { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ClaimToOutput"/> class.
+    /// Creates a new instance of the object.
     /// </summary>
-    /// <param name="address">Address to send claimed funds to.</param>
-    /// <param name="amountSats">Amount to claim satoshis.</param>
+    /// <param name="address">Address to send the claimed funds to.</param>
+    /// <param name="amountSats">Amount to claim in satoshis.</param>
     public ClaimToOutput(string address, long amountSats)
     {
         this.Address = address;
