@@ -4,7 +4,7 @@ using WhalesExchangeBackend.Controllers;
 namespace WhalesExchangeBackend.Models;
 
 /// <summary>
-/// Response to <see cref="RestApiController.GetSwapProvidersAsync"/> call.
+/// Response to <see cref="RestApiController.CreateSwapAsync"/> call.
 /// </summary>
 internal class CreateSwapResponse : RestResponseBase
 {

@@ -106,7 +106,7 @@ internal class RestApiController : InternalControllerBase
     }
 
     /// <summary>
-    /// Action that is executed when a reverse swap is requested.
+    /// Action that is executed when a swap is requested.
     /// </summary>
     /// <param name="type">Either <see cref="ForwardSwapTypeStr"/> or <see cref="ReverseSwapTypeStr"/>.</param>
     /// <param name="pairId">ID of the assets being swapped. This should be set to <c>BTC/BTC</c>.</param>
@@ -128,6 +128,10 @@ internal class RestApiController : InternalControllerBase
         this.log.Debug($"* {nameof(type)}='{type}',{nameof(pairId)}='{pairId}',{orderSide}='{orderSide}',{nameof(invoiceAmount)}={invoiceAmount},{nameof(invoice)}='{invoice}',{
             nameof(expectedAmount)}={expectedAmount},{nameof(preimageHash)}='{preimageHash}',{nameof(pairHash)}='{pairHash}',{nameof(claimPublicKey)}='{claimPublicKey}',{
             nameof(refundPublicKey)}='{refundPublicKey}'");
+
+        HttpContext? context = this.httpContextAccessor.HttpContext;
+        if (context is null)
+            throw new SanityCheckException("HTTP context is null.");
 
         IActionResult result;
         CreateSwapResponse response;
@@ -158,10 +162,6 @@ internal class RestApiController : InternalControllerBase
             this.log.Debug("$<PROVIDER_NOT_FOUND>");
             return result;
         }
-
-        HttpContext? context = this.httpContextAccessor.HttpContext;
-        if (context is null)
-            throw new SanityCheckException("HTTP context is null.");
 
         try
         {
