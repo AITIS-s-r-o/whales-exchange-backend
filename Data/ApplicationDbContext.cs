@@ -20,6 +20,12 @@ internal class ApplicationDbContext : DbContext
     /// <summary>Collection that stores swap providers and parameters of their latest offer.</summary>
     public DbSet<DbSwapProvider> SwapProviders => this.SwapProviderSet!;
 
+    /// <summary>Collection that stores swaps, or <c>null</c> if it is not initialized yet.</summary>
+    public DbSet<DbSwap>? SwapsSet { get; set; }
+
+    /// <summary>Collection that stores swaps.</summary>
+    public DbSet<DbSwap> Swaps => this.SwapsSet!;
+
     /// <inheritdoc cref="DbContext"/>
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) :
         base(options)
@@ -38,6 +44,7 @@ internal class ApplicationDbContext : DbContext
         this.log.Debug("*");
 
         this.CreateModelDbSwapProvider(modelBuilder);
+        this.CreateModelDbSwap(modelBuilder);
 
         base.OnModelCreating(modelBuilder);
 
@@ -59,7 +66,6 @@ internal class ApplicationDbContext : DbContext
 
         _ = entity
             .Property(q => q.Pubkey)
-            .IsUnicode()
             .IsRequired()
             .HasMaxLength(64);
 
@@ -122,6 +128,93 @@ internal class ApplicationDbContext : DbContext
 
         _ = entity
             .HasIndex(q => q.LastSeen);
+
+        this.log.Debug("$");
+    }
+
+    /// <summary>
+    /// Creates model for the swaps table.
+    /// </summary>
+    /// <param name="modelBuilder">Database model builder.</param>
+    private void CreateModelDbSwap(ModelBuilder modelBuilder)
+    {
+        this.log.Debug("*");
+
+        EntityTypeBuilder<DbSwap> entity = modelBuilder.Entity<DbSwap>();
+
+        _ = entity
+            .HasKey(q => q.Id);
+
+        _ = entity
+            .Property(q => q.ProviderPubkey)
+            .IsRequired()
+            .HasMaxLength(64);
+
+        _ = entity
+            .Property(q => q.IsForward)
+            .IsRequired();
+
+        _ = entity
+            .Property(q => q.Status)
+            .IsRequired();
+
+        _ = entity
+            .Property(q => q.AmountToPaySats)
+            .IsRequired();
+
+        _ = entity
+            .Property(q => q.AmountToReceiveSats)
+            .IsRequired();
+
+        _ = entity
+            .Property(q => q.LockupAddress)
+            .IsUnicode()
+            .IsRequired(false)
+            .HasMaxLength(64);
+
+        _ = entity
+            .Property(q => q.LockupOutputIndex)
+            .IsRequired(false);
+
+        _ = entity
+            .Property(q => q.FundingTxId)
+            .IsRequired(false)
+            .HasMaxLength(64);
+
+        _ = entity
+            .Property(q => q.CreatedTime)
+            .IsRequired();
+
+        _ = entity
+            .Property(q => q.AcceptedTime)
+            .IsRequired(false);
+
+        _ = entity
+            .Property(q => q.FundingTime)
+            .IsRequired(false);
+
+        _ = entity
+            .Property(q => q.SpentTime)
+            .IsRequired(false);
+
+        _ = entity
+            .Property(q => q.FailTime)
+            .IsRequired(false);
+
+        _ = entity
+            .HasOne(q => q.Provider)
+            .WithMany()
+            .HasForeignKey(q => q.ProviderPubkey)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        _ = entity
+            .HasIndex(q => q.ProviderPubkey);
+
+        _ = entity
+            .HasIndex(q => q.IsForward);
+
+        _ = entity
+            .HasIndex(q => q.Status);
 
         this.log.Debug("$");
     }

@@ -31,6 +31,7 @@ internal class ElectrumSwapData
     public string RedeemScriptHex { get; }
 
     /// <summary>Hash of the prepayment invoice as hex.</summary>
+    /// <seealso cref="FeeInvoice"/>
     [JsonPropertyName("prepay_hash")]
     public string PrepayHashHex { get; }
 

@@ -20,6 +20,7 @@ internal class DbLocks : IAsyncDisposable
     private static readonly string[] repositoryNames = new string[]
     {
         nameof(SwapProviderRepository),
+        nameof(SwapRepository),
     };
 
     /// <summary>Instance logger.</summary>
