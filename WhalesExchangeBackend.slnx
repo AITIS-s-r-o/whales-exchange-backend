@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="SharedLib/WhalesExchangeBackend.SharedLib.csproj" Id="439b66a9-bc92-4f55-961d-41e0bc472cdf" />
+  <Project Path="SharedLibUnitTests/WhalesExchangeBackend.SharedLibUnitTests.csproj" Id="1de537fe-24ac-48ed-bb79-630e947aca49" />
+  <Project Path="WhalesExchangeBackend.csproj" Id="8031d32a-451f-4c0f-af17-8bed17b22c8e" />
+</Solution>

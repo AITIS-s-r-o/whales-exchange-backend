@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using WhalesExchangeBackend.Exceptions;
+using WhalesExchangeBackend.SharedLib.Helpers;
 
 namespace WhalesExchangeBackend.Data.Repository;
 
@@ -39,15 +40,16 @@ internal class SwapProviderRepository : RepositoryBase
     /// <param name="maxAmountReverseSat">Maximum amount for a reverse swap in satoshis.</param>
     /// <param name="miningFeeForwardSat">Mining fee for forward swaps in satoshis.</param>
     /// <param name="miningFeeReverseSat">Mining fee for reverse swaps in satoshis.</param>
+    /// <param name="serverStartTime">UTC timestamp when the current instance of the server started.</param>
     /// <returns><c>true</c> if a new record was inserted in the database, <c>false</c> if an existing record has been updated.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
     public async Task<bool> UpsertAsync(string pubkey, DateTime lastSeen, int poWBits, decimal percentageFeeForward, decimal percentageFeeReverse, long minAmountForwardSat,
-        long minAmountReverseSat, long maxAmountForwardSat, long maxAmountReverseSat, long miningFeeForwardSat, long miningFeeReverseSat)
+        long minAmountReverseSat, long maxAmountForwardSat, long maxAmountReverseSat, long miningFeeForwardSat, long miningFeeReverseSat, DateTime serverStartTime)
     {
         this.log.Debug($"* {nameof(pubkey)}='{pubkey}',{nameof(lastSeen)}={lastSeen},{nameof(poWBits)}={poWBits},{nameof(percentageFeeForward)}={percentageFeeForward},{
             nameof(percentageFeeReverse)}={percentageFeeReverse},{nameof(minAmountForwardSat)}={minAmountForwardSat},{nameof(minAmountReverseSat)}={minAmountReverseSat},{
             nameof(maxAmountForwardSat)}={maxAmountForwardSat},{nameof(maxAmountReverseSat)}={maxAmountReverseSat},{nameof(miningFeeForwardSat)}={miningFeeForwardSat},{
-            nameof(minAmountReverseSat)}={minAmountReverseSat}");
+            nameof(minAmountReverseSat)}={minAmountReverseSat},{nameof(serverStartTime)}={serverStartTime}");
 
         bool result;
         try
@@ -59,16 +61,16 @@ internal class SwapProviderRepository : RepositoryBase
             DbSwapProvider? dbRecord = await db.SwapProviders.FindAsync(pubkey).ConfigureAwait(false);
             if (dbRecord is null)
             {
-                dbRecord = new(pubkey, lastSeen, poWBits: poWBits, percentageFeeForward: percentageFeeForward, percentageFeeReverse: percentageFeeReverse,
+                DateTime now = DateTime.UtcNow;
+                dbRecord = new(pubkey, firstSeen: now, lastSeen: lastSeen, poWBits: poWBits, percentageFeeForward: percentageFeeForward, percentageFeeReverse: percentageFeeReverse,
                     minAmountForwardSat: minAmountForwardSat, minAmountReverseSat: minAmountReverseSat, maxAmountForwardSat: maxAmountForwardSat,
-                    maxAmountReverseSat: maxAmountReverseSat, miningFeeForwardSat: miningFeeForwardSat, miningFeeReverseSat: miningFeeReverseSat);
+                    maxAmountReverseSat: maxAmountReverseSat, miningFeeForwardSat: miningFeeForwardSat, miningFeeReverseSat: miningFeeReverseSat, slotsPresent: 1, slotsMissed: 0);
 
                 _ = db.SwapProviders.Add(dbRecord);
                 result = true;
             }
             else
             {
-                dbRecord.LastSeen = lastSeen;
                 dbRecord.PoWBits = poWBits;
                 dbRecord.PercentageFeeForward = percentageFeeForward;
                 dbRecord.PercentageFeeReverse = percentageFeeReverse;
@@ -78,6 +80,11 @@ internal class SwapProviderRepository : RepositoryBase
                 dbRecord.MaxAmountReverseSat = maxAmountReverseSat;
                 dbRecord.MiningFeeForwardSat = miningFeeForwardSat;
                 dbRecord.MiningFeeReverseSat = miningFeeReverseSat;
+                dbRecord.SlotsPresent += ProviderPresenceCalculator.CalculatePresentSlots(prevLastSeen: dbRecord.LastSeen, newLastSeen: lastSeen,
+                    serverStartTime: serverStartTime);
+                dbRecord.SlotsMissed += ProviderPresenceCalculator.CalculateMissedSlots(prevLastSeen: dbRecord.LastSeen, newLastSeen: lastSeen,
+                    serverStartTime: serverStartTime);
+                dbRecord.LastSeen = lastSeen;
 
                 _ = db.SwapProviders.Update(dbRecord);
                 result = false;

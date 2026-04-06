@@ -400,6 +400,12 @@
         "resolved": "9.0.0",
         "contentHash": "U9msthvnH2Fsw7xwAvIhNHOdnIjOQTwOc8Vd0oGOsiRcGMGoBFlUD6qtYawRUoQdKH9ysxesZ9juFElt1Jw/7A=="
       },
+      "WhalesExchangeBackend.SharedLib": {
+        "type": "Project",
+        "dependencies": {
+          "WhalesSecret.ScriptApiLib": "[1.0.1.20, )"
+        }
+      },
       "Microsoft.Data.Sqlite.Core": {
         "type": "CentralTransitive",
         "requested": "[10.0.0, )",
