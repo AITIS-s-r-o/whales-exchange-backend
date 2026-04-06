@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json.Serialization;
 
 namespace WhalesExchangeBackend.Models;
@@ -7,7 +8,7 @@ namespace WhalesExchangeBackend.Models;
 /// </summary>
 public class SwapResponse
 {
-    /// <summary><c>true</c>> if this is a reverse swap (LN → BTC), <c>false</c> if submarine (BTC -> LN).</summary>
+    /// <summary><c>true</c> if this is a reverse swap (LN → BTC), <c>false</c> if submarine (BTC -> LN).</summary>
     [JsonPropertyName("reverse")]
     public bool Reverse { get; }
 
@@ -70,7 +71,7 @@ public class SwapResponse
     /// <summary>
     /// Initializes a new instance of the <see cref="SwapResponse"/> class.
     /// </summary>
-    /// <param name="reverse"><c>true</c>> if this is a reverse swap (LN → BTC), <c>false</c> if submarine (BTC -> LN).</param>
+    /// <param name="reverse"><c>true</c> if this is a reverse swap (LN → BTC), <c>false</c> if submarine (BTC -> LN).</param>
     /// <param name="asset">Asset being used.</param>
     /// <param name="invoice">Lightning invoice for the swap.</param>
     /// <param name="feeInvoice">Lightning invoice for the provider's fees.</param>
@@ -105,5 +106,30 @@ public class SwapResponse
         this.PrivateKey = privateKey;
         this.RedeemScript = redeemScript;
         this.LockupAddress = lockupAddress;
+    }
+
+    /// <inheritdoc/>
+    public override string ToString()
+    {
+        return string.Format
+        (
+            CultureInfo.InvariantCulture,
+            "[{0}={1},{2}=`{3}`,{4}=`{5}`,{6}=`{7}`,{8}={9},{10}={11},{12}={13},{14}={15},{16}={17},{18}=`{19}`,{20}=`{21}`,{22}=`{23}`,{24}=`{25}`,{26}=`{27}`,{28}=`{29}`]",
+            nameof(this.Reverse), this.Reverse,
+            nameof(this.Asset), this.Asset,
+            nameof(this.Invoice), this.Invoice,
+            nameof(this.FeeInvoice), this.FeeInvoice,
+            nameof(this.TimeoutBlockHeight), this.TimeoutBlockHeight,
+            nameof(this.SendAmountSats), this.SendAmountSats,
+            nameof(this.ReceiveAmountSats), this.ReceiveAmountSats,
+            nameof(this.OnChainAmountSats), this.OnChainAmountSats,
+            nameof(this.ExpectedAmountSats), this.ExpectedAmountSats,
+            nameof(this.Bip21), this.Bip21,
+            nameof(this.Address), this.Address,
+            nameof(this.Preimage), this.Preimage,
+            nameof(this.PrivateKey), this.PrivateKey,
+            nameof(this.RedeemScript), this.RedeemScript,
+            nameof(this.LockupAddress), this.LockupAddress
+        );
     }
 }
