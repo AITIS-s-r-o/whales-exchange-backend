@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json.Serialization;
 
@@ -6,6 +7,7 @@ namespace WhalesExchangeBackend.Models;
 /// <summary>
 /// Request to create a new swap.
 /// </summary>
+[SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by JSON deserializer.")]
 internal class CreateSwapRequest
 {
     /// <summary>String identifier of the forward swap type.</summary>
