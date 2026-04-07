@@ -22,18 +22,6 @@ namespace WhalesExchangeBackend.Controllers;
 [SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by ASP.NET Core DI.")]
 internal class RestApiController : InternalControllerBase
 {
-    /// <summary>String identifier of the forward swap type.</summary>
-    private const string ForwardSwapTypeStr = "submarine";
-
-    /// <summary>String identifier of the order side for forward swaps.</summary>
-    private const string ForwardSwapOrderSideStr = "sell";
-
-    /// <summary>String identifier of the reverse swap type.</summary>
-    private const string ReverseSwapTypeStr = "reversesubmarine";
-
-    /// <summary>String identifier of the order side for reverse swaps.</summary>
-    private const string ReverseSwapOrderSideStr = "buy";
-
     /// <summary>Instance logger.</summary>
     private readonly WsLogger log;
 
@@ -108,26 +96,13 @@ internal class RestApiController : InternalControllerBase
     /// <summary>
     /// Action that is executed when a swap is requested.
     /// </summary>
-    /// <param name="type">Either <see cref="ForwardSwapTypeStr"/> or <see cref="ReverseSwapTypeStr"/>.</param>
-    /// <param name="pairId">ID of the assets being swapped. This should be set to <c>BTC/BTC</c>.</param>
-    /// <param name="orderSide"><see cref="ForwardSwapOrderSideStr"/> if <paramref name="type"/> is <see cref="ForwardSwapTypeStr"/>, <see cref="ReverseSwapOrderSideStr"/> if it is
-    /// <see cref="ReverseSwapOrderSideStr"/>.</param>
-    /// <param name="invoiceAmount">Amount the user has to pay in satoshis for reverse swaps, or <c>null</c> for forward swaps.</param>
-    /// <param name="invoice">Lightning invoice for forward swaps, or <c>null</c> for reverse swaps.</param>
-    /// <param name="expectedAmount">Amount the user expects to receive in satoshis.</param>
-    /// <param name="preimageHash">Hash of the preimage.</param>
-    /// <param name="claimPublicKey">Public key that will be used to claim the on-chain funds, or <c>null</c> for forward swaps.</param>
-    /// <param name="refundPublicKey">Public key that will be used for the refund of the on-chain funds if a forward swap fails, or <c>null</c> for reverse swaps.</param>
-    /// <param name="pairHash">Public key of the selected swap provider.</param>
+    /// <param name="request">Swap request.</param>
     /// <returns>Result of the action method.</returns>
     [HttpPost]
     [Route("/createswap")]
-    public async Task<IActionResult> CreateSwapAsync(string type, string pairId, string orderSide, long? invoiceAmount, string? invoice, long expectedAmount, string preimageHash,
-        string? claimPublicKey, string? refundPublicKey, string pairHash)
+    public async Task<IActionResult> CreateSwapAsync([FromBody] CreateSwapRequest request)
     {
-        this.log.Debug($"* {nameof(type)}='{type}',{nameof(pairId)}='{pairId}',{orderSide}='{orderSide}',{nameof(invoiceAmount)}={invoiceAmount},{nameof(invoice)}='{invoice}',{
-            nameof(expectedAmount)}={expectedAmount},{nameof(preimageHash)}='{preimageHash}',{nameof(pairHash)}='{pairHash}',{nameof(claimPublicKey)}='{claimPublicKey}',{
-            nameof(refundPublicKey)}='{refundPublicKey}'");
+        this.log.Debug($"* {nameof(request)}='{request}'");
 
         HttpContext? context = this.httpContextAccessor.HttpContext;
         if (context is null)
@@ -136,7 +111,7 @@ internal class RestApiController : InternalControllerBase
         IActionResult result;
         CreateSwapResponse response;
 
-        string providerPk = pairHash;
+        string providerPk = request.PairHash;
         DbSwapProvider? provider;
         try
         {
@@ -165,28 +140,28 @@ internal class RestApiController : InternalControllerBase
 
         try
         {
-            if ((type == ForwardSwapTypeStr) && (orderSide == ForwardSwapOrderSideStr))
+            if ((request.Type == CreateSwapRequest.ForwardSwapTypeStr) && (request.OrderSide == CreateSwapRequest.ForwardSwapOrderSideStr))
             {
-                if (invoice is not null)
+                if (request.Invoice is not null)
                 {
-                    if (refundPublicKey is not null)
+                    if (request.RefundPublicKey is not null)
                     {
                         response = new("Forward swaps are not supported at the moment.");
                     }
-                    else response = new($"'{nameof(refundPublicKey)}' is mandatory for forward swaps.");
+                    else response = new($"'{nameof(request.RefundPublicKey)}' is mandatory for forward swaps.");
                 }
-                else response = new($"'{nameof(invoice)}' is mandatory for forward swaps.");
+                else response = new($"'{nameof(request.Invoice)}' is mandatory for forward swaps.");
             }
-            else if ((type == ReverseSwapTypeStr) && (orderSide == ReverseSwapOrderSideStr))
+            else if ((request.Type == CreateSwapRequest.ReverseSwapTypeStr) && (request.OrderSide == CreateSwapRequest.ReverseSwapOrderSideStr))
             {
-                if (invoiceAmount is not null)
+                if (request.InvoiceAmount is not null)
                 {
-                    if (claimPublicKey is not null)
+                    if (request.ClaimPublicKey is not null)
                     {
                         long prepaymentSats = 2 * provider.MiningFeeReverseSat;
-                        ElectrumSwapData electrumSwapData = await this.electrumRpcClient.ReverseSwapAsync(lnAmountSats: invoiceAmount.Value, onChainAmountSats: expectedAmount,
-                            prepaymentSats: prepaymentSats, preimageHash: preimageHash, claimPk: claimPublicKey, providerPk: providerPk, context.RequestAborted)
-                            .ConfigureAwait(false);
+                        ElectrumSwapData electrumSwapData = await this.electrumRpcClient.ReverseSwapAsync(lnAmountSats: request.InvoiceAmount.Value,
+                            onChainAmountSats: request.ExpectedAmount, prepaymentSats: prepaymentSats, preimageHash: request.PreimageHash, claimPk: request.ClaimPublicKey,
+                            providerPk: providerPk, context.RequestAborted).ConfigureAwait(false);
 
                         SwapResponse swapResponse = new(reverse: true, asset: "BTC", invoice: electrumSwapData.Invoice, feeInvoice: electrumSwapData.FeeInvoice,
                             timeoutBlockHeight: electrumSwapData.Locktime, sendAmountSats: electrumSwapData.LightningAmountSats,
@@ -194,11 +169,11 @@ internal class RestApiController : InternalControllerBase
 
                         response = new(swapResponse);
                     }
-                    else response = new($"'{nameof(claimPublicKey)}' is mandatory for reverse swaps.");
+                    else response = new($"'{nameof(request.ClaimPublicKey)}' is mandatory for reverse swaps.");
                 }
-                else response = new($"'{nameof(invoiceAmount)}' is mandatory for reverse swaps.");
+                else response = new($"'{nameof(request.InvoiceAmount)}' is mandatory for reverse swaps.");
             }
-            else response = new($"Unknown swap type '{type}' and order side '{orderSide}' combination.");
+            else response = new($"Unknown swap type '{request.Type}' and order side '{request.OrderSide}' combination.");
         }
         catch (Exception e)
         {
