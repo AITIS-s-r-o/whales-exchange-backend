@@ -166,9 +166,9 @@ internal class RestApiController : InternalControllerBase
                 {
                     if (request.ClaimPublicKey is not null)
                     {
-                        swapId = await this.swapRepository.InsertReverseAsync(providerPubkey: providerPk, amountToPaySats: invoiceAmount.Value,
-                            amountToReceiveSats: expectedAmount).ConfigureAwait(false); 
-                        
+                        swapId = await this.swapRepository.InsertReverseAsync(providerPubkey: providerPk, amountToPaySats: request.InvoiceAmount.Value,
+                            amountToReceiveSats: request.ExpectedAmount).ConfigureAwait(false);
+
                         long prepaymentSats = 2 * provider.MiningFeeReverseSat;
                         ElectrumSwapData electrumSwapData = await this.electrumRpcClient.ReverseSwapAsync(lnAmountSats: request.InvoiceAmount.Value,
                             onChainAmountSats: request.ExpectedAmount, prepaymentSats: prepaymentSats, preimageHash: request.PreimageHash, claimPk: request.ClaimPublicKey,
