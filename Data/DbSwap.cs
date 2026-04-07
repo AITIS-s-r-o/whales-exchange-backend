@@ -27,7 +27,7 @@ internal class DbSwap
     /// <summary>Amount the client paid or should pay (including all fees) in satoshis.</summary>
     public long AmountToPaySats { get; set; }
 
-    /// <summary>Amount the client reveived or should receive in satoshis.</summary>
+    /// <summary>Amount the client received or should receive in satoshis.</summary>
     public long AmountToReceiveSats { get; set; }
 
     /// <summary>Address to which the reverse swap funding transaction spends the funds to be claimed by the client, or <c>null</c> for forward swaps.</summary>
@@ -83,7 +83,7 @@ internal class DbSwap
     /// <param name="isForward"><c>true</c> for forward swaps, <c>false</c> for reverse swaps.</param>
     /// <param name="status">Status of the swap.</param>
     /// <param name="amountToPaySats">Amount the client paid or should pay (including all fees) in satoshis.</param>
-    /// <param name="amountToReceiveSats">Amount the client reveived or should receive in satoshis.</param>
+    /// <param name="amountToReceiveSats">Amount the client received or should receive in satoshis.</param>
     /// <param name="lockupAddress">Address to which the reverse swap funding transaction spends the funds to be claimed by the client, or <c>null</c> for forward swaps.</param>
     /// <param name="lockupOutputIndex">Index of the output in the funding transaction that spends to the <see cref="LockupAddress"/>, or <c>null</c> for forward swaps.</param>
     /// <param name="fundingTxId">ID of the funding transaction, or <c>null</c> if not funded yet.</param>
