@@ -113,7 +113,7 @@ internal class ElectrumRpcClient
 
             if ((rpcResponse is null) || (rpcResponse.Result is null))
             {
-                this.log.Debug($"Received response was '{responseJson}'");
+                this.log.Debug($"Received response was '{responseJson}'.");
                 throw new OperationFailedException($"Calling Electrum RPC method '{method}' produced null response.");
             }
 
@@ -124,11 +124,13 @@ internal class ElectrumRpcClient
         }
         catch (OperationFailedException)
         {
+            this.log.Debug("$<EXCEPTION_FAILURE>");
             throw;
         }
         catch (ElectrumRpcException e)
         {
             this.log.Debug($"JSON RPC requested for method '{method}' failed with exception: {e}");
+            this.log.Debug("$<EXCEPTION_ELECTRUM>");
             throw;
         }
         catch (Exception e)
