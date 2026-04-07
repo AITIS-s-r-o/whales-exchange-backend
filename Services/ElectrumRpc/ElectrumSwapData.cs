@@ -39,9 +39,9 @@ internal class ElectrumSwapData
     [JsonPropertyName("lockup_address")]
     public string LockupAddress { get; }
 
-    /// <summary>Address and amount to which the funding UTXO should be claimed.</summary>
+    /// <summary>Address and amount to which the funding UTXO should be claimed, or <c>null</c> if not set.</summary>
     [JsonPropertyName("claim_to_output")]
-    public ClaimToOutput ClaimToOutput { get; }
+    public ClaimToOutput? ClaimToOutput { get; }
 
     /// <summary>Main swap LN invoice.</summary>
     [JsonPropertyName("invoice")]
@@ -61,11 +61,11 @@ internal class ElectrumSwapData
     /// <param name="redeemScriptHex">Full redeem script of the HTLC as hex.</param>
     /// <param name="prepayHashHex">Hash of the prepayment invoice as hex.</param>
     /// <param name="lockupAddress">On-chain lockup address (P2WSH address where funds will be sent).</param>
-    /// <param name="claimToOutput">Address and amount to which the funding UTXO should be claimed.</param>
+    /// <param name="claimToOutput">Address and amount to which the funding UTXO should be claimed, or <c>null</c> if not set</param>
     /// <param name="invoice">Main swap LN invoice.</param>
     /// <param name="feeInvoice">LN invoice to cover swap provider fees.</param>
     public ElectrumSwapData(bool isReverse, long locktime, long onChainAmountSats, long lightningAmountSats, string redeemScriptHex, string prepayHashHex, string lockupAddress,
-        ClaimToOutput claimToOutput, string invoice, string feeInvoice)
+        ClaimToOutput? claimToOutput, string invoice, string feeInvoice)
     {
         this.IsReverse = isReverse;
         this.Locktime = locktime;
