@@ -19,27 +19,34 @@ internal class DbSwap
     public string ProviderPubkey { get; set; }
 
     /// <summary><c>true</c> for forward swaps, <c>false</c> for reverse swaps.</summary>
+    /// <remarks>The setter is needed for the serializer.</remarks>
     public bool IsForward { get; set; }
 
     /// <summary>Status of the swap.</summary>
+    /// <remarks>The setter is needed for the serializer.</remarks>
     public SwapStatus Status { get; set; }
 
     /// <summary>Amount the client paid or should pay (including all fees) in satoshis.</summary>
     public long AmountToPaySats { get; set; }
 
     /// <summary>Amount the client received or should receive in satoshis.</summary>
+    /// <remarks>The setter is needed for the serializer.</remarks>
     public long AmountToReceiveSats { get; set; }
 
     /// <summary>Address to which the reverse swap funding transaction spends the funds to be claimed by the client, or <c>null</c> for forward swaps.</summary>
+    /// <remarks>The setter is needed for the serializer.</remarks>
     public string? LockupAddress { get; set; }
 
     /// <summary>Index of the output in the funding transaction that spends to the <see cref="LockupAddress"/>, or <c>null</c> for forward swaps.</summary>
+    /// <remarks>The setter is needed for the serializer.</remarks>
     public int? LockupOutputIndex { get; set; }
 
     /// <summary>ID of the funding transaction, or <c>null</c> if not funded yet.</summary>
+    /// <remarks>The setter is needed for the serializer.</remarks>
     public string? FundingTxId { get; set; }
 
     /// <summary>Block height after which the swap is considered expired, or <c>null</c> if not set yet.</summary>
+    /// <remarks>The setter is needed for the serializer.</remarks>
     public long? TimeoutBlockHeight { get; set; }
 
     /// <summary>UTC time when the swap was created by the user.</summary>
