@@ -90,7 +90,8 @@ internal static class ProviderPresenceCalculator
     {
         // Round to the start of a next time slot.
         int minute = prevLastSeen.Minute - (prevLastSeen.Minute % PresenceSlotMinutes) + PresenceSlotMinutes;
-        prevLastSeenSlotEnd = new(year: prevLastSeen.Year, month: prevLastSeen.Month, day: prevLastSeen.Day, hour: prevLastSeen.Hour, minute: minute, second: 0, DateTimeKind.Utc);
+        prevLastSeenSlotEnd = new DateTime(year: prevLastSeen.Year, month: prevLastSeen.Month, day: prevLastSeen.Day, hour: prevLastSeen.Hour, minute: 0, second: 0,
+            DateTimeKind.Utc).AddMinutes(minute);
 
         minute = newLastSeen.Minute - (newLastSeen.Minute % PresenceSlotMinutes);
         newLastSeenSlotStart = new(year: newLastSeen.Year, month: newLastSeen.Month, day: newLastSeen.Day, hour: newLastSeen.Hour, minute: minute, second: 0, DateTimeKind.Utc);
