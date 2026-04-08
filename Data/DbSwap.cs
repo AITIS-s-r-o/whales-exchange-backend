@@ -54,19 +54,31 @@ internal class DbSwap
     public DateTime CreatedTime { get; set; }
 
     /// <summary>UTC time when the swap was created by the user, or <c>null</c> if not accepted yet.</summary>
-    /// <remarks>The setter is needed for the serializer.</remarks>
+    /// <remarks>
+    /// This time value is set by this backend.
+    /// <para>The setter is needed for the serializer.</para>
+    /// </remarks>
     public DateTime? AcceptedTime { get; set; }
 
     /// <summary>UTC time when the funding Bitcoin transaction has been broadcasted by the provider, or <c>null</c> if not funded yet.</summary>
-    /// <remarks>The setter is needed for the serializer.</remarks>
+    /// <remarks>
+    /// This time value is set by this backend.
+    /// <para>The setter is needed for the serializer.</para>
+    /// </remarks>
     public DateTime? FundingTime { get; set; }
 
     /// <summary>UTC time when the funding Bitcoin transaction output was spent by the client, or <c>null</c> if not spent yet.</summary>
-    /// <remarks>The setter is needed for the serializer.</remarks>
+    /// <remarks>
+    /// This time value is set by this backend.
+    /// <para>The setter is needed for the serializer.</para>
+    /// </remarks>
     public DateTime? SpentTime { get; set; }
 
     /// <summary>UTC time since when the swap is considered as failed, or <c>null</c> if the swap is not failed.</summary>
-    /// <remarks>The setter is needed for the serializer.</remarks>
+    /// <remarks>
+    /// This time value is set by this backend.
+    /// <para>The setter is needed for the serializer.</para>
+    /// </remarks>
     public DateTime? FailTime { get; set; }
 
     /// <summary>Provider of the swap.</summary>
