@@ -1,4 +1,17 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="appsettings.Debug.json" />
+    <File Path="appsettings.json" />
+    <File Path="appsettings.Release.json" />
+    <File Path="config.secret.debug.json" />
+    <File Path="config.secret.json" />
+    <File Path="config.secret.json.template" />
+    <File Path="config.secret.release.json" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="exclusion.dic" />
+    <File Path="global.json" />
+  </Folder>
   <Project Path="SharedLib/WhalesExchangeBackend.SharedLib.csproj" Id="439b66a9-bc92-4f55-961d-41e0bc472cdf" />
   <Project Path="SharedLibUnitTests/WhalesExchangeBackend.SharedLibUnitTests.csproj" Id="1de537fe-24ac-48ed-bb79-630e947aca49" />
   <Project Path="WhalesExchangeBackend.csproj" Id="8031d32a-451f-4c0f-af17-8bed17b22c8e" />
