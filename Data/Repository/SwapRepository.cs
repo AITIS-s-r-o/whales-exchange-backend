@@ -1,8 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using WhalesExchangeBackend.Exceptions;
 using WhalesExchangeBackend.Models;
@@ -31,7 +29,7 @@ internal class SwapRepository : RepositoryBase
     /// </summary>
     /// <param name="providerPubkey">Public key of the swap provider as a hex string.</param>
     /// <param name="amountToPaySats">Amount the client paid or should pay (including all fees) in satoshis.</param>
-    /// <param name="amountToReceiveSats">Amount the client reveived or should receive in satoshis.</param>
+    /// <param name="amountToReceiveSats">Amount the client received or should receive in satoshis.</param>
     /// <returns>ID of the database record.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
     public async Task<long> InsertReverseAsync(string providerPubkey, long amountToPaySats, long amountToReceiveSats)
@@ -56,8 +54,8 @@ internal class SwapRepository : RepositoryBase
 
             DateTime now = DateTime.UtcNow;
             DbSwap dbRecord = new(id: 0, providerPubkey: providerPubkey, isForward: false, SwapStatus.Created, amountToPaySats: amountToPaySats,
-            amountToReceiveSats: amountToReceiveSats, lockupAddress: null, lockupOutputIndex: null, fundingTxId: null, timeoutBlockHeight: null, now, acceptedTime: null,
-            fundingTime: null, spentTime: null, failTime: null, dbSwapProvider);
+                amountToReceiveSats: amountToReceiveSats, lockupAddress: null, lockupOutputIndex: null, fundingTxId: null, timeoutBlockHeight: null, createdTime: now,
+                acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, dbSwapProvider);
 
             _ = db.Swaps.Add(dbRecord);
             _ = db.SaveChanges();
