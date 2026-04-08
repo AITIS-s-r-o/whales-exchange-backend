@@ -79,7 +79,7 @@ internal static class ProviderPresenceCalculator
     }
 
     /// <summary>
-    /// Based on previous and new last seen timestamps, calculates the end of the slot when the provider was previously seen and the start of the slot when the provider was newly
+    /// Based on previous and new last-seen timestamps, calculates the end of the slot when the provider was previously seen and the start of the slot when the provider was newly
     /// seen.
     /// </summary>
     /// <param name="prevLastSeen">UTC time when the provider was last seen according to the database.</param>
