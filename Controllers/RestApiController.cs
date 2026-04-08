@@ -166,9 +166,9 @@ internal class RestApiController : InternalControllerBase
                 {
                     if (request.ClaimPublicKey is not null)
                     {
-                        swapId = await this.swapRepository.InsertReverseAsync(providerPubkey: providerPk, amountToPaySats: invoiceAmount.Value,
-                            amountToReceiveSats: expectedAmount).ConfigureAwait(false); 
-                        
+                        swapId = await this.swapRepository.InsertReverseAsync(providerPubkey: providerPk, amountToPaySats: request.InvoiceAmount.Value,
+                            amountToReceiveSats: request.ExpectedAmount).ConfigureAwait(false);
+
                         long prepaymentSats = 2 * provider.MiningFeeReverseSat;
                         ElectrumSwapData electrumSwapData = await this.electrumRpcClient.ReverseSwapAsync(lnAmountSats: request.InvoiceAmount.Value,
                             onChainAmountSats: request.ExpectedAmount, prepaymentSats: prepaymentSats, preimageHash: request.PreimageHash, claimPk: request.ClaimPublicKey,
@@ -176,7 +176,8 @@ internal class RestApiController : InternalControllerBase
 
                         SwapResponse swapResponse = new(reverse: true, asset: "BTC", invoice: electrumSwapData.Invoice, feeInvoice: electrumSwapData.FeeInvoice,
                             timeoutBlockHeight: electrumSwapData.Locktime, sendAmountSats: electrumSwapData.LightningAmountSats,
-                            receiveAmountSats: electrumSwapData.OnChainAmountSats, redeemScript: electrumSwapData.RedeemScriptHex, lockupAddress: electrumSwapData.LockupAddress);
+                            receiveAmountSats: request.ExpectedAmount, onChainAmountSats: electrumSwapData.OnChainAmountSats, redeemScript: electrumSwapData.RedeemScriptHex,
+                            lockupAddress: electrumSwapData.LockupAddress);
 
                         response = new(swapResponse);
 
@@ -198,7 +199,14 @@ internal class RestApiController : InternalControllerBase
 
         if (failed && (swapId is not null))
         {
-            await this.swapRepository.MarkSwapRejectedAsync(swapId.Value).ConfigureAwait(false);
+            try
+            {
+                await this.swapRepository.MarkSwapRejectedAsync(swapId.Value).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                this.log.Error($"Exception occurred while marking swap ID {swapId} as rejected: {e}");
+            }
         }
 
         result = this.Ok(response);
