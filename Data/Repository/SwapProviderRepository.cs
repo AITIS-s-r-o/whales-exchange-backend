@@ -80,10 +80,8 @@ internal class SwapProviderRepository : RepositoryBase
                 dbRecord.MaxAmountReverseSat = maxAmountReverseSat;
                 dbRecord.MiningFeeForwardSat = miningFeeForwardSat;
                 dbRecord.MiningFeeReverseSat = miningFeeReverseSat;
-                dbRecord.SlotsPresent += ProviderPresenceCalculator.CalculatePresentSlots(prevLastSeen: dbRecord.LastSeen, newLastSeen: lastSeen,
-                    serverStartTime: serverStartTime);
-                dbRecord.SlotsMissed += ProviderPresenceCalculator.CalculateMissedSlots(prevLastSeen: dbRecord.LastSeen, newLastSeen: lastSeen,
-                    serverStartTime: serverStartTime);
+                dbRecord.SlotsPresent += ProviderPresenceCalculator.CalculatePresentSlots(prevLastSeen: dbRecord.LastSeen, newLastSeen: lastSeen, serverStartTime: serverStartTime);
+                dbRecord.SlotsMissed += ProviderPresenceCalculator.CalculateMissedSlots(prevLastSeen: dbRecord.LastSeen, newLastSeen: lastSeen, serverStartTime: serverStartTime);
                 dbRecord.LastSeen = lastSeen;
 
                 _ = db.SwapProviders.Update(dbRecord);

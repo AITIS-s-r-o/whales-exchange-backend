@@ -92,9 +92,8 @@ internal class DbSwapProvider
     /// <param name="miningFeeReverseSat">Mining fee for reverse swaps in satoshis.</param>
     /// <param name="slotsPresent">Total number of slots that the provider was present.</param>
     /// <param name="slotsMissed">Total number of slots that the provider missed.</param>
-    public DbSwapProvider(string pubkey, DateTime firstSeen, DateTime lastSeen, int poWBits, decimal percentageFeeForward, decimal percentageFeeReverse,
-        long minAmountForwardSat, long minAmountReverseSat, long maxAmountForwardSat, long maxAmountReverseSat, long miningFeeForwardSat, long miningFeeReverseSat,
-        int slotsPresent, int slotsMissed)
+    public DbSwapProvider(string pubkey, DateTime firstSeen, DateTime lastSeen, int poWBits, decimal percentageFeeForward, decimal percentageFeeReverse, long minAmountForwardSat,
+        long minAmountReverseSat, long maxAmountForwardSat, long maxAmountReverseSat, long miningFeeForwardSat, long miningFeeReverseSat, int slotsPresent, int slotsMissed)
     {
         this.Pubkey = pubkey;
         this.FirstSeen = firstSeen;
