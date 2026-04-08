@@ -88,6 +88,7 @@ internal static class ProviderPresenceCalculator
     /// <param name="newLastSeenSlotStart">This is filled with the start of the slot during which the provider was last seen.</param>
     private static void CalculateSlotTimes(DateTime prevLastSeen, DateTime newLastSeen, out DateTime prevLastSeenSlotEnd, out DateTime newLastSeenSlotStart)
     {
+        // Round to the start of a next time slot.
         int minute = prevLastSeen.Minute - (prevLastSeen.Minute % PresenceSlotMinutes) + PresenceSlotMinutes;
         prevLastSeenSlotEnd = new(year: prevLastSeen.Year, month: prevLastSeen.Month, day: prevLastSeen.Day, hour: prevLastSeen.Hour, minute: minute, second: 0, DateTimeKind.Utc);
 
