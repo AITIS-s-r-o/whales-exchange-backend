@@ -89,11 +89,9 @@ internal static class ProviderPresenceCalculator
     private static void CalculateSlotTimes(DateTime prevLastSeen, DateTime newLastSeen, out DateTime prevLastSeenSlotEnd, out DateTime newLastSeenSlotStart)
     {
         int minute = prevLastSeen.Minute - (prevLastSeen.Minute % PresenceSlotMinutes) + PresenceSlotMinutes;
-        prevLastSeenSlotEnd = new(year: prevLastSeen.Year, month: prevLastSeen.Month, day: prevLastSeen.Day, hour: prevLastSeen.Hour, minute: minute, second: 0,
-            DateTimeKind.Utc);
+        prevLastSeenSlotEnd = new(year: prevLastSeen.Year, month: prevLastSeen.Month, day: prevLastSeen.Day, hour: prevLastSeen.Hour, minute: minute, second: 0, DateTimeKind.Utc);
 
         minute = newLastSeen.Minute - (newLastSeen.Minute % PresenceSlotMinutes);
-        newLastSeenSlotStart = new(year: newLastSeen.Year, month: newLastSeen.Month, day: newLastSeen.Day, hour: newLastSeen.Hour, minute: minute, second: 0,
-            DateTimeKind.Utc);
+        newLastSeenSlotStart = new(year: newLastSeen.Year, month: newLastSeen.Month, day: newLastSeen.Day, hour: newLastSeen.Hour, minute: minute, second: 0, DateTimeKind.Utc);
     }
 }
