@@ -33,15 +33,15 @@ internal class DbSwap
     /// <remarks>The setter is needed for the serializer.</remarks>
     public long AmountToReceiveSats { get; set; }
 
-    /// <summary>Address to which the reverse swap funding transaction spends the funds to be claimed by the client, or <c>null</c> for forward swaps.</summary>
+    /// <summary>Bitcoin address to which the reverse swap funding Bitcoin transaction spends the funds to be claimed by the client, or <c>null</c> for forward swaps.</summary>
     /// <remarks>The setter is needed for the serializer.</remarks>
     public string? LockupAddress { get; set; }
 
-    /// <summary>Index of the output in the funding transaction that spends to the <see cref="LockupAddress"/>, or <c>null</c> for forward swaps.</summary>
+    /// <summary>Index of the output in the funding Bitcoin transaction that spends to the <see cref="LockupAddress"/>, or <c>null</c> for forward swaps.</summary>
     /// <remarks>The setter is needed for the serializer.</remarks>
     public int? LockupOutputIndex { get; set; }
 
-    /// <summary>ID of the funding transaction, or <c>null</c> if not funded yet.</summary>
+    /// <summary>ID of the funding Bitcoin transaction, or <c>null</c> if not funded yet.</summary>
     /// <remarks>The setter is needed for the serializer.</remarks>
     public string? FundingTxId { get; set; }
 
@@ -57,11 +57,11 @@ internal class DbSwap
     /// <remarks>The setter is needed for the serializer.</remarks>
     public DateTime? AcceptedTime { get; set; }
 
-    /// <summary>UTC time when the funding transaction has been broadcasted by the provider, or <c>null</c> if not funded yet.</summary>
+    /// <summary>UTC time when the funding Bitcoin transaction has been broadcasted by the provider, or <c>null</c> if not funded yet.</summary>
     /// <remarks>The setter is needed for the serializer.</remarks>
     public DateTime? FundingTime { get; set; }
 
-    /// <summary>UTC time when the funding transaction output was spent by the client, or <c>null</c> if not spent yet.</summary>
+    /// <summary>UTC time when the funding Bitcoin transaction output was spent by the client, or <c>null</c> if not spent yet.</summary>
     /// <remarks>The setter is needed for the serializer.</remarks>
     public DateTime? SpentTime { get; set; }
 
@@ -91,14 +91,15 @@ internal class DbSwap
     /// <param name="status">Status of the swap.</param>
     /// <param name="amountToPaySats">Amount the client paid or should pay (including all fees) in satoshis.</param>
     /// <param name="amountToReceiveSats">Amount the client received or should receive in satoshis.</param>
-    /// <param name="lockupAddress">Address to which the reverse swap funding transaction spends the funds to be claimed by the client, or <c>null</c> for forward swaps.</param>
-    /// <param name="lockupOutputIndex">Index of the output in the funding transaction that spends to the <see cref="LockupAddress"/>, or <c>null</c> for forward swaps.</param>
-    /// <param name="fundingTxId">ID of the funding transaction, or <c>null</c> if not funded yet.</param>
+    /// <param name="lockupAddress">Bitcoin address to which the reverse swap funding Bitcoin transaction spends the funds to be claimed by the client, or <c>null</c> for forward
+    /// swaps.</param>
+    /// <param name="lockupOutputIndex">Index of the output in the funding Bitcoin transaction that spends to the <see cref="LockupAddress"/>, or <c>null</c> for forward swaps.</param>
+    /// <param name="fundingTxId">ID of the funding Bitcoin transaction, or <c>null</c> if not funded yet.</param>
     /// <param name="timeoutBlockHeight">Block height after which the swap is considered expired, or <c>null</c> if not set yet.</param>
     /// <param name="createdTime">UTC time when the swap was created by the user.</param>
     /// <param name="acceptedTime">UTC time when the swap was created by the user, or <c>null</c> if not accepted yet.</param>
-    /// <param name="fundingTime">UTC time when the funding transaction has been broadcasted by the provider, or <c>null</c> if not funded yet.</param>
-    /// <param name="spentTime">UTC time when the funding transaction output was spent by the client, or <c>null</c> if not spent yet.</param>
+    /// <param name="fundingTime">UTC time when the funding Bitcoin transaction has been broadcasted by the provider, or <c>null</c> if not funded yet.</param>
+    /// <param name="spentTime">UTC time when the funding Bitcoin transaction output was spent by the client, or <c>null</c> if not spent yet.</param>
     /// <param name="failTime">UTC time since when the swap is considered as failed, or <c>null</c> if the swap is not failed.</param>
     /// <param name="provider">Provider of the swap.</param>
     public DbSwap(long id, string providerPubkey, bool isForward, SwapStatus status, long amountToPaySats, long amountToReceiveSats, string? lockupAddress, int? lockupOutputIndex,
