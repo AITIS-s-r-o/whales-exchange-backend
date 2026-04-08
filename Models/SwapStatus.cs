@@ -4,9 +4,13 @@ namespace WhalesExchangeBackend.Models;
 /// Status of the swap.
 /// </summary>
 /// <remarks>
-/// Success states have values less than <c>100</c>. Error state values are between <c>100</c> and <c>199</c> for provider failures, between <c>200</c> and <c>299</c> for client
-/// failures, and between <c>300</c> and <c>399</c> for faults that cannot be assigned to either side due to lack of information. When the hundreds parts is removed (i.e. code
-/// modulo <c>100</c>), the status values are ordered chronologically.
+/// <list type="bullet">
+/// <item>Success states have values less than <c>100</c>.</item>
+/// <item>Error state values are between <c>100</c> and <c>199</c> for provider failures.</item>
+/// <item>Error state values are between <c>200</c> and <c>299</c> for client failures.</item>
+/// <item>Error state values are between <c>300</c> and <c>399</c> for faults that cannot be assigned to either side due to lack of information.</item>
+/// </list>
+/// Note that when the hundreds parts is removed (i.e. code modulo <c>100</c>), the status values are ordered chronologically.
 /// </remarks>
 internal enum SwapStatus
 {
