@@ -11,7 +11,7 @@ using WhalesExchangeBackend.Data;
 namespace WhalesExchangeBackend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260406073611_InitialCreate")]
+    [Migration("20260408084627_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -90,6 +90,9 @@ namespace WhalesExchangeBackend.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("FirstSeen")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("LastSeen")
                         .HasColumnType("TEXT");
 
@@ -120,6 +123,12 @@ namespace WhalesExchangeBackend.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int>("PoWBits")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SlotsMissed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SlotsPresent")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Pubkey");

@@ -87,6 +87,9 @@ namespace WhalesExchangeBackend.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("FirstSeen")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("LastSeen")
                         .HasColumnType("TEXT");
 
@@ -117,6 +120,12 @@ namespace WhalesExchangeBackend.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int>("PoWBits")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SlotsMissed")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SlotsPresent")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Pubkey");

@@ -4,9 +4,9 @@
     "net10.0": {
       "Microsoft.CodeAnalysis.Analyzers": {
         "type": "Direct",
-        "requested": "[3.11.0, )",
-        "resolved": "3.11.0",
-        "contentHash": "v/EW3UE8/lbEYHoC2Qq7AR/DnmvpgdtAMndfQNmpuIMx/Mto8L5JnuCfdBYtgvalQOtfNCnxFejxuRrryvUTsg=="
+        "requested": "[5.3.0, )",
+        "resolved": "5.3.0",
+        "contentHash": "KuLhbZwB0L8JikL86AE5VWEp3RLNjIcp+j8yz9EJ/UBgRz4+qDEjHg/tluRFbpYpD/e37BqaaNFbQ0vqawBwWQ=="
       },
       "Microsoft.EntityFrameworkCore.Design": {
         "type": "Direct",
@@ -82,7 +82,7 @@
         "type": "Direct",
         "requested": "[1.0.1.20, )",
         "resolved": "1.0.1.20",
-        "contentHash": "A/Y9Fc40lZd9drY38eTtGNrjkPbHtsSaVMnRfzkX329DCvoZyBPgnWgoPikiJv9Zwz4uH1S8dDklwK2nduYHbQ==",
+        "contentHash": "uIXZLxfYWJnJJ4o5e7MfTxa/fw82nJyKo7TXeWMFKRBXGXM9OEv8hH1lOp4G47IYxnGvWY62xaF3n1rhQb6nAg==",
         "dependencies": {
           "Autofac": "8.2.0",
           "LZMA-SDK": "22.1.1",
@@ -399,6 +399,12 @@
         "type": "Transitive",
         "resolved": "9.0.0",
         "contentHash": "U9msthvnH2Fsw7xwAvIhNHOdnIjOQTwOc8Vd0oGOsiRcGMGoBFlUD6qtYawRUoQdKH9ysxesZ9juFElt1Jw/7A=="
+      },
+      "whalesexchangebackend.sharedlib": {
+        "type": "Project",
+        "dependencies": {
+          "WhalesSecret.ScriptApiLib": "[1.0.1.20, )"
+        }
       },
       "Microsoft.Data.Sqlite.Core": {
         "type": "CentralTransitive",

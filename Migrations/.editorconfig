@@ -1,0 +1,13 @@
+# https://editorconfig.org/
+
+# Code files
+[*.{cs,vb}]
+
+# https://docs.microsoft.com/en-us/dotnet/fundamentals/code-analysis/configuration-options#exclude-generated-code
+generated_code = true
+
+# Compiler Warning (level 4) CS1591
+# The DocumentationFile compiler option was specified, but one or more constructs did not have comments.
+# https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/compiler-messages/cs1591
+# Disable reason: No need to document generated code.
+dotnet_diagnostic.CS1591.severity = none

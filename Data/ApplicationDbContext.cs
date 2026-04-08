@@ -70,6 +70,10 @@ internal class ApplicationDbContext : DbContext
             .HasMaxLength(64);
 
         _ = entity
+            .Property(q => q.FirstSeen)
+            .IsRequired();
+
+        _ = entity
             .Property(q => q.LastSeen)
             .IsRequired();
 
@@ -109,6 +113,14 @@ internal class ApplicationDbContext : DbContext
 
         _ = entity
             .Property(q => q.MiningFeeReverseSat)
+            .IsRequired();
+
+        _ = entity
+            .Property(q => q.SlotsPresent)
+            .IsRequired();
+
+        _ = entity
+            .Property(q => q.SlotsMissed)
             .IsRequired();
 
         _ = entity

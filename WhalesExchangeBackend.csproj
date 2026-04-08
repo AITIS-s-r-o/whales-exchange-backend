@@ -26,4 +26,15 @@
     <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" />
     <PackageReference Include="Microsoft.VisualStudio.Threading.Only" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="SharedLib\**" />
+    <Compile Remove="SharedLibUnitTests\**" />
+    <Content Remove="SharedLib\**" />
+    <Content Remove="SharedLibUnitTests\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="SharedLib\WhalesExchangeBackend.SharedLib.csproj" />
+  </ItemGroup>
 </Project>

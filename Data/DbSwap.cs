@@ -105,7 +105,8 @@ internal class DbSwap
     /// <param name="amountToReceiveSats">Amount the client received or should receive in satoshis.</param>
     /// <param name="lockupAddress">Bitcoin address to which the reverse swap funding Bitcoin transaction spends the funds to be claimed by the client, or <c>null</c> for forward
     /// swaps.</param>
-    /// <param name="lockupOutputIndex">Index of the output in the funding Bitcoin transaction that spends to the <see cref="LockupAddress"/>, or <c>null</c> for forward swaps.</param>
+    /// <param name="lockupOutputIndex">Index of the output in the funding Bitcoin transaction that spends to the <see cref="LockupAddress"/>, or <c>null</c> for forward swaps.
+    /// </param>
     /// <param name="fundingTxId">ID of the funding Bitcoin transaction, or <c>null</c> if not funded yet.</param>
     /// <param name="timeoutBlockHeight">Block height after which the swap is considered expired, or <c>null</c> if not set yet.</param>
     /// <param name="createdTime">UTC time when the swap was created by the user.</param>

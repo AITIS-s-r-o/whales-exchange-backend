@@ -36,6 +36,9 @@ internal class SwapProviderFetcher : System.IAsyncDisposable
     /// <summary>Background task periodically downloading latest swap providers.</summary>
     private readonly JoinableTask syncTask;
 
+    /// <summary>UTC timestamp when the current backend instance started.</summary>
+    private readonly DateTime startTime;
+
     /// <summary>Lock object to be used when accessing <see cref="disposedValue"/>.</summary>
     private readonly Lock disposedValueLock;
 
@@ -52,6 +55,9 @@ internal class SwapProviderFetcher : System.IAsyncDisposable
     public SwapProviderFetcher(ElectrumRpcClient electrumRpcClient, SwapProviderRepository swapProviderRepository, JoinableTaskFactory joinableTaskFactory)
     {
         this.log.Debug("*");
+
+        this.startTime = DateTime.Now;
+        this.log.Debug($"Server started at {this.startTime} UTC.");
 
         this.disposedValueLock = new();
         this.shutdownTokenSource = new();
@@ -103,10 +109,10 @@ internal class SwapProviderFetcher : System.IAsyncDisposable
                         long actualMaxForwardAmountSat = provider.MaxAmountReverseSat;
                         long actualMaxReverseAmountSat = provider.MaxAmountForwardSat;
 
-                        bool isNew = await this.swapProviderRepository.UpsertAsync(provider.Pubkey, lastSeen, provider.PoWBits, percentageFeeForward: provider.PercentageFee,
-                            percentageFeeReverse: provider.PercentageFee, minAmountForwardSat: provider.MinAmountSat, minAmountReverseSat: provider.MinAmountSat,
-                            maxAmountForwardSat: actualMaxForwardAmountSat, maxAmountReverseSat: actualMaxReverseAmountSat, miningFeeForwardSat: provider.MiningFeeSat,
-                            miningFeeReverseSat: provider.MiningFeeSat).ConfigureAwait(false);
+                        bool isNew = await this.swapProviderRepository.UpsertAsync(provider.Pubkey, lastSeen: lastSeen, provider.PoWBits,
+                            percentageFeeForward: provider.PercentageFee, percentageFeeReverse: provider.PercentageFee, minAmountForwardSat: provider.MinAmountSat,
+                            minAmountReverseSat: provider.MinAmountSat, maxAmountForwardSat: actualMaxForwardAmountSat, maxAmountReverseSat: actualMaxReverseAmountSat,
+                            miningFeeForwardSat: provider.MiningFeeSat, miningFeeReverseSat: provider.MiningFeeSat, this.startTime).ConfigureAwait(false);
 
                         if (isNew) this.log.Debug($"New provider pubkey '{provider.Pubkey}' has been added to the database.");
                         else this.log.Debug($"Provider pubkey '{provider.Pubkey}' has been updated in the database.");
