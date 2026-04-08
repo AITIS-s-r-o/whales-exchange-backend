@@ -24,7 +24,7 @@ internal static class ProviderPresenceCalculator
     /// </summary>
     /// <param name="prevLastSeen">UTC time when the provider was last seen according to the database.</param>
     /// <param name="newLastSeen">UTC time when the provider was last seen according to the latest data from Electrum.</param>
-    /// <param name="serverStartTime">UTC timestamp when the current instance of the server started.</param>
+    /// <param name="serverStartTime">UTC timestamp when the current backend instance started.</param>
     /// <returns><c>0</c> if a new slot has not started yet, <c>1</c> if the presence should be accounted for.</returns>
     public static int CalculatePresentSlots(DateTime prevLastSeen, DateTime newLastSeen, DateTime serverStartTime)
     {
@@ -52,7 +52,7 @@ internal static class ProviderPresenceCalculator
     /// </summary>
     /// <param name="prevLastSeen">UTC time when the provider was last seen according to the database.</param>
     /// <param name="newLastSeen">UTC time when the provider was last seen according to the latest data from Electrum.</param>
-    /// <param name="serverStartTime">UTC timestamp when the current instance of the server started.</param>
+    /// <param name="serverStartTime">UTC timestamp when the current backend instance started.</param>
     /// <returns>Number of slots that provider missed.</returns>
     public static int CalculateMissedSlots(DateTime prevLastSeen, DateTime newLastSeen, DateTime serverStartTime)
     {

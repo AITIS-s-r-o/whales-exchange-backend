@@ -36,7 +36,7 @@ internal class SwapProviderFetcher : System.IAsyncDisposable
     /// <summary>Background task periodically downloading latest swap providers.</summary>
     private readonly JoinableTask syncTask;
 
-    /// <summary>UTC timestamp when the current instance of the server started.</summary>
+    /// <summary>UTC timestamp when the current backend instance started.</summary>
     private readonly DateTime startTime;
 
     /// <summary>Lock object to be used when accessing <see cref="disposedValue"/>.</summary>

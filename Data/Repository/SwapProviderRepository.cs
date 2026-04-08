@@ -40,7 +40,7 @@ internal class SwapProviderRepository : RepositoryBase
     /// <param name="maxAmountReverseSat">Maximum amount for a reverse swap in satoshis.</param>
     /// <param name="miningFeeForwardSat">Mining fee for forward swaps in satoshis.</param>
     /// <param name="miningFeeReverseSat">Mining fee for reverse swaps in satoshis.</param>
-    /// <param name="serverStartTime">UTC timestamp when the current instance of the server started.</param>
+    /// <param name="serverStartTime">UTC timestamp when the current backend instance started.</param>
     /// <returns><c>true</c> if a new record was inserted in the database, <c>false</c> if an existing record has been updated.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
     public async Task<bool> UpsertAsync(string pubkey, DateTime lastSeen, int poWBits, decimal percentageFeeForward, decimal percentageFeeReverse, long minAmountForwardSat,

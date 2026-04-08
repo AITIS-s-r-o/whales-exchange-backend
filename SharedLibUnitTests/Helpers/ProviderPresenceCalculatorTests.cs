@@ -57,7 +57,7 @@ public class ProviderPresenceCalculatorTests
     /// </summary>
     /// <param name="prevLastSeen">UTC time when the provider was last seen according to the database.</param>
     /// <param name="newLastSeen">UTC time when the provider was last seen according to the latest data from Electrum.</param>
-    /// <param name="serverStartTime">UTC timestamp when the current instance of the server started.</param>
+    /// <param name="serverStartTime">UTC timestamp when the current backend instance started.</param>
     /// <param name="expectedResult">Expected number of presence slots.</param>
     [Theory]
     [MemberData(nameof(CalculatePresentSlotsData))]
@@ -76,7 +76,7 @@ public class ProviderPresenceCalculatorTests
     /// </summary>
     /// <param name="prevLastSeen">UTC time when the provider was last seen according to the database.</param>
     /// <param name="newLastSeen">UTC time when the provider was last seen according to the latest data from Electrum.</param>
-    /// <param name="serverStartTime">UTC timestamp when the current instance of the server started.</param>
+    /// <param name="serverStartTime">UTC timestamp when the current backend instance started.</param>
     /// <param name="expectedResult">Expected number of missed presence slots.</param>
     [Theory]
     [MemberData(nameof(CalculateMissedSlotsData))]
