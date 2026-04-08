@@ -198,7 +198,14 @@ internal class RestApiController : InternalControllerBase
 
         if (failed && (swapId is not null))
         {
-            await this.swapRepository.MarkSwapRejectedAsync(swapId.Value).ConfigureAwait(false);
+            try
+            {
+                await this.swapRepository.MarkSwapRejectedAsync(swapId.Value).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                this.log.Error($"Exception occurred while marking swap ID {swapId} as rejected: {e}");
+            }
         }
 
         result = this.Ok(response);
