@@ -22,7 +22,7 @@ internal static class ProviderPresenceCalculator
     /// <summary>
     /// Calculates the number of slots that should be added to the provider's present slots.
     /// </summary>
-    /// <param name="prevLastSeen">UTC time when the provider was last seen according to the database.</param>
+    /// <param name="prevLastSeen">UTC time when the provider was last seen according to the backend database.</param>
     /// <param name="newLastSeen">UTC time when the provider was last seen according to the latest data from Electrum.</param>
     /// <param name="serverStartTime">UTC timestamp when the current backend instance started.</param>
     /// <returns><c>0</c> if a new slot has not started yet, <c>1</c> if the presence should be accounted for.</returns>
@@ -50,7 +50,7 @@ internal static class ProviderPresenceCalculator
     /// <summary>
     /// Calculates the number of slots that a provider missed since it was last seen.
     /// </summary>
-    /// <param name="prevLastSeen">UTC time when the provider was last seen according to the database.</param>
+    /// <param name="prevLastSeen">UTC time when the provider was last seen according to the backend database.</param>
     /// <param name="newLastSeen">UTC time when the provider was last seen according to the latest data from Electrum.</param>
     /// <param name="serverStartTime">UTC timestamp when the current backend instance started.</param>
     /// <returns>Number of slots that provider missed.</returns>
@@ -82,7 +82,7 @@ internal static class ProviderPresenceCalculator
     /// Based on previous and new last-seen timestamps, calculates the end of the slot when the provider was previously seen and the start of the slot when the provider was newly
     /// seen.
     /// </summary>
-    /// <param name="prevLastSeen">UTC time when the provider was last seen according to the database.</param>
+    /// <param name="prevLastSeen">UTC time when the provider was last seen according to the backend database.</param>
     /// <param name="newLastSeen">UTC time when the provider was last seen according to the latest data from Electrum.</param>
     /// <param name="prevLastSeenSlotEnd">This is filled with the end of the slot during which the provider was previously last seen.</param>
     /// <param name="newLastSeenSlotStart">This is filled with the start of the slot during which the provider was last seen.</param>
