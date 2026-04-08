@@ -176,7 +176,8 @@ internal class RestApiController : InternalControllerBase
 
                         SwapResponse swapResponse = new(reverse: true, asset: "BTC", invoice: electrumSwapData.Invoice, feeInvoice: electrumSwapData.FeeInvoice,
                             timeoutBlockHeight: electrumSwapData.Locktime, sendAmountSats: electrumSwapData.LightningAmountSats,
-                            receiveAmountSats: electrumSwapData.OnChainAmountSats, redeemScript: electrumSwapData.RedeemScriptHex, lockupAddress: electrumSwapData.LockupAddress);
+                            receiveAmountSats: request.ExpectedAmount, onChainAmountSats: electrumSwapData.OnChainAmountSats, redeemScript: electrumSwapData.RedeemScriptHex,
+                            lockupAddress: electrumSwapData.LockupAddress);
 
                         response = new(swapResponse);
 
