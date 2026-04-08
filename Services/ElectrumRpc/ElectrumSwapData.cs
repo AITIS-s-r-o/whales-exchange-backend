@@ -61,7 +61,7 @@ internal class ElectrumSwapData
     /// <param name="redeemScriptHex">Full redeem script of the HTLC as hex.</param>
     /// <param name="prepayHashHex">Hash of the prepayment invoice as hex.</param>
     /// <param name="lockupAddress">On-chain lockup address (P2WSH address where funds will be sent).</param>
-    /// <param name="claimToOutput">Address and amount to which the funding UTXO should be claimed, or <c>null</c> if not set</param>
+    /// <param name="claimToOutput">Address and amount to which the funding UTXO should be claimed, or <c>null</c> if not set.</param>
     /// <param name="invoice">Main swap LN invoice.</param>
     /// <param name="feeInvoice">LN invoice to cover swap provider fees.</param>
     public ElectrumSwapData(bool isReverse, long locktime, long onChainAmountSats, long lightningAmountSats, string redeemScriptHex, string prepayHashHex, string lockupAddress,
