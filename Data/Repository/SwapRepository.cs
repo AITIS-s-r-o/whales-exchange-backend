@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Storage;
 using WhalesExchangeBackend.Exceptions;
 using WhalesExchangeBackend.Models;
+using WhalesExchangeBackend.Utils;
 
 namespace WhalesExchangeBackend.Data.Repository;
 
@@ -30,13 +31,13 @@ internal class SwapRepository : RepositoryBase
     /// <param name="providerPubkey">Public key of the swap provider as a hex string.</param>
     /// <param name="amountToPaySats">Amount the client paid or should pay (including all fees) in satoshis.</param>
     /// <param name="amountToReceiveSats">Amount the client received or should receive in satoshis.</param>
-    /// <returns>ID of the database record.</returns>
+    /// <returns>Newly created database record.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
-    public async Task<long> InsertReverseAsync(string providerPubkey, long amountToPaySats, long amountToReceiveSats)
+    public async Task<DbSwap> InsertReverseAsync(string providerPubkey, long amountToPaySats, long amountToReceiveSats)
     {
         this.log.Debug($"* {nameof(providerPubkey)}='{providerPubkey}',{nameof(amountToPaySats)}={amountToPaySats},{nameof(amountToReceiveSats)}={amountToReceiveSats}");
 
-        long result;
+        DbSwap result;
         try
         {
             using ApplicationDbContext db = this.dbContextFactory.CreateDbContext();
@@ -53,7 +54,8 @@ internal class SwapRepository : RepositoryBase
             }
 
             DateTime now = DateTime.UtcNow;
-            DbSwap dbRecord = new(id: 0, providerPubkey: providerPubkey, isForward: false, SwapStatus.Created, amountToPaySats: amountToPaySats,
+            string frontendId = RandomStringGenerator.Generate(DbSwap.FrontendIdLength);
+            DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, isForward: false, SwapStatus.Created, amountToPaySats: amountToPaySats,
                 amountToReceiveSats: amountToReceiveSats, lockupAddress: null, lockupOutputIndex: null, fundingTxId: null, timeoutBlockHeight: null, createdTime: now,
                 acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, dbSwapProvider);
 
@@ -61,8 +63,8 @@ internal class SwapRepository : RepositoryBase
             _ = db.SaveChanges();
             transaction.Commit();
 
-            result = dbRecord.Id;
-            this.log.Debug($"Reverse swap ID '{result}' through provider '{providerPubkey}' has been added to the database.");
+            result = dbRecord;
+            this.log.Debug($"Reverse swap ID {result.Id} through provider '{providerPubkey}' has been added to the database.");
         }
         catch (Exception e)
         {

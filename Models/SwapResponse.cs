@@ -8,6 +8,10 @@ namespace WhalesExchangeBackend.Models;
 /// </summary>
 public class SwapResponse
 {
+    /// <summary>Unique identifier for the swap.</summary>
+    [JsonPropertyName("id")]
+    public string Id { get; }
+
     /// <summary><c>true</c> if this is a reverse swap (LN → BTC), <c>false</c> if submarine (BTC -> LN).</summary>
     [JsonPropertyName("reverse")]
     public bool Reverse { get; }
@@ -71,6 +75,7 @@ public class SwapResponse
     /// <summary>
     /// Initializes a new instance of the <see cref="SwapResponse"/> class.
     /// </summary>
+    /// <param name="id">Unique identifier for the swap.</param>
     /// <param name="reverse"><c>true</c> if this is a reverse swap (LN → BTC), <c>false</c> if submarine (BTC -> LN).</param>
     /// <param name="asset">Asset being used.</param>
     /// <param name="invoice">Lightning invoice for the swap.</param>
@@ -87,10 +92,11 @@ public class SwapResponse
     /// <param name="privateKey">Private key for refund or claim, or <c>null</c> if not set.</param>
     /// <param name="redeemScript">Redeem script (hex) of the HTLC, or <c>null</c> if not set.</param>
     /// <param name="lockupAddress">On-chain lockup address (P2WSH), or <c>null</c> if not set.</param>
-    public SwapResponse(bool reverse, string asset, string invoice, string feeInvoice, long timeoutBlockHeight, long sendAmountSats, long receiveAmountSats,
+    public SwapResponse(string id, bool reverse, string asset, string invoice, string feeInvoice, long timeoutBlockHeight, long sendAmountSats, long receiveAmountSats,
         long? onChainAmountSats = null, long? expectedAmountSats = null, string? bip21 = null, string? address = null, string? preimage = null, string? privateKey = null,
         string? redeemScript = null, string? lockupAddress = null)
     {
+        this.Id = id;
         this.Reverse = reverse;
         this.Asset = asset;
         this.Invoice = invoice;
@@ -111,10 +117,13 @@ public class SwapResponse
     /// <inheritdoc/>
     public override string ToString()
     {
+        string format = "[{0}=`{1}`,{2}={3},{4}=`{5}`,{6}=`{7}`,{8}=`{9}`,{10}={11},{12}={13},{14}={15},{16}={17},{18}={19},{20}=`{21}`,{22}=`{23}`,{24}=`{25}`,{26}=`{27}`,"
+            + "{28}=`{29}`,{30}=`{31}`]";
         return string.Format
         (
             CultureInfo.InvariantCulture,
-            "[{0}={1},{2}=`{3}`,{4}=`{5}`,{6}=`{7}`,{8}={9},{10}={11},{12}={13},{14}={15},{16}={17},{18}=`{19}`,{20}=`{21}`,{22}=`{23}`,{24}=`{25}`,{26}=`{27}`,{28}=`{29}`]",
+            format,
+            nameof(this.Id), this.Id,
             nameof(this.Reverse), this.Reverse,
             nameof(this.Asset), this.Asset,
             nameof(this.Invoice), this.Invoice,

@@ -10,9 +10,16 @@ namespace WhalesExchangeBackend.Data;
 /// <remarks>In this class, "forward swap" means BTC->LN - i.e. the user sends on-chain, receives off-chain.</remarks>
 internal class DbSwap
 {
+    /// <summary>Length of <see cref="FrontendId"/>.</summary>
+    public const int FrontendIdLength = 10;
+
     /// <summary>Unique ID of the swap.</summary>
     /// <remarks>The setter is needed for the serializer.</remarks>
     public long Id { get; set; }
+
+    /// <summary>Unique ID of the swap provided to the frontend.</summary>
+    /// <remarks>The setter is needed for the serializer.</remarks>
+    public string FrontendId { get; set; }
 
     /// <summary>Public key of the swap provider as a hex string.</summary>
     /// <remarks>The setter is needed for the serializer.</remarks>
@@ -90,6 +97,7 @@ internal class DbSwap
     /// </summary>
     public DbSwap()
     {
+        this.FrontendId = null!;
         this.ProviderPubkey = string.Empty;
         this.Provider = null!;
     }
@@ -98,6 +106,7 @@ internal class DbSwap
     /// Creates a new instance of the object.
     /// </summary>
     /// <param name="id">Unique ID of the swap.</param>
+    /// <param name="frontendId">Unique ID of the swap provided to the frontend.</param>
     /// <param name="providerPubkey">Public key of the swap provider as a hex string.</param>
     /// <param name="isForward"><c>true</c> for forward swaps, <c>false</c> for reverse swaps.</param>
     /// <param name="status">Status of the swap.</param>
@@ -115,11 +124,12 @@ internal class DbSwap
     /// <param name="spentTime">UTC time when the funding Bitcoin transaction output was spent by the client, or <c>null</c> if not spent yet.</param>
     /// <param name="failTime">UTC time since when the swap is considered as failed, or <c>null</c> if the swap is not failed.</param>
     /// <param name="provider">Provider of the swap.</param>
-    public DbSwap(long id, string providerPubkey, bool isForward, SwapStatus status, long amountToPaySats, long amountToReceiveSats, string? lockupAddress, int? lockupOutputIndex,
-        string? fundingTxId, long? timeoutBlockHeight, DateTime createdTime, DateTime? acceptedTime, DateTime? fundingTime, DateTime? spentTime, DateTime? failTime,
-        DbSwapProvider provider)
+    public DbSwap(long id, string frontendId, string providerPubkey, bool isForward, SwapStatus status, long amountToPaySats, long amountToReceiveSats, string? lockupAddress,
+        int? lockupOutputIndex, string? fundingTxId, long? timeoutBlockHeight, DateTime createdTime, DateTime? acceptedTime, DateTime? fundingTime, DateTime? spentTime,
+        DateTime? failTime, DbSwapProvider provider)
     {
         this.Id = id;
+        this.FrontendId = frontendId;
         this.ProviderPubkey = providerPubkey;
         this.IsForward = isForward;
         this.Status = status;
@@ -143,8 +153,9 @@ internal class DbSwap
         return string.Format
         (
             CultureInfo.InvariantCulture,
-            "[{0}={1},{2}=`{3}`,{4}={5},{6}={7},{8}={9},{10}={11},{12}=`{13}`,{14}={15},{16}=`{17}`,{18}={19},{20}={21},{22}={23},{24}={25},{26}={27},{28}={29}]",
+            "[{0}={1},{2}=`{3}`,{4}=`{5}`,{6}={7},{8}={9},{10}={11},{12}={13},{14}=`{15}`,{16}={17},{18}=`{19}`,{20}={21},{22}={23},{24}={25},{26}={27},{28}={29},{30}={31}]",
             nameof(this.Id), this.Id,
+            nameof(this.FrontendId), this.FrontendId,
             nameof(this.ProviderPubkey), this.ProviderPubkey,
             nameof(this.IsForward), this.IsForward,
             nameof(this.Status), this.Status,

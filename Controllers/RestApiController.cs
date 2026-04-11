@@ -144,7 +144,7 @@ internal class RestApiController : InternalControllerBase
             return result;
         }
 
-        long? swapId = null;
+        DbSwap? swap = null;
         bool failed = false;
         try
         {
@@ -166,7 +166,7 @@ internal class RestApiController : InternalControllerBase
                 {
                     if (request.ClaimPublicKey is not null)
                     {
-                        swapId = await this.swapRepository.InsertReverseAsync(providerPubkey: providerPk, amountToPaySats: request.InvoiceAmount.Value,
+                        swap = await this.swapRepository.InsertReverseAsync(providerPubkey: providerPk, amountToPaySats: request.InvoiceAmount.Value,
                             amountToReceiveSats: request.ExpectedAmount).ConfigureAwait(false);
 
                         long prepaymentSats = 2 * provider.MiningFeeReverseSat;
@@ -174,13 +174,14 @@ internal class RestApiController : InternalControllerBase
                             onChainAmountSats: request.ExpectedAmount, prepaymentSats: prepaymentSats, preimageHash: request.PreimageHash, claimPk: request.ClaimPublicKey,
                             providerPk: providerPk, context.RequestAborted).ConfigureAwait(false);
 
-                        SwapResponse swapResponse = new(reverse: true, asset: "BTC", invoice: electrumSwapData.Invoice, feeInvoice: electrumSwapData.FeeInvoice,
-                            timeoutBlockHeight: electrumSwapData.Locktime, sendAmountSats: electrumSwapData.LightningAmountSats, receiveAmountSats: request.ExpectedAmount,
-                            onChainAmountSats: electrumSwapData.OnChainAmountSats, redeemScript: electrumSwapData.RedeemScriptHex, lockupAddress: electrumSwapData.LockupAddress);
+                        SwapResponse swapResponse = new(id: swap.FrontendId, reverse: true, asset: "BTC", invoice: electrumSwapData.Invoice,
+                            feeInvoice: electrumSwapData.FeeInvoice, timeoutBlockHeight: electrumSwapData.Locktime, sendAmountSats: electrumSwapData.LightningAmountSats,
+                            receiveAmountSats: request.ExpectedAmount, onChainAmountSats: electrumSwapData.OnChainAmountSats, redeemScript: electrumSwapData.RedeemScriptHex,
+                            lockupAddress: electrumSwapData.LockupAddress);
 
                         response = new(swapResponse);
 
-                        await this.swapRepository.MarkSwapAcceptedAsync(id: swapId.Value, electrumSwapData.LockupAddress, timeoutBlockHeight: electrumSwapData.Locktime)
+                        await this.swapRepository.MarkSwapAcceptedAsync(id: swap.Id, electrumSwapData.LockupAddress, timeoutBlockHeight: electrumSwapData.Locktime)
                             .ConfigureAwait(false);
                     }
                     else response = new($"'{nameof(request.ClaimPublicKey)}' is mandatory for reverse swaps.");
@@ -196,15 +197,15 @@ internal class RestApiController : InternalControllerBase
             failed = true;
         }
 
-        if (failed && (swapId is not null))
+        if (failed && (swap is not null))
         {
             try
             {
-                await this.swapRepository.MarkSwapRejectedAsync(swapId.Value).ConfigureAwait(false);
+                await this.swapRepository.MarkSwapRejectedAsync(swap.Id).ConfigureAwait(false);
             }
             catch (Exception e)
             {
-                this.log.Error($"Exception occurred while marking swap ID {swapId} as rejected: {e}");
+                this.log.Error($"Exception occurred while marking swap ID {swap.Id} as rejected: {e}");
             }
         }
 

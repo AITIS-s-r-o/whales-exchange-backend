@@ -11,7 +11,7 @@ using WhalesExchangeBackend.Data;
 namespace WhalesExchangeBackend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260408084627_InitialCreate")]
+    [Migration("20260411150552_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -39,6 +39,11 @@ namespace WhalesExchangeBackend.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("FailTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FrontendId")
+                        .IsRequired()
+                        .HasMaxLength(16)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("FundingTime")

@@ -38,6 +38,11 @@ namespace WhalesExchangeBackend.Migrations
                     b.Property<DateTime?>("FailTime")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("FrontendId")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("FundingTime")
                         .HasColumnType("TEXT");
 
