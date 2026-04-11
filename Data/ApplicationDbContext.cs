@@ -146,6 +146,11 @@ internal class ApplicationDbContext : DbContext
             .HasKey(q => q.Id);
 
         _ = entity
+            .Property(q => q.FrontendId)
+            .IsRequired()
+            .HasMaxLength(16);
+
+        _ = entity
             .Property(q => q.ProviderPubkey)
             .IsRequired()
             .HasMaxLength(64);

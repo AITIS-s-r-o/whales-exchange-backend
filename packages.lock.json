@@ -82,7 +82,7 @@
         "type": "Direct",
         "requested": "[1.0.1.20, )",
         "resolved": "1.0.1.20",
-        "contentHash": "uIXZLxfYWJnJJ4o5e7MfTxa/fw82nJyKo7TXeWMFKRBXGXM9OEv8hH1lOp4G47IYxnGvWY62xaF3n1rhQb6nAg==",
+        "contentHash": "A/Y9Fc40lZd9drY38eTtGNrjkPbHtsSaVMnRfzkX329DCvoZyBPgnWgoPikiJv9Zwz4uH1S8dDklwK2nduYHbQ==",
         "dependencies": {
           "Autofac": "8.2.0",
           "LZMA-SDK": "22.1.1",
