@@ -47,10 +47,11 @@ namespace WhalesExchangeBackend.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FundingTxData")
+                        .HasMaxLength(2097152)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FundingTxId")
-                        .HasMaxLength(204800)
+                        .HasMaxLength(64)
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("IsForward")
