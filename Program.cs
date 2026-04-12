@@ -124,7 +124,8 @@ public static class Program
 
             // Database repositories provide access to individual tables of the database and are created on per-request basis.
             _ = builder.Services.AddSingleton<SwapProviderRepository>();
-            _ = builder.Services.AddSingleton<ISwapRepository, SwapRepository>();
+            _ = builder.Services.AddSingleton<SwapRepository>();
+            _ = builder.Services.AddSingleton<ISwapRepository>(sp => sp.GetRequiredService<SwapRepository>());
 
             // Electrum RPC connectivity and related services.
             _ = builder.Services.AddSingleton<ElectrumRpcClient>();
