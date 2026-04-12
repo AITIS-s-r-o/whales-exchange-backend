@@ -11,7 +11,11 @@ using WhalesExchangeBackend.Data;
 namespace WhalesExchangeBackend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
+<<<<<<<< HEAD:Migrations/20260412113500_InitialCreate.Designer.cs
     [Migration("20260412113500_InitialCreate")]
+========
+    [Migration("20260411150552_InitialCreate")]
+>>>>>>>> master-AITIS:Migrations/20260411150552_InitialCreate.Designer.cs
     partial class InitialCreate
     {
         /// <inheritdoc />
