@@ -208,7 +208,7 @@ internal class ApplicationDbContext : DbContext
             .IsRequired(false);
 
         _ = entity
-            .Property(q => q.FundingTxId)
+            .Property(q => q.FundingTxData)
             .IsRequired(false)
             .HasMaxLength(2 * 100 * 1024);
 
