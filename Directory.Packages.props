@@ -26,7 +26,6 @@
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Authentication.Negotiate" Version="10.0.0" />
     <!-- Whale's Secret -->
     <PackageVersion Include="WhalesSecret.ScriptApiLib" Version="1.0.1.20" />
   </ItemGroup>
