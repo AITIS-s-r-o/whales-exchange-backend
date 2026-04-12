@@ -189,7 +189,7 @@ public static class Program
             // WebSockets for signals service.
             _ = app.UseWebSockets();
 
-            _ = app.Map("/ws", async (HttpContext context) =>
+            _ = app.Map("/v2/ws", async (HttpContext context) =>
             {
                 if (shutdownToken is null)
                     throw new SanityCheckException("Shutdown token has not been initialized yet.");
