@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Security;
 using System.Net.WebSockets;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -71,6 +72,10 @@ public static class Program
             // Add services to the container.
             _ = builder.Services.AddControllersWithViews()
                 .EnableInternalControllers()
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+                })
                 .AddCookieTempDataProvider(options =>
                 {
                     options.Cookie.IsEssential = true;
@@ -180,11 +185,7 @@ public static class Program
 
             _ = app.UseAuthorization();
             _ = app.UseAuthentication();
-            _ = app.MapControllerRoute
-            (
-                name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}"
-            );
+            _ = app.MapControllers();
 
             // WebSockets for signals service.
             _ = app.UseWebSockets();

@@ -221,7 +221,7 @@ internal class RestApiController : InternalControllerBase
     /// </summary>
     /// <param name="frontendId">Frontend ID of the swap.</param>
     /// <returns>Result of the action method.</returns>
-    [HttpPost]
+    [HttpGet]
     [Route("/v2/swap/{frontendId}")]
     public async Task<IActionResult> GetSwapStatusAsync(string frontendId)
     {
