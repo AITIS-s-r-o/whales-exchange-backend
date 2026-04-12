@@ -69,7 +69,7 @@ internal class SwapUpdate
             status = swap.Status switch
             {
                 SwapStatus.Created => Constants.SwapStatusPendingSwapCreated,
-                SwapStatus.Accepted => Constants.SwapStatusPendingInvoiceSet,
+                SwapStatus.Accepted => Constants.SwapStatusPendingSwapCreated,
                 SwapStatus.FundingTxCreated => Constants.SwapStatusPendingTransactionMempool,
                 SwapStatus.FundingTxSpent => Constants.SwapStatusSuccessTransactionClaimed,
                 SwapStatus.ProviderErrorNotAccepted => Constants.SwapStatusFailedSwapRejected,

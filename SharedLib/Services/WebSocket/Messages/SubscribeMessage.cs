@@ -38,7 +38,7 @@ internal class SubscribeMessage : OperationMessageBase
         (
             CultureInfo.InvariantCulture,
             "[{0},{1}=`{2}`,{3}=`{4}`,{5}={6}]",
-            nameof(UnsubscribeMessage),
+            nameof(SubscribeMessage),
             nameof(this.Operation), this.Operation,
             nameof(this.Channel), this.Channel,
             nameof(this.SwapIds), this.SwapIds.LogJoin()
