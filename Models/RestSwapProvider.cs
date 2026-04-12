@@ -1,6 +1,6 @@
 using System;
 using System.Text.Json.Serialization;
-using WhalesExchangeBackend.Data;
+using WhalesExchangeBackend.SharedLib.Data;
 
 namespace WhalesExchangeBackend.Models;
 

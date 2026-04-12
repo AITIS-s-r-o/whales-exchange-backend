@@ -1,18 +1,21 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using WhalesExchangeBackend.Exceptions;
-using WhalesExchangeBackend.Models;
+using WhalesExchangeBackend.SharedLib.Data;
+using WhalesExchangeBackend.SharedLib.Exceptions;
+using WhalesExchangeBackend.SharedLib.Models;
 using WhalesExchangeBackend.Utils;
+using WhalesSecret.TradeScriptLib.Logging;
 
 namespace WhalesExchangeBackend.Data.Repository;
 
-/// <summary>
-/// Provider of access to swaps in the database.
-/// </summary>
+/// <inheritdoc cref="ISwapRepository"/>
 [SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by ASP.NET Core DI as a singleton.")]
-internal class SwapRepository : RepositoryBase
+internal class SwapRepository : RepositoryBase, ISwapRepository
 {
     /// <summary>
     /// Creates a new instance of the object.
@@ -57,7 +60,7 @@ internal class SwapRepository : RepositoryBase
             string frontendId = RandomStringGenerator.Generate(DbSwap.FrontendIdLength);
             DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, isForward: false, SwapStatus.Created, amountToPaySats: amountToPaySats,
                 amountToReceiveSats: amountToReceiveSats, lockupAddress: null, lockupOutputIndex: null, fundingTxId: null, timeoutBlockHeight: null, createdTime: now,
-                acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, dbSwapProvider);
+                acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, fundingTxData: null, dbSwapProvider);
 
             _ = db.Swaps.Add(dbRecord);
             _ = db.SaveChanges();
@@ -178,5 +181,40 @@ internal class SwapRepository : RepositoryBase
         }
 
         this.log.Debug("$");
+    }
+
+    /// <inheritdoc/>
+    public async Task<DbSwap?[]> GetSwapsByFrontentIdsAsync(string[] frontendIds)
+    {
+        this.log.Debug($"* {nameof(frontendIds)}={frontendIds.LogJoin()}");
+
+        DbSwap?[] result;
+        try
+        {
+            using ApplicationDbContext db = this.dbContextFactory.CreateDbContext();
+            using IDisposable dbLocked = await this.dbLock.EnterAsync().ConfigureAwait(false);
+
+            Dictionary<string, DbSwap> dbRecordsMap = await db.Swaps
+                .Where(i => frontendIds.Contains(i.FrontendId))
+                .ToDictionaryAsync(i => i.FrontendId)
+                .ConfigureAwait(false);
+
+            result = new DbSwap?[frontendIds.Length];
+            for (int i = 0; i < frontendIds.Length; i++)
+            {
+                string frontendId = frontendIds[i];
+                if (dbRecordsMap.TryGetValue(frontendId, out DbSwap? dbRecord))
+                    result[i] = dbRecord;
+            }
+        }
+        catch (Exception e)
+        {
+            this.log.Error($"Getting {frontendIds.Length} swaps from the database failed with exception: {e}");
+            this.log.Debug("$<DB_EXCEPTION>");
+            throw new DatabaseException($"Getting {frontendIds.Length} swaps from the database failed.", e);
+        }
+
+        this.log.Debug($"|$|={result.Length}");
+        return result;
     }
 }

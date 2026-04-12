@@ -13,6 +13,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.Negotiate" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" />
+
     <ProjectReference Include="..\SharedLib\WhalesExchangeBackend.SharedLib.csproj" />
   </ItemGroup>
 

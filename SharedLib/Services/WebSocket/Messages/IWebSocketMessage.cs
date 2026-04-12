@@ -5,8 +5,8 @@ namespace WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
 /// <summary>
 /// Interface denoting a message received from a trading signals WebSocket connection.
 /// </summary>
-[JsonDerivedType(typeof(PingRequest), typeDiscriminator: nameof(PingRequest))]
-[JsonDerivedType(typeof(PingResponse), typeDiscriminator: nameof(PingResponse))]
-internal interface ISignalsProtocolMessage
+[JsonDerivedType(typeof(PingMessage), typeDiscriminator: nameof(PingMessage))]
+[JsonDerivedType(typeof(PongMessage), typeDiscriminator: nameof(PongMessage))]
+internal interface IWebSocketMessage
 {
 }

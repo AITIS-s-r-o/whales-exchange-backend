@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using WhalesExchangeBackend.SharedLib.Helpers;
 
-namespace WhalesExchangeBackend.Data;
+namespace WhalesExchangeBackend.SharedLib.Data;
 
 /// <summary>
 /// Description of a license in the database.

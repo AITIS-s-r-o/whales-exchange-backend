@@ -1,4 +1,4 @@
-namespace WhalesExchangeBackend.Models;
+namespace WhalesExchangeBackend.SharedLib.Models;
 
 /// <summary>
 /// Status of the swap.

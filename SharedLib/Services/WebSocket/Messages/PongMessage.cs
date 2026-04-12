@@ -4,16 +4,16 @@ using System.Text.Json.Serialization;
 namespace WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
 
 /// <summary>
-/// Server's response to client's <see cref="PingRequest"/>.
+/// Server's response to client's <see cref="PingMessage"/>.
 /// </summary>
-/// <seealso cref="PingRequest"/>
-internal class PingResponse : ResponseMessageBase
+/// <seealso cref="PingMessage"/>
+internal class PongMessage : EventMessageBase
 {
     /// <summary>
     /// Creates a new instance of the object.
     /// </summary>
     [JsonConstructor]
-    public PingResponse() :
+    public PongMessage() :
         base(@event: "pong")
     {
     }
@@ -25,7 +25,7 @@ internal class PingResponse : ResponseMessageBase
         (
             CultureInfo.InvariantCulture,
             "[{0},{1}=`{2}`]",
-            nameof(PingResponse),
+            nameof(PongMessage),
             nameof(this.Event), this.Event
         );
     }

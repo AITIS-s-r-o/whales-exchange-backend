@@ -6,14 +6,14 @@ namespace WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
 /// <summary>
 /// Message to ping the other party.
 /// </summary>
-/// <seealso cref="PingResponse"/>
-internal class PingRequest : RequestMessageBase
+/// <seealso cref="PongMessage"/>
+internal class PingMessage : OperationMessageBase
 {
     /// <summary>
     /// Creates a new instance of the object.
     /// </summary>
     [JsonConstructor]
-    public PingRequest() :
+    public PingMessage() :
         base(operation: "ping")
     {
     }
@@ -25,7 +25,7 @@ internal class PingRequest : RequestMessageBase
         (
             CultureInfo.InvariantCulture,
             "[{0},{1}=`{2}`]",
-            nameof(PingRequest),
+            nameof(PingMessage),
             nameof(this.Operation), this.Operation
         );
     }

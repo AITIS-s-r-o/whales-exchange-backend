@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using WhalesSecret.TradeScriptLib.Logging;
 
-namespace WhalesExchangeBackend.Utils.Sync;
+namespace WhalesExchangeBackend.SharedLib.Utils.Sync;
 
 /// <summary>
 /// Synchronization object used to prevent race conditions with disposable release via <see cref="DisposableReleaser"/>.

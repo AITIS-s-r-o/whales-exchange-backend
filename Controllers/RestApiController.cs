@@ -5,12 +5,12 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using WhalesExchangeBackend.Controllers.InternalSupport;
-using WhalesExchangeBackend.Data;
 using WhalesExchangeBackend.Data.Repository;
-using WhalesExchangeBackend.Exceptions;
 using WhalesExchangeBackend.Models;
 using WhalesExchangeBackend.Services;
 using WhalesExchangeBackend.Services.ElectrumRpc;
+using WhalesExchangeBackend.SharedLib.Data;
+using WhalesExchangeBackend.SharedLib.Exceptions;
 using WhalesSecret.TradeScriptLib.Exceptions;
 using WhalesSecret.TradeScriptLib.Logging;
 

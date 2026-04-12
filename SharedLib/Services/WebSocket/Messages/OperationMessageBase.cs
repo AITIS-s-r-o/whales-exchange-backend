@@ -5,7 +5,7 @@ namespace WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
 /// <summary>
 /// Base class for request messages.
 /// </summary>
-internal abstract class RequestMessageBase : ISignalsProtocolMessage
+internal abstract class OperationMessageBase : IWebSocketMessage
 {
     /// <summary>Operation type.</summary>
     [JsonPropertyName("op")]
@@ -16,7 +16,7 @@ internal abstract class RequestMessageBase : ISignalsProtocolMessage
     /// </summary>
     /// <param name="operation">Operation type.</param>
     [JsonConstructor]
-    protected RequestMessageBase(string operation)
+    protected OperationMessageBase(string operation)
     {
         this.Operation = operation;
     }

@@ -1,4 +1,4 @@
-using WhalesExchangeBackend.Utils.Sync;
+using WhalesExchangeBackend.SharedLib.Utils.Sync;
 using WhalesSecret.TradeScriptLib.Logging;
 
 namespace WhalesExchangeBackend.Data.Repository;

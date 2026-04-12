@@ -5,10 +5,10 @@ namespace WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
 /// <summary>
 /// Base class for response messages.
 /// </summary>
-internal abstract class ResponseMessageBase : ISignalsProtocolMessage
+internal abstract class EventMessageBase : IWebSocketMessage
 {
     /// <summary>Error indicating that the response has an invalid type.</summary>
-    public const string ErrorInvalidTypeResponse = nameof(ResponseMessageBase) + "_" + nameof(ErrorInvalidTypeResponse);
+    public const string ErrorInvalidTypeResponse = nameof(EventMessageBase) + "_" + nameof(ErrorInvalidTypeResponse);
 
     /// <summary>Type of the event.</summary>
     [JsonPropertyName("event")]
@@ -19,7 +19,7 @@ internal abstract class ResponseMessageBase : ISignalsProtocolMessage
     /// </summary>
     /// <param name="event">Type of the event.</param>
     [JsonConstructor]
-    protected ResponseMessageBase(string @event)
+    protected EventMessageBase(string @event)
     {
         this.Event = @event;
     }
