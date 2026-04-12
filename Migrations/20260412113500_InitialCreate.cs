@@ -49,13 +49,14 @@ namespace WhalesExchangeBackend.Migrations
                     AmountToReceiveSats = table.Column<long>(type: "INTEGER", nullable: false),
                     LockupAddress = table.Column<string>(type: "TEXT", maxLength: 64, nullable: true),
                     LockupOutputIndex = table.Column<int>(type: "INTEGER", nullable: true),
-                    FundingTxId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: true),
+                    FundingTxId = table.Column<string>(type: "TEXT", maxLength: 204800, nullable: true),
                     TimeoutBlockHeight = table.Column<long>(type: "INTEGER", nullable: true),
                     CreatedTime = table.Column<DateTime>(type: "TEXT", nullable: false),
                     AcceptedTime = table.Column<DateTime>(type: "TEXT", nullable: true),
                     FundingTime = table.Column<DateTime>(type: "TEXT", nullable: true),
                     SpentTime = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    FailTime = table.Column<DateTime>(type: "TEXT", nullable: true)
+                    FailTime = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    FundingTxData = table.Column<string>(type: "TEXT", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -67,6 +68,11 @@ namespace WhalesExchangeBackend.Migrations
                         principalColumn: "Pubkey",
                         onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DbSwap_FrontendId",
+                table: "DbSwap",
+                column: "FrontendId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_DbSwap_IsForward",
