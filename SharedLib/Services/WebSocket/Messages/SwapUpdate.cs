@@ -1,8 +1,5 @@
-using System;
 using System.Globalization;
-using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
-using Microsoft.EntityFrameworkCore.Query;
 using WhalesExchangeBackend.SharedLib.Data;
 using WhalesExchangeBackend.SharedLib.Models;
 using WhalesSecret.TradeScriptLib.Exceptions;
@@ -66,17 +63,7 @@ internal class SwapUpdate
         }
         else
         {
-            status = swap.Status switch
-            {
-                SwapStatus.Created => Constants.SwapStatusPendingSwapCreated,
-                SwapStatus.Accepted => Constants.SwapStatusPendingSwapCreated,
-                SwapStatus.FundingTxCreated => Constants.SwapStatusPendingTransactionMempool,
-                SwapStatus.FundingTxSpent => Constants.SwapStatusSuccessTransactionClaimed,
-                SwapStatus.ProviderErrorNotAccepted => Constants.SwapStatusFailedSwapRejected,
-                SwapStatus.ClientErrorFundingTxNotSpent => Constants.SwapStatusFailedSwapRefunded,
-                SwapStatus.ErrorFundingTxNotCreated => Constants.SwapStatusFailedTransactionLockupFailed,
-                _ => Constants.SwapStatusUnknown,
-            };
+            status = FrontendStatusFromSwapStatus(swap.Status);
 
             switch (swap.Status)
             {
@@ -113,6 +100,26 @@ internal class SwapUpdate
         }
 
         return new(frontendId: frontendId, status: status, failureReason: failureReason, transaction);
+    }
+
+    /// <summary>
+    /// Converts <see cref="SwapStatus"/> to frontend swap status constant.
+    /// </summary>
+    /// <param name="status">Swap status to convert.</param>
+    /// <returns>Frontend string constant that corresponds to the swap status.</returns>
+    private static string FrontendStatusFromSwapStatus(SwapStatus status)
+    {
+        return status switch
+        {
+            SwapStatus.Created => Constants.SwapStatusPendingSwapCreated,
+            SwapStatus.Accepted => Constants.SwapStatusPendingSwapCreated,
+            SwapStatus.FundingTxCreated => Constants.SwapStatusPendingTransactionMempool,
+            SwapStatus.FundingTxSpent => Constants.SwapStatusSuccessTransactionClaimed,
+            SwapStatus.ProviderErrorNotAccepted => Constants.SwapStatusFailedSwapRejected,
+            SwapStatus.ClientErrorFundingTxNotSpent => Constants.SwapStatusFailedSwapRefunded,
+            SwapStatus.ErrorFundingTxNotCreated => Constants.SwapStatusFailedTransactionLockupFailed,
+            _ => Constants.SwapStatusUnknown,
+        };
     }
 
     /// <inheritdoc/>
