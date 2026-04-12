@@ -18,6 +18,7 @@ using WhalesExchangeBackend.Controllers.InternalSupport;
 using WhalesExchangeBackend.Data;
 using WhalesExchangeBackend.Data.Repository;
 using WhalesExchangeBackend.Services;
+using WhalesExchangeBackend.SharedLib.Data;
 using WhalesExchangeBackend.SharedLib.Services.WebSocket;
 using WhalesSecret.TradeScriptLib.Exceptions;
 using WhalesSecret.TradeScriptLib.Logging;
@@ -123,7 +124,7 @@ public static class Program
 
             // Database repositories provide access to individual tables of the database and are created on per-request basis.
             _ = builder.Services.AddSingleton<SwapProviderRepository>();
-            _ = builder.Services.AddSingleton<SwapRepository>();
+            _ = builder.Services.AddSingleton<ISwapRepository, SwapRepository>();
 
             // Electrum RPC connectivity and related services.
             _ = builder.Services.AddSingleton<ElectrumRpcClient>();
