@@ -210,7 +210,7 @@ internal class ApplicationDbContext : DbContext
         _ = entity
             .Property(q => q.FundingTxData)
             .IsRequired(false)
-            .HasMaxLength(2 * 100 * 1024);
+            .HasMaxLength(2 * 1024 * 1024);
 
         _ = entity
             .HasOne(q => q.Provider)
