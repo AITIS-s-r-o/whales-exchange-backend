@@ -14,7 +14,7 @@ internal class PingMessage : OperationMessageBase
     /// </summary>
     [JsonConstructor]
     public PingMessage() :
-        base(operation: "ping")
+        base(operation: Constants.OperationPing)
     {
     }
 

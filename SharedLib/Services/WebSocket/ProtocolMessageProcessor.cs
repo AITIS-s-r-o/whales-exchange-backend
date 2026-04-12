@@ -48,23 +48,18 @@ internal class ProtocolMessageProcessor : IProtocolMessageProcessor
                 responseMessage = await this.ProcessPingMessageAsync(pingMessage).ConfigureAwait(false);
                 break;
 
-            case SubscribeUnsubscribeMessage subscribeUnsubscribeMessage:
-                if ((subscribeUnsubscribeMessage.Operation == Constants.OperationSubscribe) || (subscribeUnsubscribeMessage.Operation == Constants.OperationUnsubscribe))
+            case SubscribeMessage subscribeMessage:
+                bool success = await this.ProcessSubscribeMessageAsync(subscribeMessage, clientConnectionHandler, cancellationToken).ConfigureAwait(false);
+                if (!success)
                 {
-                    bool success = await this.ProcessSubscribeUnsubscribeMessageAsync(subscribeUnsubscribeMessage, clientConnectionHandler, cancellationToken)
-                        .ConfigureAwait(false);
-                    if (!success)
-                    {
-                        closingStatus = WebSocketCloseStatus.PolicyViolation;
-                        closingDescription = "Processing subscribe/unsubscribe message failed.";
-                    }
-                }
-                else
-                {
-                    closingStatus = WebSocketCloseStatus.InvalidMessageType;
-                    closingDescription = $"Invalid operation '{subscribeUnsubscribeMessage.Operation}' received.";
+                    closingStatus = WebSocketCloseStatus.PolicyViolation;
+                    closingDescription = "Processing subscribe/unsubscribe message failed.";
                 }
 
+                break;
+
+            case UnsubscribeMessage unsubscribeMessage:
+                this.ProcessUnsubscribeMessage(unsubscribeMessage, clientConnectionHandler);
                 break;
 
             default:
@@ -95,30 +90,34 @@ internal class ProtocolMessageProcessor : IProtocolMessageProcessor
     }
 
     /// <summary>
-    /// Processes incoming <see cref="SubscribeUnsubscribeMessage"/>.
+    /// Processes incoming <see cref="SubscribeMessage"/>.
     /// </summary>
     /// <param name="message">Message to process.</param>
     /// <param name="clientConnectionHandler">Handler of client connections to the WebSocket endpoint.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns><c>true</c> if the message was processed successfully, <c>false</c> if the client should be disconnected.</returns>
-    private async Task<bool> ProcessSubscribeUnsubscribeMessageAsync(SubscribeUnsubscribeMessage message, ClientConnectionHandler clientConnectionHandler,
+    private async Task<bool> ProcessSubscribeMessageAsync(SubscribeMessage message, ClientConnectionHandler clientConnectionHandler,
         CancellationToken cancellationToken)
     {
         this.log.Debug($"* {nameof(message)}='{message}'");
 
-        bool result;
-        if (message.Operation == Constants.OperationSubscribe)
-        {
-            result = await this.subscriptionManager.SubscribeAsync(message.SwapIds, clientConnectionHandler, cancellationToken).ConfigureAwait(false);
-        }
-        else if (message.Operation == Constants.OperationUnsubscribe)
-        {
-            this.subscriptionManager.Unsubscribe(message.SwapIds, clientConnectionHandler);
-            result = true;
-        }
-        else throw new SanityCheckException($"Invalid operation '{message.Operation}' received.");
+        bool result = await this.subscriptionManager.SubscribeAsync(message.SwapIds, clientConnectionHandler, cancellationToken).ConfigureAwait(false);
 
         this.log.Debug($"$='{result}'");
         return result;
+    }
+
+    /// <summary>
+    /// Processes incoming <see cref="UnsubscribeMessage"/>.
+    /// </summary>
+    /// <param name="message">Message to process.</param>
+    /// <param name="clientConnectionHandler">Handler of client connections to the WebSocket endpoint.</param>
+    private void ProcessUnsubscribeMessage(UnsubscribeMessage message, ClientConnectionHandler clientConnectionHandler)
+    {
+        this.log.Debug($"* {nameof(message)}='{message}'");
+
+        this.subscriptionManager.Unsubscribe(message.SwapIds, clientConnectionHandler);
+
+        this.log.Debug("$");
     }
 }

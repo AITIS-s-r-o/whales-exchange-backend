@@ -5,30 +5,30 @@ using WhalesSecret.TradeScriptLib.Logging;
 namespace WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
 
 /// <summary>
-/// Server's message to inform the client about updates for swaps the client subscribed for.
+/// Client's message to subscribe to updates for swaps on the server.
 /// </summary>
-/// <seealso cref="UnsubscribeMessage"/>
-internal class SubscriptionUpdateMessage : EventMessageBase
+/// <seealso cref="SubscriptionUpdateMessage"/>
+internal class SubscribeMessage : OperationMessageBase
 {
-    /// <summary>Name of the channel.</summary>
+    /// <summary>Name of the channel to subscribe.</summary>
     [JsonPropertyName("channel")]
     public string Channel { get; }
 
-    /// <summary>List of updates for the swaps.</summary>
+    /// <summary>IDs of the swaps to subscribe for.</summary>
     [JsonPropertyName("args")]
-    public SwapUpdate[] SwapUpdates { get; }
+    public string[] SwapIds { get; }
 
     /// <summary>
     /// Creates a new instance of the object.
     /// </summary>
     /// <param name="channel">Name of the channel to subscribe.</param>
-    /// <param name="swapUpdates">List of updates for the swaps.</param>
+    /// <param name="swapIds">IDs of the swaps to subscribe for.</param>
     [JsonConstructor]
-    public SubscriptionUpdateMessage(string channel, SwapUpdate[] swapUpdates) :
-        base(@event: Constants.EventSubscriptionUpdate)
+    public SubscribeMessage(string channel, string[] swapIds) :
+        base(operation: Constants.OperationSubscribe)
     {
         this.Channel = channel;
-        this.SwapUpdates = swapUpdates;
+        this.SwapIds = swapIds;
     }
 
     /// <inheritdoc/>
@@ -38,10 +38,10 @@ internal class SubscriptionUpdateMessage : EventMessageBase
         (
             CultureInfo.InvariantCulture,
             "[{0},{1}=`{2}`,{3}=`{4}`,{5}={6}]",
-            nameof(SubscriptionUpdateMessage),
-            nameof(this.Event), this.Event,
+            nameof(UnsubscribeMessage),
+            nameof(this.Operation), this.Operation,
             nameof(this.Channel), this.Channel,
-            nameof(this.SwapUpdates), this.SwapUpdates.LogJoin()
+            nameof(this.SwapIds), this.SwapIds.LogJoin()
         );
     }
 }

@@ -14,7 +14,7 @@ internal class PongMessage : EventMessageBase
     /// </summary>
     [JsonConstructor]
     public PongMessage() :
-        base(@event: "pong")
+        base(@event: Constants.EventPong)
     {
     }
 

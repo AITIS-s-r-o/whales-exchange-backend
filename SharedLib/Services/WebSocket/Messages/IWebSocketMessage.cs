@@ -1,12 +1,12 @@
 using System.Text.Json.Serialization;
+using WhalesExchangeBackend.SharedLib.Encoding.Converters;
 
 namespace WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
 
 /// <summary>
 /// Interface denoting a message received from a trading signals WebSocket connection.
 /// </summary>
-[JsonDerivedType(typeof(PingMessage), typeDiscriminator: nameof(PingMessage))]
-[JsonDerivedType(typeof(PongMessage), typeDiscriminator: nameof(PongMessage))]
+[JsonConverter(typeof(WebSocketMessageConverter))]
 internal interface IWebSocketMessage
 {
 }

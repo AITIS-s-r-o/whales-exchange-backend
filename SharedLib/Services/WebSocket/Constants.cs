@@ -16,11 +16,20 @@ internal static class Constants
     /// <summary>Name of the channel for swap updates.</summary>
     public const string SwapUpdatesChannel = "swap.update";
 
+    /// <summary>Name of the ping operation.</summary>
+    public const string OperationPing = "ping";
+
     /// <summary>Name of the subscribe operation.</summary>
     public const string OperationSubscribe = "subscribe";
 
     /// <summary>Name of the unsubscribe operation.</summary>
     public const string OperationUnsubscribe = "unsubscribe";
+
+    /// <summary>Name of the pong event.</summary>
+    public const string EventPong = "pong";
+
+    /// <summary>Name of the subscription update event.</summary>
+    public const string EventSubscriptionUpdate = "update";
 
     /// <summary>Name of the pending swap status when the LN invoice is set.</summary>
     public const string SwapStatusPendingInvoiceSet = "invoice.set";

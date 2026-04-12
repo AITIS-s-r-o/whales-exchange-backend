@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using WhalesExchangeBackend.SharedLib.Data;
@@ -61,10 +62,16 @@ internal class SubscriptionManager
     {
         this.log.Debug($"* {nameof(frontendSwapIds)}={frontendSwapIds.LogJoin()},{nameof(clientConnectionHandler)}='{clientConnectionHandler}'");
 
+        // Frontend swap ID comes from the client and thus can be null.
+        frontendSwapIds = frontendSwapIds.Select(c => c ?? string.Empty).ToArray();
+
         lock (this.clientLock)
         {
             foreach (string frontendSwapId in frontendSwapIds)
             {
+                if (string.IsNullOrEmpty(frontendSwapId))
+                    continue;
+
                 if (!this.swapIdsToClients.TryGetValue(frontendSwapId, out HashSet<ClientConnectionHandler>? clients))
                 {
                     clients = new();
@@ -119,6 +126,9 @@ internal class SubscriptionManager
     public void Unsubscribe(string[] frontendSwapIds, ClientConnectionHandler clientConnectionHandler)
     {
         this.log.Debug($"* {nameof(frontendSwapIds)}={frontendSwapIds.LogJoin()},{nameof(clientConnectionHandler)}='{clientConnectionHandler}'");
+
+        // Frontend swap ID comes from the client and thus can be null.
+        frontendSwapIds = frontendSwapIds.Select(c => c ?? string.Empty).ToArray();
 
         lock (this.clientLock)
         {
