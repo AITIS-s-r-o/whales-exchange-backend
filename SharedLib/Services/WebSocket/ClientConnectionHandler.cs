@@ -131,7 +131,7 @@ internal class ClientConnectionHandler : IAsyncDisposable
                     }
 
                     // The protocol is based on JSON messages exchanged using the text WebSocket messages.
-                    if (receiveResult.MessageType == WebSocketMessageType.Text)
+                    if (receiveResult.MessageType != Constants.MessageType)
                     {
                         this.log.Debug("Invalid message received, closing connection.");
                         _ = await this.CloseAsync(WebSocketCloseStatus.ProtocolError, "Invalid message received.", cancellationToken).ConfigureAwait(false);
