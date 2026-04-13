@@ -11,6 +11,7 @@ namespace WhalesExchangeBackend.Models;
 internal class GetSwapStatusResponse
 {
     /// <summary>Status of the swap, or <c>null</c> if error occurred.</summary>
+    /// <seealso cref="SwapUpdate.Status"/>
     [JsonPropertyName("status")]
     public string? Status { get; }
 
@@ -34,6 +35,7 @@ internal class GetSwapStatusResponse
     /// <param name="failureReason">Reason of the failure if the swap failed, or <c>null</c> if no failure is reported.</param>
     /// <param name="transaction">Description of a Bitcoin transaction associated with the swap update, or <c>null</c> if no transaction is associated.</param>
     /// <param name="error">Error message, or <c>null</c> if the call succeeded.</param>
+    [JsonConstructor]
     public GetSwapStatusResponse(string? status, string? failureReason, SwapStatusTransaction? transaction, string? error)
     {
         this.Status = status;

@@ -187,7 +187,7 @@ public static class Program
             _ = app.UseAuthentication();
             _ = app.MapControllers();
 
-            // WebSockets for signals service.
+            // WebSockets for swap updates.
             _ = app.UseWebSockets();
 
             _ = app.Map("/v2/ws", async (HttpContext context) =>
@@ -231,7 +231,7 @@ public static class Program
     }
 
     /// <summary>
-    /// Method that is called when signals service WebSocket endpoint receives a client.
+    /// Method that is called when the WebSocket endpoint receives a client.
     /// </summary>
     /// <param name="context">Information about the incoming HTTP request.</param>
     /// <param name="clientConnectionHandlerFactory">Factory for creating <see cref="ClientConnectionHandler"/>s.</param>
