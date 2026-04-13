@@ -16,6 +16,7 @@ internal class SwapUpdate
     public string FrontendId { get; }
 
     /// <summary>New status of the swap.</summary>
+    /// <remarks>See <c>SwapStatus*</c> constants in <see cref="Constants"/>.</remarks>
     [JsonPropertyName("status")]
     public string Status { get; }
 
