@@ -2,7 +2,6 @@ using System.Net.WebSockets;
 using System.Threading;
 using System.Threading.Tasks;
 using WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
-using WhalesSecret.TradeScriptLib.Exceptions;
 using WhalesSecret.TradeScriptLib.Logging;
 
 namespace WhalesExchangeBackend.SharedLib.Services.WebSocket;
@@ -96,8 +95,7 @@ internal class ProtocolMessageProcessor : IProtocolMessageProcessor
     /// <param name="clientConnectionHandler">Handler of client connections to the WebSocket endpoint.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns><c>true</c> if the message was processed successfully, <c>false</c> if the client should be disconnected.</returns>
-    private async Task<bool> ProcessSubscribeMessageAsync(SubscribeMessage message, ClientConnectionHandler clientConnectionHandler,
-        CancellationToken cancellationToken)
+    private async Task<bool> ProcessSubscribeMessageAsync(SubscribeMessage message, ClientConnectionHandler clientConnectionHandler, CancellationToken cancellationToken)
     {
         this.log.Debug($"* {nameof(message)}='{message}'");
 
