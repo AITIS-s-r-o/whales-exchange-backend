@@ -31,7 +31,7 @@ internal class SubscriptionManager
     /// <remarks>All access to this object must be protected by <see cref="clientLock"/>.</remarks>
     private readonly Dictionary<ClientConnectionHandler, HashSet<string>> clientsToSwapIds;
 
-    /// <summary>Lock object to protect access to <see cref="swapIdsToClients"/>.</summary>
+    /// <summary>Lock object to protect access to <see cref="swapIdsToClients"/>, and <see cref="clientsToSwapIds"/>.</summary>
     private readonly Lock clientLock;
 
     /// <summary>
