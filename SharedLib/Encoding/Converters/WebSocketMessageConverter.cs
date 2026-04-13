@@ -19,7 +19,7 @@ internal class WebSocketMessageConverter : JsonConverter<IWebSocketMessage>
 
         if (root.TryGetProperty("op", out JsonElement operationElement))
         {
-            string op = operationElement.GetString() ?? string.Empty;
+            string? op = operationElement.GetString();
             return op switch
             {
                 Constants.OperationPing => JsonSerializer.Deserialize<PingMessage>(root.GetRawText(), options),
@@ -31,7 +31,7 @@ internal class WebSocketMessageConverter : JsonConverter<IWebSocketMessage>
 
         if (root.TryGetProperty("event", out JsonElement eventElement))
         {
-            string eventName = eventElement.GetString() ?? string.Empty;
+            string? eventName = eventElement.GetString();
             return eventName switch
             {
                 Constants.EventPong => JsonSerializer.Deserialize<PongMessage>(root.GetRawText(), options),
