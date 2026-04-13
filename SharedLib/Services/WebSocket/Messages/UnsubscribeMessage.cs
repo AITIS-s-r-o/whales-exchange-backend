@@ -5,7 +5,7 @@ using WhalesSecret.TradeScriptLib.Logging;
 namespace WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
 
 /// <summary>
-/// Client's message to unsubscribe to updates from swaps on the server.
+/// Client's message to unsubscribe from updates from swaps on the server.
 /// </summary>
 internal class UnsubscribeMessage : OperationMessageBase
 {
