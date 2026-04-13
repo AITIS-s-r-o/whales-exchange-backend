@@ -14,27 +14,27 @@ internal class SubscriptionUpdateMessage : EventMessageBase
     [JsonPropertyName("channel")]
     public string Channel { get; }
 
-    /// <summary>List of updates for the swaps.</summary>
-    [JsonPropertyName("args")]
-    public SwapUpdate[] SwapUpdates { get; }
-
     /// <summary>UNIX timestamp of the event in milliseconds.</summary>
     [JsonPropertyName("timestamp")]
     public long TimestampMs { get; }
+
+    /// <summary>List of updates for the swaps.</summary>
+    [JsonPropertyName("args")]
+    public SwapUpdate[] SwapUpdates { get; }
 
     /// <summary>
     /// Creates a new instance of the object.
     /// </summary>
     /// <param name="channel">Name of the channel to subscribe.</param>
-    /// <param name="swapUpdates">List of updates for the swaps.</param>
     /// <param name="timestampMs">UNIX timestamp of the event in milliseconds.</param>
+    /// <param name="swapUpdates">List of updates for the swaps.</param>
     [JsonConstructor]
-    public SubscriptionUpdateMessage(string channel, SwapUpdate[] swapUpdates, long timestampMs) :
+    public SubscriptionUpdateMessage(string channel, long timestampMs, SwapUpdate[] swapUpdates) :
         base(@event: Constants.EventSubscriptionUpdate)
     {
         this.Channel = channel;
-        this.SwapUpdates = swapUpdates;
         this.TimestampMs = timestampMs;
+        this.SwapUpdates = swapUpdates;
     }
 
     /// <inheritdoc/>
@@ -47,8 +47,8 @@ internal class SubscriptionUpdateMessage : EventMessageBase
             nameof(SubscriptionUpdateMessage),
             nameof(this.Event), this.Event,
             nameof(this.Channel), this.Channel,
-            nameof(this.SwapUpdates), this.SwapUpdates.LogJoin(),
-            nameof(this.TimestampMs), this.TimestampMs
+            nameof(this.TimestampMs), this.TimestampMs,
+            nameof(this.SwapUpdates), this.SwapUpdates.LogJoin()
         );
     }
 }

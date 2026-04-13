@@ -228,7 +228,7 @@ internal class ClientConnectionHandler : IAsyncDisposable
 
         bool result = false;
         long timestampMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-        SubscriptionUpdateMessage message = new(channel: Constants.SwapUpdatesChannel, swapUpdates, timestampMs);
+        SubscriptionUpdateMessage message = new(channel: Constants.SwapUpdatesChannel, timestampMs, swapUpdates);
 
         try
         {
