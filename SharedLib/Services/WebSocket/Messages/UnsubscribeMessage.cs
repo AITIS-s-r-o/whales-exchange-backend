@@ -9,19 +9,19 @@ namespace WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
 /// </summary>
 internal class UnsubscribeMessage : OperationMessageBase
 {
-    /// <summary>Name of the channel to subscribe.</summary>
+    /// <summary>Name of the channel to unsubscribe.</summary>
     [JsonPropertyName("channel")]
     public string Channel { get; }
 
-    /// <summary>IDs of the swaps to subscribe for.</summary>
+    /// <summary>IDs of the swaps to unsubscribe.</summary>
     [JsonPropertyName("args")]
     public string[] SwapIds { get; }
 
     /// <summary>
     /// Creates a new instance of the object.
     /// </summary>
-    /// <param name="channel">Name of the channel to subscribe.</param>
-    /// <param name="swapIds">IDs of the swaps to subscribe for.</param>
+    /// <param name="channel">Name of the channel to unsubscribe.</param>
+    /// <param name="swapIds">IDs of the swaps to unsubscribe.</param>
     [JsonConstructor]
     public UnsubscribeMessage(string channel, string[] swapIds) :
         base(operation: Constants.OperationUnsubscribe)
