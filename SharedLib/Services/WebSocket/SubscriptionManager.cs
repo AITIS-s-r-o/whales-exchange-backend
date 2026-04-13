@@ -98,7 +98,7 @@ internal class SubscriptionManager
             }
         }
 
-        DbSwap?[] swaps = await this.swapRepository.GetSwapsByFrontentIdsAsync(frontendSwapIds).ConfigureAwait(false);
+        DbSwap?[] swaps = await this.swapRepository.GetSwapsByFrontendIdsAsync(frontendSwapIds).ConfigureAwait(false);
 
         List<SwapUpdate> swapUpdates = new(capacity: swaps.Length);
         foreach (DbSwap? swap in swaps)

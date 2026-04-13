@@ -228,7 +228,7 @@ internal class RestApiController : InternalControllerBase
         this.log.Debug($"* {nameof(frontendId)}='{frontendId}'");
 
         IActionResult result;
-        DbSwap?[] swaps = await this.swapRepository.GetSwapsByFrontentIdsAsync(new string[] { frontendId }).ConfigureAwait(false);
+        DbSwap?[] swaps = await this.swapRepository.GetSwapsByFrontendIdsAsync(new string[] { frontendId }).ConfigureAwait(false);
 
         if ((swaps.Length == 1) && (swaps[0] is not null))
         {

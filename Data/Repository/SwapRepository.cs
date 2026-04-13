@@ -184,7 +184,7 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     }
 
     /// <inheritdoc/>
-    public async Task<DbSwap?[]> GetSwapsByFrontentIdsAsync(string[] frontendIds)
+    public async Task<DbSwap?[]> GetSwapsByFrontendIdsAsync(string[] frontendIds)
     {
         this.log.Debug($"* {nameof(frontendIds)}={frontendIds.LogJoin()}");
 
