@@ -18,7 +18,7 @@ internal class SubscriptionUpdateMessage : EventMessageBase
     [JsonPropertyName("args")]
     public SwapUpdate[] SwapUpdates { get; }
 
-    /// <summary>UNIX timestmap of the event in milliseconds.</summary>
+    /// <summary>UNIX timestamp of the event in milliseconds.</summary>
     [JsonPropertyName("timestamp")]
     public long TimestampMs { get; }
 
@@ -27,7 +27,7 @@ internal class SubscriptionUpdateMessage : EventMessageBase
     /// </summary>
     /// <param name="channel">Name of the channel to subscribe.</param>
     /// <param name="swapUpdates">List of updates for the swaps.</param>
-    /// <param name="timestampMs">UNIX timestmap of the event in milliseconds.</param>
+    /// <param name="timestampMs">UNIX timestamp of the event in milliseconds.</param>
     [JsonConstructor]
     public SubscriptionUpdateMessage(string channel, SwapUpdate[] swapUpdates, long timestampMs) :
         base(@event: Constants.EventSubscriptionUpdate)
