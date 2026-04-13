@@ -210,7 +210,6 @@ internal class ClientConnectionHandler : IAsyncDisposable
         catch (Exception e)
         {
             this.log.Error($"Exception occurred while handling the client: {e}");
-            throw;
         }
 
         this.log.Debug("$");
