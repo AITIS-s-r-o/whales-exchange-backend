@@ -18,7 +18,6 @@ internal abstract class EventMessageBase : IWebSocketMessage
     /// Creates a new instance of the object.
     /// </summary>
     /// <param name="event">Type of the event.</param>
-    [JsonConstructor]
     protected EventMessageBase(string @event)
     {
         this.Event = @event;

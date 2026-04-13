@@ -15,7 +15,6 @@ internal abstract class OperationMessageBase : IWebSocketMessage
     /// Creates a new instance of the object.
     /// </summary>
     /// <param name="operation">Operation type.</param>
-    [JsonConstructor]
     protected OperationMessageBase(string operation)
     {
         this.Operation = operation;
