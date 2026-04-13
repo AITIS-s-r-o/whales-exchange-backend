@@ -21,7 +21,7 @@ internal class ClientConnectionHandler : IAsyncDisposable
     /// <summary>Connected WebSocket representing the incoming client.</summary>
     private readonly System.Net.WebSockets.WebSocket webSocket;
 
-    /// <summary>Processor of trading signals protocol messages.</summary>
+    /// <summary>Processor of WebSocket protocol messages.</summary>
     private readonly IProtocolMessageProcessor protocolMessageProcessor;
 
     /// <summary>Name of the instance for logging purposes only.</summary>
@@ -50,7 +50,7 @@ internal class ClientConnectionHandler : IAsyncDisposable
     /// Creates a new instance of the object.
     /// </summary>
     /// <param name="webSocket">Connected WebSocket representing the incoming client.</param>
-    /// <param name="protocolMessageProcessor">Processor of trading signals protocol messages.</param>
+    /// <param name="protocolMessageProcessor">Processor of WebSocket protocol messages.</param>
     /// <param name="instanceName">Name of the instance for logging purposes only.</param>
     public ClientConnectionHandler(System.Net.WebSockets.WebSocket webSocket, IProtocolMessageProcessor protocolMessageProcessor, string instanceName)
     {
