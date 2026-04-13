@@ -17,6 +17,9 @@ internal class SubscriptionManager
     /// <summary>Maximum number of swap IDs per message.</summary>
     private const int MaxIdsPerMessage = 200;
 
+    /// <summary>Maximum number of swap IDs that a single client can be subscribed to.</summary>
+    private const int MaxIdsPerClient = 1000;
+
     /// <summary>Instance logger.</summary>
     private readonly WsLogger log = WsLogger.GetCurrentClassLogger();
 
@@ -78,6 +81,20 @@ internal class SubscriptionManager
 
         lock (this.clientLock)
         {
+            if (!this.clientsToSwapIds.TryGetValue(clientConnectionHandler, out HashSet<string>? swapIds))
+            {
+                swapIds = new();
+                this.clientsToSwapIds.Add(clientConnectionHandler, swapIds);
+            }
+
+            if (swapIds.Count + frontendSwapIds.Length > MaxIdsPerClient)
+            {
+                this.log.Debug($"{frontendSwapIds.Length} new swap IDs will not be subscribed for client ID '{
+                    clientConnectionHandler}' as this client would reach over the maximum number of subscription.");
+                this.log.Debug("$<CLIENT_MAX_SUBSCRIPTIONS>=false");
+                return false;
+            }
+
             foreach (string frontendSwapId in frontendSwapIds)
             {
                 if (string.IsNullOrEmpty(frontendSwapId))
@@ -87,12 +104,6 @@ internal class SubscriptionManager
                 {
                     clients = new();
                     this.swapIdsToClients.Add(frontendSwapId, clients);
-                }
-
-                if (!this.clientsToSwapIds.TryGetValue(clientConnectionHandler, out HashSet<string>? swapIds))
-                {
-                    swapIds = new();
-                    this.clientsToSwapIds.Add(clientConnectionHandler, swapIds);
                 }
 
                 if (clients.Add(clientConnectionHandler))
