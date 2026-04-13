@@ -217,7 +217,7 @@ internal class ClientConnectionHandler : IAsyncDisposable
     }
 
     /// <summary>
-    /// Sends a swap update message to the client.
+    /// Sends a swap subscription update message to the client.
     /// </summary>
     /// <param name="swapUpdates">List of swap updates to send.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>

@@ -14,6 +14,9 @@ namespace WhalesExchangeBackend.SharedLib.Services.WebSocket;
 /// </summary>
 internal class SubscriptionManager
 {
+    /// <summary>Maximum number of swap IDs per message.</summary>
+    private const int MaxIdsPerMessage = 200;
+
     /// <summary>Instance logger.</summary>
     private readonly WsLogger log = WsLogger.GetCurrentClassLogger();
 
@@ -61,6 +64,14 @@ internal class SubscriptionManager
     public async Task<bool> SubscribeAsync(string[] frontendSwapIds, ClientConnectionHandler clientConnectionHandler, CancellationToken cancellationToken)
     {
         this.log.Debug($"* {nameof(frontendSwapIds)}={frontendSwapIds.LogJoin()},{nameof(clientConnectionHandler)}='{clientConnectionHandler}'");
+
+        if ((frontendSwapIds is null) || (frontendSwapIds.Length > MaxIdsPerMessage))
+        {
+            if (frontendSwapIds is null) this.log.Debug("$<NULL_IDS>=false");
+            else this.log.Debug($"$<TOO_MANY_IDS>=false");
+
+            return false;
+        }
 
         // Frontend swap ID comes from the client and thus can be null.
         frontendSwapIds = frontendSwapIds.Select(c => c ?? string.Empty).ToArray();
@@ -126,6 +137,14 @@ internal class SubscriptionManager
     public void Unsubscribe(string[] frontendSwapIds, ClientConnectionHandler clientConnectionHandler)
     {
         this.log.Debug($"* {nameof(frontendSwapIds)}={frontendSwapIds.LogJoin()},{nameof(clientConnectionHandler)}='{clientConnectionHandler}'");
+
+        if ((frontendSwapIds is null) || (frontendSwapIds.Length > MaxIdsPerMessage))
+        {
+            if (frontendSwapIds is null) this.log.Debug("$<NULL_IDS>=false");
+            else this.log.Debug($"$<TOO_MANY_IDS>=false");
+
+            return;
+        }
 
         // Frontend swap ID comes from the client and thus can be null.
         frontendSwapIds = frontendSwapIds.Select(c => c ?? string.Empty).ToArray();
