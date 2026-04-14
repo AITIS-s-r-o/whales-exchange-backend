@@ -135,6 +135,7 @@ public static class Program
             // Electrum RPC connectivity and related services.
             _ = builder.Services.AddSingleton<ElectrumRpcClient>();
             _ = builder.Services.AddSingleton<SwapProviderFetcher>();
+            _ = builder.Services.AddSingleton<BlockchainDataProvider>();
 
             // WebSocket services.
             _ = builder.Services.AddSingleton<IProtocolMessageProcessorFactory, ProtocolMessageProcessorFactory>();
@@ -201,8 +202,9 @@ public static class Program
                 await HandleSignalsWebSocketClientAsync(context, clientConnectionHandlerFactory, subscriptionManager, shutdownToken.Value).ConfigureAwait(false);
             });
 
-            // Trigger instantiation of the swap provider fetcher.
+            // Trigger instantiation of the swap provider fetcher and blockchain data provider.
             _ = app.Services.GetRequiredService<SwapProviderFetcher>();
+            _ = app.Services.GetRequiredService<BlockchainDataProvider>();
 
             // Initialize and seed database at startup.
             using (IServiceScope scope = app.Services.CreateScope())
