@@ -3,6 +3,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Security;
+using System.Net.WebSockets;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -17,6 +19,8 @@ using WhalesExchangeBackend.Controllers.InternalSupport;
 using WhalesExchangeBackend.Data;
 using WhalesExchangeBackend.Data.Repository;
 using WhalesExchangeBackend.Services;
+using WhalesExchangeBackend.SharedLib.Data;
+using WhalesExchangeBackend.SharedLib.Services.WebSocket;
 using WhalesSecret.TradeScriptLib.Exceptions;
 using WhalesSecret.TradeScriptLib.Logging;
 
@@ -68,6 +72,10 @@ public static class Program
             // Add services to the container.
             _ = builder.Services.AddControllersWithViews()
                 .EnableInternalControllers()
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+                })
                 .AddCookieTempDataProvider(options =>
                 {
                     options.Cookie.IsEssential = true;
@@ -122,10 +130,16 @@ public static class Program
             // Database repositories provide access to individual tables of the database and are created on per-request basis.
             _ = builder.Services.AddSingleton<SwapProviderRepository>();
             _ = builder.Services.AddSingleton<SwapRepository>();
+            _ = builder.Services.AddSingleton<ISwapRepository>(sp => sp.GetRequiredService<SwapRepository>());
 
             // Electrum RPC connectivity and related services.
             _ = builder.Services.AddSingleton<ElectrumRpcClient>();
             _ = builder.Services.AddSingleton<SwapProviderFetcher>();
+
+            // WebSocket services.
+            _ = builder.Services.AddSingleton<IProtocolMessageProcessorFactory, ProtocolMessageProcessorFactory>();
+            _ = builder.Services.AddScoped<IClientConnectionHandlerFactory, ClientConnectionHandlerFactory>();
+            _ = builder.Services.AddSingleton<SubscriptionManager>();
 
             // These configuration files are used when "dotnet ef" command is executed.
             _ = builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: false);
@@ -171,22 +185,20 @@ public static class Program
 
             _ = app.UseAuthorization();
             _ = app.UseAuthentication();
-            _ = app.MapControllerRoute
-            (
-                name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}"
-            );
+            _ = app.MapControllers();
 
-            // WebSockets for signals service.
+            // WebSockets for swap updates.
             _ = app.UseWebSockets();
 
-            _ = app.Map("/ws", async (HttpContext context) =>
+            _ = app.Map("/v2/ws", async (HttpContext context) =>
             {
                 if (shutdownToken is null)
                     throw new SanityCheckException("Shutdown token has not been initialized yet.");
 
                 using IServiceScope scope = context.RequestServices.CreateScope();
-                /* TODO */
+                IClientConnectionHandlerFactory clientConnectionHandlerFactory = scope.ServiceProvider.GetRequiredService<IClientConnectionHandlerFactory>();
+                SubscriptionManager subscriptionManager = scope.ServiceProvider.GetRequiredService<SubscriptionManager>();
+                await HandleSignalsWebSocketClientAsync(context, clientConnectionHandlerFactory, subscriptionManager, shutdownToken.Value).ConfigureAwait(false);
             });
 
             // Trigger instantiation of the swap provider fetcher.
@@ -216,5 +228,45 @@ public static class Program
         {
             clog.FlushAndShutDown();
         }
+    }
+
+    /// <summary>
+    /// Method that is called when the WebSocket endpoint receives a client.
+    /// </summary>
+    /// <param name="context">Information about the incoming HTTP request.</param>
+    /// <param name="clientConnectionHandlerFactory">Factory for creating <see cref="ClientConnectionHandler"/>s.</param>
+    /// <param name="subscriptionManager">Manager of swap subscriptions.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    private static async Task HandleSignalsWebSocketClientAsync(HttpContext context, IClientConnectionHandlerFactory clientConnectionHandlerFactory,
+        SubscriptionManager subscriptionManager, CancellationToken cancellationToken)
+    {
+        clog.Debug("*");
+
+        if (!context.WebSockets.IsWebSocketRequest)
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+            try
+            {
+                await context.Response.WriteAsync("WebSocket request expected", cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                clog.Debug("Sending bad request response to the client has been canceled.");
+            }
+
+            clog.Debug("$<BAD_REQUEST_NO_WS>");
+            return;
+        }
+
+        using WebSocket webSocket = await context.WebSockets.AcceptWebSocketAsync().ConfigureAwait(false);
+
+        await using ClientConnectionHandler connectionHandler = clientConnectionHandlerFactory.Create(webSocket, instanceName: $"{context.Connection.RemoteIpAddress}");
+
+        await connectionHandler.RunClientHandlingLoopAsync(cancellationToken).ConfigureAwait(false);
+
+        subscriptionManager.RemoveClient(connectionHandler);
+
+        clog.Debug("$");
     }
 }

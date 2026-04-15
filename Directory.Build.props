@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
     <TargetFrameworks>net10.0</TargetFrameworks>
     <AnalysisLevel>latest</AnalysisLevel>
     <LangVersion>14.0</LangVersion>

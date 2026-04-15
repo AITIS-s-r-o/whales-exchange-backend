@@ -11,7 +11,7 @@ using WhalesExchangeBackend.Data;
 namespace WhalesExchangeBackend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260411150552_InitialCreate")]
+    [Migration("20260412154853_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -20,7 +20,7 @@ namespace WhalesExchangeBackend.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
 
-            modelBuilder.Entity("WhalesExchangeBackend.Data.DbSwap", b =>
+            modelBuilder.Entity("WhalesExchangeBackend.SharedLib.Data.DbSwap", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -47,6 +47,10 @@ namespace WhalesExchangeBackend.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("FundingTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FundingTxData")
+                        .HasMaxLength(2097152)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FundingTxId")
@@ -80,6 +84,8 @@ namespace WhalesExchangeBackend.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("FrontendId");
+
                     b.HasIndex("IsForward");
 
                     b.HasIndex("ProviderPubkey");
@@ -89,7 +95,7 @@ namespace WhalesExchangeBackend.Migrations
                     b.ToTable("DbSwap");
                 });
 
-            modelBuilder.Entity("WhalesExchangeBackend.Data.DbSwapProvider", b =>
+            modelBuilder.Entity("WhalesExchangeBackend.SharedLib.Data.DbSwapProvider", b =>
                 {
                     b.Property<string>("Pubkey")
                         .HasMaxLength(64)
@@ -145,9 +151,9 @@ namespace WhalesExchangeBackend.Migrations
                     b.ToTable("DbSwapProvider");
                 });
 
-            modelBuilder.Entity("WhalesExchangeBackend.Data.DbSwap", b =>
+            modelBuilder.Entity("WhalesExchangeBackend.SharedLib.Data.DbSwap", b =>
                 {
-                    b.HasOne("WhalesExchangeBackend.Data.DbSwapProvider", "Provider")
+                    b.HasOne("WhalesExchangeBackend.SharedLib.Data.DbSwapProvider", "Provider")
                         .WithMany()
                         .HasForeignKey("ProviderPubkey")
                         .OnDelete(DeleteBehavior.Cascade)

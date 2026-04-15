@@ -25,7 +25,6 @@ internal abstract class RestResponseBase
     /// <param name="success"><c>true</c> if the API call succeeded, <c>false</c> otherwise.</param>
     /// <param name="data">If <see cref="Success"/> is <c>true</c>, this contains the result of the API call; otherwise this is <c>null</c>.</param>
     /// <param name="error">If <see cref="Success"/> is <c>false</c>, this is the error message; otherwise this is <c>null</c>.</param>
-    [JsonConstructor]
     protected RestResponseBase(bool success, object? data, string? error)
     {
         this.Success = success;

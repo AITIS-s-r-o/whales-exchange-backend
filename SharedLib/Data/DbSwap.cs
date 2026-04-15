@@ -1,8 +1,8 @@
 using System;
 using System.Globalization;
-using WhalesExchangeBackend.Models;
+using WhalesExchangeBackend.SharedLib.Models;
 
-namespace WhalesExchangeBackend.Data;
+namespace WhalesExchangeBackend.SharedLib.Data;
 
 /// <summary>
 /// Description of a swap in the database.
@@ -88,6 +88,10 @@ internal class DbSwap
     /// </remarks>
     public DateTime? FailTime { get; set; }
 
+    /// <summary>Funding transaction data in hex format, or <c>null</c> if not funded yet.</summary>
+    /// <remarks>The setter is needed for the serializer.</remarks>
+    public string? FundingTxData { get; set; }
+
     /// <summary>Provider of the swap.</summary>
     /// <remarks>The setter is needed for the serializer.</remarks>
     public DbSwapProvider Provider { get; set; }
@@ -123,10 +127,11 @@ internal class DbSwap
     /// <param name="fundingTime">UTC time when the funding Bitcoin transaction has been broadcasted by the provider, or <c>null</c> if not funded yet.</param>
     /// <param name="spentTime">UTC time when the funding Bitcoin transaction output was spent by the client, or <c>null</c> if not spent yet.</param>
     /// <param name="failTime">UTC time since when the swap is considered as failed, or <c>null</c> if the swap is not failed.</param>
+    /// <param name="fundingTxData">Funding transaction data in hex format, or <c>null</c> if not funded yet.</param>
     /// <param name="provider">Provider of the swap.</param>
     public DbSwap(long id, string frontendId, string providerPubkey, bool isForward, SwapStatus status, long amountToPaySats, long amountToReceiveSats, string? lockupAddress,
         int? lockupOutputIndex, string? fundingTxId, long? timeoutBlockHeight, DateTime createdTime, DateTime? acceptedTime, DateTime? fundingTime, DateTime? spentTime,
-        DateTime? failTime, DbSwapProvider provider)
+        DateTime? failTime, string? fundingTxData, DbSwapProvider provider)
     {
         this.Id = id;
         this.FrontendId = frontendId;
@@ -144,16 +149,20 @@ internal class DbSwap
         this.FundingTime = fundingTime;
         this.SpentTime = spentTime;
         this.FailTime = failTime;
+        this.FundingTxData = fundingTxData;
         this.Provider = provider;
     }
 
     /// <inheritdoc/>
     public override string ToString()
     {
+        string format = "[{0}={1},{2}=`{3}`,{4}=`{5}`,{6}={7},{8}={9},{10}={11},{12}={13},{14}=`{15}`,{16}={17},{18}=`{19}`,{20}={21},{22}={23},{24}={25},{26}={27},{28}={29},"
+            + "{30}={31},{32}=`{33}`]";
+
         return string.Format
         (
             CultureInfo.InvariantCulture,
-            "[{0}={1},{2}=`{3}`,{4}=`{5}`,{6}={7},{8}={9},{10}={11},{12}={13},{14}=`{15}`,{16}={17},{18}=`{19}`,{20}={21},{22}={23},{24}={25},{26}={27},{28}={29},{30}={31}]",
+            format,
             nameof(this.Id), this.Id,
             nameof(this.FrontendId), this.FrontendId,
             nameof(this.ProviderPubkey), this.ProviderPubkey,
@@ -169,7 +178,8 @@ internal class DbSwap
             nameof(this.AcceptedTime), this.AcceptedTime,
             nameof(this.FundingTime), this.FundingTime,
             nameof(this.SpentTime), this.SpentTime,
-            nameof(this.FailTime), this.FailTime
+            nameof(this.FailTime), this.FailTime,
+            nameof(this.FundingTxData), this.FundingTxData
         );
     }
 }

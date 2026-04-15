@@ -1,11 +1,11 @@
 using System;
 
-namespace WhalesExchangeBackend.Exceptions;
+namespace WhalesExchangeBackend.SharedLib.Exceptions;
 
 /// <summary>
 /// Exception for cases when an Electrum RPC call fails.
 /// </summary>
-internal class ElectrumRpcException : Exception
+public class ElectrumRpcException : Exception
 {
     /// <summary>Error code.</summary>
     public long Code { get; }

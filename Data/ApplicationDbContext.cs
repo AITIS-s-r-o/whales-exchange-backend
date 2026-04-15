@@ -2,6 +2,7 @@ using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage;
+using WhalesExchangeBackend.SharedLib.Data;
 using WhalesSecret.TradeScriptLib.Logging;
 
 namespace WhalesExchangeBackend.Data;
@@ -207,6 +208,11 @@ internal class ApplicationDbContext : DbContext
             .IsRequired(false);
 
         _ = entity
+            .Property(q => q.FundingTxData)
+            .IsRequired(false)
+            .HasMaxLength(2 * 1024 * 1024);
+
+        _ = entity
             .HasOne(q => q.Provider)
             .WithMany()
             .HasForeignKey(q => q.ProviderPubkey)
@@ -217,6 +223,9 @@ internal class ApplicationDbContext : DbContext
 
         _ = entity
             .HasIndex(q => q.IsForward);
+
+        _ = entity
+            .HasIndex(q => q.FrontendId);
 
         _ = entity
             .HasIndex(q => q.Status);

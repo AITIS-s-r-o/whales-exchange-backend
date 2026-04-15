@@ -1,7 +1,7 @@
 using System;
 using System.Threading;
 
-namespace WhalesExchangeBackend.Utils.Sync;
+namespace WhalesExchangeBackend.SharedLib.Utils.Sync;
 
 /// <summary>
 /// Disposable interface that allows releasing the underlying <see cref="IReleasable"/> object.

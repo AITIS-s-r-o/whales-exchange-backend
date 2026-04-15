@@ -1,11 +1,11 @@
 using System;
 
-namespace WhalesExchangeBackend.Exceptions;
+namespace WhalesExchangeBackend.SharedLib.Exceptions;
 
 /// <summary>
 /// Exception for cases when a database operation fails.
 /// </summary>
-internal class DatabaseException : Exception
+public class DatabaseException : Exception
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="DatabaseException" /> class.

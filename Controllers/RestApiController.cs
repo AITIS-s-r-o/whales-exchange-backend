@@ -5,12 +5,13 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using WhalesExchangeBackend.Controllers.InternalSupport;
-using WhalesExchangeBackend.Data;
 using WhalesExchangeBackend.Data.Repository;
-using WhalesExchangeBackend.Exceptions;
 using WhalesExchangeBackend.Models;
 using WhalesExchangeBackend.Services;
 using WhalesExchangeBackend.Services.ElectrumRpc;
+using WhalesExchangeBackend.SharedLib.Data;
+using WhalesExchangeBackend.SharedLib.Exceptions;
+using WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
 using WhalesSecret.TradeScriptLib.Exceptions;
 using WhalesSecret.TradeScriptLib.Logging;
 
@@ -210,6 +211,39 @@ internal class RestApiController : InternalControllerBase
         }
 
         result = this.Ok(response);
+
+        this.log.Debug("$");
+        return result;
+    }
+
+    /// <summary>
+    /// Action that is executed when a swap status is requested.
+    /// </summary>
+    /// <param name="frontendId">Frontend ID of the swap.</param>
+    /// <returns>Result of the action method.</returns>
+    [HttpGet]
+    [Route("/v2/swap/{frontendId}")]
+    public async Task<IActionResult> GetSwapStatusAsync(string frontendId)
+    {
+        this.log.Debug($"* {nameof(frontendId)}='{frontendId}'");
+
+        IActionResult result;
+        DbSwap?[] swaps = await this.swapRepository.GetSwapsByFrontendIdsAsync(new string[] { frontendId }).ConfigureAwait(false);
+
+        if ((swaps.Length == 1) && (swaps[0] is not null))
+        {
+            SwapUpdate swapUpdate = SwapUpdate.FromDbSwap(swaps[0]!);
+
+            GetSwapStatusResponse response = new(status: swapUpdate.Status, failureReason: swapUpdate.FailureReason, swapUpdate.Transaction, error: null);
+            result = this.Ok(response);
+        }
+        else
+        {
+            this.log.Debug($"Unable to get swap status of swap frontend ID '{frontendId}'.");
+
+            GetSwapStatusResponse response = new(status: null, failureReason: null, transaction: null, error: $"Could not find swap with ID '{frontendId}'.");
+            result = this.NotFound(response);
+        }
 
         this.log.Debug("$");
         return result;

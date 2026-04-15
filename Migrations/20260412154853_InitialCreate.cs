@@ -55,7 +55,8 @@ namespace WhalesExchangeBackend.Migrations
                     AcceptedTime = table.Column<DateTime>(type: "TEXT", nullable: true),
                     FundingTime = table.Column<DateTime>(type: "TEXT", nullable: true),
                     SpentTime = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    FailTime = table.Column<DateTime>(type: "TEXT", nullable: true)
+                    FailTime = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    FundingTxData = table.Column<string>(type: "TEXT", maxLength: 2097152, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -67,6 +68,11 @@ namespace WhalesExchangeBackend.Migrations
                         principalColumn: "Pubkey",
                         onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DbSwap_FrontendId",
+                table: "DbSwap",
+                column: "FrontendId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_DbSwap_IsForward",

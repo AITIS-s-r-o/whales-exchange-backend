@@ -73,7 +73,7 @@ public class SwapResponse
     public string? LockupAddress { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SwapResponse"/> class.
+    /// Creates a new instance of the object.
     /// </summary>
     /// <param name="id">Unique identifier for the swap.</param>
     /// <param name="reverse"><c>true</c> if this is a reverse swap (LN → BTC), <c>false</c> if submarine (BTC -> LN).</param>

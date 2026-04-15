@@ -4,7 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using WhalesExchangeBackend.Exceptions;
+using WhalesExchangeBackend.SharedLib.Data;
+using WhalesExchangeBackend.SharedLib.Exceptions;
 using WhalesExchangeBackend.SharedLib.Helpers;
 
 namespace WhalesExchangeBackend.Data.Repository;

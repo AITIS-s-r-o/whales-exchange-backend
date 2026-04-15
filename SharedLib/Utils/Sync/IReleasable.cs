@@ -1,4 +1,4 @@
-namespace WhalesExchangeBackend.Utils.Sync;
+namespace WhalesExchangeBackend.SharedLib.Utils.Sync;
 
 /// <summary>
 /// Interface for releasable synchronization primitives.

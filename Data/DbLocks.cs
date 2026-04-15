@@ -4,7 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 using WhalesExchangeBackend.Data.Repository;
-using WhalesExchangeBackend.Utils.Sync;
+using WhalesExchangeBackend.SharedLib.Utils.Sync;
 using WhalesSecret.TradeScriptLib.Exceptions;
 using WhalesSecret.TradeScriptLib.Logging;
 
