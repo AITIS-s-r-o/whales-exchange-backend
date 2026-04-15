@@ -23,6 +23,17 @@ namespace WhalesExchangeBackend.Controllers;
 [SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by ASP.NET Core DI.")]
 internal class RestApiController : InternalControllerBase
 {
+    /// <summary>Number of blocks to serve as a safe buffer before for a lockup address timeout scenario.</summary>
+    /// <remarks>
+    /// When the swap provider publishes the funding transaction with an output paying to the lockup address, the client must be provided with enough time to spend this output
+    /// before the time lock on the output allows the swap provider to claim the money back. If the client learned about the the funding transaction just before the time lock
+    /// expires, the client may fail to spend it on time.
+    /// </remarks>
+    private const int LockupAddressTimeoutBuffer = 5;
+
+    /// <summary>Number of satoshis that are considered high enough to justify waiting for two confirmations instead of one.</summary>
+    private const long TwoConfirmationAmountThresholdSats = 1_000_000;
+
     /// <summary>Instance logger.</summary>
     private readonly WsLogger log;
 
@@ -38,6 +49,9 @@ internal class RestApiController : InternalControllerBase
     /// <summary>Client that communicates with Electrum RPC server.</summary>
     private readonly ElectrumRpcClient electrumRpcClient;
 
+    /// <summary>Monitor of blockchain data fetched from the Electrum backend client.</summary>
+    private readonly BlockchainDataMonitor blockchainDataMonitor;
+
     /// <summary>
     /// Creates a new instance of the object.
     /// </summary>
@@ -45,8 +59,9 @@ internal class RestApiController : InternalControllerBase
     /// <param name="swapProviderRepository">Provider of access to swap providers and their offers in the database.</param>
     /// <param name="swapRepository">Provider of access to swaps in the database.</param>
     /// <param name="electrumRpcClient">Client that communicates with Electrum RPC server.</param>
+    /// <param name="blockchainDataMonitor">Monitor of blockchain data fetched from the Electrum backend client.</param>
     public RestApiController(IHttpContextAccessor httpContextAccessor, SwapProviderRepository swapProviderRepository, SwapRepository swapRepository,
-        ElectrumRpcClient electrumRpcClient)
+        ElectrumRpcClient electrumRpcClient, BlockchainDataMonitor blockchainDataMonitor)
     {
         this.httpContextAccessor = httpContextAccessor;
         HttpContext? context = this.httpContextAccessor.HttpContext;
@@ -58,6 +73,7 @@ internal class RestApiController : InternalControllerBase
         this.swapProviderRepository = swapProviderRepository;
         this.swapRepository = swapRepository;
         this.electrumRpcClient = electrumRpcClient;
+        this.blockchainDataMonitor = blockchainDataMonitor;
 
         this.log.Debug("*$");
     }
@@ -182,6 +198,11 @@ internal class RestApiController : InternalControllerBase
 
                         response = new(swapResponse);
 
+                        int requiredConfirmations = this.GetRequiredConfirmationsForAmount(request.ExpectedAmount);
+                        int timeoutHeight = (int)electrumSwapData.Locktime - requiredConfirmations - LockupAddressTimeoutBuffer;
+                        this.blockchainDataMonitor.RegisterMonitoredAddress(swapId: swap.Id, electrumSwapData.LockupAddress, amountSats: request.ExpectedAmount,
+                            requiredConfirmations: requiredConfirmations, timeoutHeight: timeoutHeight);
+
                         await this.swapRepository.MarkSwapAcceptedAsync(id: swap.Id, electrumSwapData.LockupAddress, timeoutBlockHeight: electrumSwapData.Locktime)
                             .ConfigureAwait(false);
                     }
@@ -215,6 +236,14 @@ internal class RestApiController : InternalControllerBase
         this.log.Debug("$");
         return result;
     }
+
+    /// <summary>
+    /// Gets number of confirmations required for the funding transaction based on the amount being swapped.
+    /// </summary>
+    /// <param name="amountSats">Amount being swapped in satoshis.</param>
+    /// <returns>Number of confirmations required for the funding transaction.</returns>
+    private int GetRequiredConfirmationsForAmount(long amountSats)
+        => amountSats >= TwoConfirmationAmountThresholdSats ? 2 : 1;
 
     /// <summary>
     /// Action that is executed when a swap status is requested.

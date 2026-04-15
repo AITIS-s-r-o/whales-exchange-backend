@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Threading;
 
 namespace WhalesExchangeBackend.Services.DataProvider;
 
@@ -7,6 +8,9 @@ namespace WhalesExchangeBackend.Services.DataProvider;
 /// </summary>
 internal class MonitoredAddress
 {
+    /// <summary>Lock object to be used when accessing <see cref="MempoolActionReported"/>.</summary>
+    private readonly Lock statusLock;
+
     /// <summary>ID of the swap that the monitored address is related to.</summary>
     public long SwapId { get; }
 
@@ -26,6 +30,27 @@ internal class MonitoredAddress
     /// <summary>Blockchain height at which the monitoring started.</summary>
     public int MonitoringStartedAtHeight { get; }
 
+    /// <summary>Last action on the monitored address that has been reported already, or <c>null</c> if no action has been reported for this monitored address yet.</summary>
+    /// <remarks>All access has to be protected by <see cref="statusLock"/>.</remarks>
+    public bool MempoolActionReported
+    {
+        get
+        {
+            lock (this.statusLock)
+            {
+                return field;
+            }
+        }
+
+        set
+        {
+            lock (this.statusLock)
+            {
+                field = value;
+            }
+        }
+    }
+
     /// <summary>
     /// Creates a new instance of the object.
     /// </summary>
@@ -37,6 +62,7 @@ internal class MonitoredAddress
     /// <param name="monitoringStartedAtHeight">Blockchain height at which the monitoring started.</param>
     public MonitoredAddress(long swapId, string address, long amountSats, int requiredConfirmations, int timeoutHeight, int monitoringStartedAtHeight)
     {
+        this.statusLock = new();
         this.SwapId = swapId;
         this.Address = address;
         this.AmountSats = amountSats;
@@ -51,13 +77,14 @@ internal class MonitoredAddress
         return string.Format
         (
             CultureInfo.InvariantCulture,
-            "[{0}={1},{2}=`{3}`,{4}={5},{6}={7},{8}={9},{10}={11}]",
+            "[{0}={1},{2}=`{3}`,{4}={5},{6}={7},{8}={9},{10}={11},{12}={13}]",
             nameof(this.SwapId), this.SwapId,
             nameof(this.Address), this.Address,
             nameof(this.AmountSats), this.AmountSats,
             nameof(this.RequiredConfirmations), this.RequiredConfirmations,
             nameof(this.TimeoutHeight), this.TimeoutHeight,
-            nameof(this.MonitoringStartedAtHeight), this.MonitoringStartedAtHeight
+            nameof(this.MonitoringStartedAtHeight), this.MonitoringStartedAtHeight,
+            nameof(this.MempoolActionReported), this.MempoolActionReported
         );
     }
 }

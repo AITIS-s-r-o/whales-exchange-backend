@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Threading;
-using WhalesExchangeBackend.Data.Repository;
 using WhalesExchangeBackend.Services.DataProvider;
 using WhalesExchangeBackend.Services.ElectrumRpc;
 using WhalesExchangeBackend.SharedLib.Exceptions;
@@ -15,10 +14,10 @@ using WhalesSecret.TradeScriptLib.Logging;
 namespace WhalesExchangeBackend.Services;
 
 /// <summary>
-/// Provider of blockchain data fetched from the Electrum backend client.
+/// Monitor of blockchain data fetched from the Electrum backend client.
 /// </summary>
 [SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by ASP.NET Core DI as a singleton.")]
-internal class BlockchainDataProvider : System.IAsyncDisposable
+internal class BlockchainDataMonitor : System.IAsyncDisposable
 {
     /// <summary>Frequency with which the information about the Electrum blockchain height is updated.</summary>
     private static readonly TimeSpan blockchainHeightUpdateFrequency = TimeSpan.FromSeconds(63);
@@ -80,7 +79,7 @@ internal class BlockchainDataProvider : System.IAsyncDisposable
     /// </summary>
     /// <param name="electrumRpcClient">Client that communicates with Electrum RPC server.</param>
     /// <param name="joinableTaskFactory">Factory for starting async tasks running in the background.</param>
-    public BlockchainDataProvider(ElectrumRpcClient electrumRpcClient, JoinableTaskFactory joinableTaskFactory)
+    public BlockchainDataMonitor(ElectrumRpcClient electrumRpcClient, JoinableTaskFactory joinableTaskFactory)
     {
         this.log.Debug("*");
 
@@ -247,10 +246,15 @@ internal class BlockchainDataProvider : System.IAsyncDisposable
                                 {
                                     if (unspentInfo.BlockHeight == 0)
                                     {
-                                        this.log.Debug($"Monitored address '{monitoredAddress.Address}' received a new unspent output with amount {
-                                            unspentInfo.AmountSats} satoshis and it has no confirmation yet.");
+                                        if (!monitoredAddress.MempoolActionReported)
+                                        {
+                                            this.log.Debug($"Monitored address '{monitoredAddress.Address}' received a new unspent output with amount {
+                                                unspentInfo.AmountSats} satoshis and it has no confirmation yet.");
 
-                                        action = MonitoredAddressAction.InMempool;
+                                            action = MonitoredAddressAction.InMempool;
+                                            monitoredAddress.MempoolActionReported = true;
+                                        }
+                                        else this.log.Debug($"Transaction in mempool has already been reported for monitored address '{monitoredAddress}'.");
                                     }
                                     else
                                     {
@@ -280,7 +284,9 @@ internal class BlockchainDataProvider : System.IAsyncDisposable
                                             .ConfigureAwait(false);
                                     }
 
-                                    monitoredAddressesToRemove.Add(monitoredAddress);
+                                    if (action.Value == MonitoredAddressAction.Confirmed)
+                                        monitoredAddressesToRemove.Add(monitoredAddress);
+
                                     break;
                                 }
                             }
