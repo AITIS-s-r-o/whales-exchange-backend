@@ -71,8 +71,10 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <param name="monitoredAddress">Monitored address that triggered the action.</param>
     /// <param name="transactionId">Bitcoin transaction ID in hex format, or <c>null</c> if <paramref name="action"/> is <see cref="MonitoredAddressAction.Timeout"/>.</param>
     /// <param name="transactionData">Raw transaction data in hex format, or <c>null</c> if <paramref name="action"/> is <see cref="MonitoredAddressAction.Timeout"/>.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    public delegate Task OnMonitoredAddressActionCallback(MonitoredAddressAction action, MonitoredAddress monitoredAddress, string? transactionId, string? transactionData);
+    public delegate Task OnMonitoredAddressActionCallback(MonitoredAddressAction action, MonitoredAddress monitoredAddress, string? transactionId, string? transactionData,
+        CancellationToken cancellationToken);
 
     /// <summary>
     /// Creates a new instance of the object.
@@ -155,7 +157,10 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                             foreach (MonitoredAddress monitoredAddress in expiredMonitoredAddresses)
                             {
                                 foreach (OnMonitoredAddressActionCallback callback in callbacks)
-                                    await callback(MonitoredAddressAction.Timeout, monitoredAddress, transactionId: null, transactionData: null).ConfigureAwait(false);
+                                {
+                                    await callback(MonitoredAddressAction.Timeout, monitoredAddress, transactionId: null, transactionData: null, cancellationToken)
+                                        .ConfigureAwait(false);
+                                }
                             }
                         }
                         else this.log.Debug($"Electrum server is at blockchain height {response.BlockchainHeight}, not synced with its server at {response.ServerHeight}.");
@@ -280,8 +285,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
                                     foreach (OnMonitoredAddressActionCallback callback in callbacks)
                                     {
-                                        await callback(action.Value, monitoredAddress, transactionId: unspentInfo.TransactionHash, transactionData: transactionData)
-                                            .ConfigureAwait(false);
+                                        await callback(action.Value, monitoredAddress, transactionId: unspentInfo.TransactionHash, transactionData: transactionData,
+                                            cancellationToken).ConfigureAwait(false);
                                     }
 
                                     if (action.Value == MonitoredAddressAction.Confirmed)

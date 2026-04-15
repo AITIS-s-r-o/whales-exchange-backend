@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -248,6 +249,40 @@ internal class SubscriptionManager
             }
         }
         else this.log.Debug($"Client ID '{clientConnectionHandler}' has already been removed from the map.");
+
+        this.log.Debug("$");
+    }
+
+    /// <summary>
+    /// Propagates swap update to the subscribed clients.
+    /// </summary>
+    /// <param name="swapUpdate">Swap update to propagate.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+    public async Task PropagateSwapUpdateAsync(SwapUpdate swapUpdate, CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(swapUpdate)}='{swapUpdate}'");
+
+        ClientConnectionHandler[] clientConnectionHandlers = Array.Empty<ClientConnectionHandler>();
+        lock (this.clientLock)
+        {
+            if (this.swapIdsToClients.TryGetValue(swapUpdate.FrontendId, out HashSet<ClientConnectionHandler>? handlers))
+                clientConnectionHandlers = handlers.ToArray();
+        }
+
+        if (clientConnectionHandlers.Length > 0)
+        {
+            this.log.Debug($"Swap update '{swapUpdate}' will be propagated to {clientConnectionHandlers.Length} clients.");
+            SwapUpdate[] swapUpdates = new SwapUpdate[] { swapUpdate };
+
+            foreach (ClientConnectionHandler clientConnectionHandler in clientConnectionHandlers)
+            {
+                bool success = await clientConnectionHandler.SendSwapUpdateAsync(swapUpdates, cancellationToken).ConfigureAwait(false);
+                if (!success)
+                    this.log.Warn($"Sending swap update '{swapUpdate}' to client ID '{clientConnectionHandler}' failed.");
+            }
+        }
+        else this.log.Debug($"No clients are currently subscribed to swap frontend ID '{swapUpdate.FrontendId}'.");
 
         this.log.Debug("$");
     }
