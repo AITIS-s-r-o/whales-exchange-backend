@@ -143,12 +143,12 @@ internal class RestApiController : InternalControllerBase
         this.log.Debug("*");
 
         IActionResult result;
-        DateTime hourAgo = DateTime.UtcNow.AddHours(-1);
+        DateTime min20ago = DateTime.UtcNow.AddMinutes(-20);
 
         GetSwapProvidersResponse response;
         try
         {
-            DbSwapProvider[] dbRecords = await this.swapProviderRepository.GetRecentAsync(hourAgo).ConfigureAwait(false);
+            DbSwapProvider[] dbRecords = await this.swapProviderRepository.GetRecentAsync(min20ago).ConfigureAwait(false);
 
             RestSwapProvider[] providers = dbRecords
                 .Select(RestSwapProvider.FromDbSwapProvider)
@@ -176,7 +176,7 @@ internal class RestApiController : InternalControllerBase
     /// <param name="request">Swap request.</param>
     /// <returns>Result of the action method.</returns>
     [HttpPost]
-    [Route("/createswap")]
+    [Route("createswap")]
     public async Task<IActionResult> CreateSwapAsync([FromBody] CreateSwapRequest request)
     {
         this.log.Debug($"* {nameof(request)}='{request}'");
@@ -305,7 +305,7 @@ internal class RestApiController : InternalControllerBase
     /// <param name="frontendId">Frontend ID of the swap.</param>
     /// <returns>Result of the action method.</returns>
     [HttpGet]
-    [Route("/v2/swap/{frontendId}")]
+    [Route("v2/swap/{frontendId}")]
     public async Task<IActionResult> GetSwapStatusAsync(string frontendId)
     {
         this.log.Debug($"* {nameof(frontendId)}='{frontendId}'");
@@ -327,6 +327,59 @@ internal class RestApiController : InternalControllerBase
             GetSwapStatusResponse response = new(status: null, failureReason: null, transaction: null, error: $"Could not find swap with ID '{frontendId}'.");
             result = this.NotFound(response);
         }
+
+        this.log.Debug("$");
+        return result;
+    }
+
+    /// <summary>
+    /// Action that is executed when a swap's funding transaction is requested.
+    /// </summary>
+    /// <param name="request">Request to get funding transaction of a swap.</param>
+    /// <returns>Result of the action method.</returns>
+    [HttpPost]
+    [Route("getswaptransaction")]
+    public async Task<IActionResult> GetSwapTransactionAsync([FromBody] GetSwapTransactionRequest request)
+    {
+        this.log.Debug($"* {nameof(request)}='{request}'");
+
+        string id = request.Id;
+        IActionResult result;
+
+        GetSwapTransactionResponse response;
+        try
+        {
+            DbSwap?[] dbRecords = await this.swapRepository.GetSwapsByFrontendIdsAsync(new string[] { id }).ConfigureAwait(false);
+
+            if (dbRecords.Length != 1)
+                throw new SanityCheckException($"Expected 1 record, got {dbRecords.Length}");
+
+            DbSwap? swap = dbRecords[0];
+            if (swap is not null)
+            {
+                if (swap.FundingTxId is not null)
+                {
+                    response = new(transactionId: swap.FundingTxId, transactionData: swap.FundingTxData, timeoutBlockHeight: swap.TimeoutBlockHeight, error: null);
+                }
+                else
+                {
+                    this.log.Debug($"Swap frontend ID '{id}' does not have funding transaction yet.");
+                    response = new($"No coins were locked up yet for swap '{id}'.");
+                }
+            }
+            else
+            {
+                this.log.Debug($"Swap frontend ID '{id}' does not exist.");
+                response = new($"Could not find swap with frontend ID '{id}'.");
+            }
+        }
+        catch (Exception e)
+        {
+            this.log.Error($"Exception occurred while getting swap frontend ID '{id}' from the database: {e}");
+            response = new($"Getting swap frontend ID '{id}' from the database failed. {e.Message}");
+        }
+
+        result = this.Ok(response);
 
         this.log.Debug("$");
         return result;
