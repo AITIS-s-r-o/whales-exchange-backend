@@ -20,9 +20,17 @@ namespace WhalesExchangeBackend.Services;
 internal class BlockchainDataMonitor : System.IAsyncDisposable
 {
     /// <summary>Frequency with which the information about the Electrum blockchain height is updated.</summary>
+    /// <remarks>The value here was selected in order to provide reasonable frequency of udpates while distributing queries to Electrum server in time.</remarks>
     private static readonly TimeSpan blockchainHeightUpdateFrequency = TimeSpan.FromSeconds(63);
 
     /// <summary>Frequency with which the monitored addresses are checked for matching transactions.</summary>
+    /// <remarks>
+    /// The value here was selected in order to provide reasonable frequency of udpates while distributing queries to Electrum server in time.
+    /// <para>
+    /// Specifically in case of transaction updates, the frequency should be higher in order to deliver the information as soon as possible to the frontend, but not too high to
+    /// waste too many resources.
+    /// </para>
+    /// </remarks>
     private static readonly TimeSpan monitoredAddressTransactionUpdateFrequency = TimeSpan.FromSeconds(13);
 
     /// <summary>Instance logger.</summary>
