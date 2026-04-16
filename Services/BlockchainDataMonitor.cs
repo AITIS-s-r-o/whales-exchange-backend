@@ -56,9 +56,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <remarks>All access has to be protected by <see cref="dataLock"/>.</remarks>
     private readonly HashSet<MonitoredAddress> monitoredAddresses;
 
-    /// <summary>
-    /// Lock object to be used when accessing <see cref="blockchainHeight"/>, <see cref="onMonitoredAddressActions"/>, and <see cref="monitoredAddresses"/>.
-    /// </summary>
+    /// <summary>Lock object to be used when accessing <see cref="blockchainHeight"/>, <see cref="onMonitoredAddressActions"/>, and <see cref="monitoredAddresses"/>.</summary>
     private readonly Lock dataLock;
 
     /// <summary>Lock object to be used when accessing <see cref="disposedValue"/>.</summary>
