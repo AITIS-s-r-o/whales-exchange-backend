@@ -176,7 +176,7 @@ internal class RestApiController : InternalControllerBase
     /// <param name="request">Swap request.</param>
     /// <returns>Result of the action method.</returns>
     [HttpPost]
-    [Route("/createswap")]
+    [Route("createswap")]
     public async Task<IActionResult> CreateSwapAsync([FromBody] CreateSwapRequest request)
     {
         this.log.Debug($"* {nameof(request)}='{request}'");
