@@ -285,13 +285,16 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                                 else
                                 {
                                     this.log.Debug($"Value of unspent output '{unspentInfo.TransactionHash}:{unspentInfo.OutputIndex}' is {unspentInfo.AmountSats} < {
-                                        monitoredAddress.AmountSats}. Skipping.");
+                                        monitoredAddress.AmountSats}. Ignoring and continuing monitoring.");
                                 }
 
                                 if (action is not null)
                                 {
+                                    this.log.Debug($"Action set to {action} for monitored address '{monitoredAddress}'.");
+
                                     string txHash = unspentInfo.TransactionHash;
                                     string? transactionData = null;
+
                                     try
                                     {
                                         transactionData = await this.electrumRpcClient.GetTransactionAsync(txHash, cancellationToken).ConfigureAwait(false);
