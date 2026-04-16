@@ -239,7 +239,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                     {
                         // Electrum returns unspent outputs sorted by block height in ascending order, so the last one is the newest. However, if the transaction is still in its mempool,
                         // the block height is returned as 0. We can ignore all records with block height prior to monitoring start.
-                        if ((response[^1].BlockHeight == 0) || (response[^1].BlockHeight > monitoredAddress.MonitoringStartedAtHeight))
+                        bool isLastUtxoInMempool = response[^1].BlockHeight == 0;
+                        if (isLastUtxoInMempool || (response[^1].BlockHeight > monitoredAddress.MonitoringStartedAtHeight))
                         {
                             OnMonitoredAddressActionCallback[] callbacks = Array.Empty<OnMonitoredAddressActionCallback>();
                             lock (this.dataLock)
