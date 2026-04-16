@@ -256,7 +256,6 @@ internal class ElectrumRpcClient
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns>Raw transaction data in hex format, or <c>null</c> if the transaction ID could not be found.</returns>
     /// <exception cref="ElectrumRpcException ">Thrown when the Electrum server responded with an error.</exception>
-    /// <exception cref="OperationFailedException">Thrown when the operation failed except for error returned by the Electrum server.</exception>
     public async Task<string?> GetTransactionAsync(string transactionId, CancellationToken cancellationToken)
     {
         this.log.Debug($"* {nameof(transactionId)}='{transactionId}'");
