@@ -380,8 +380,10 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
         foreach (MonitoredAddress monitoredAddress in result)
         {
-            if (this.monitoredAddresses.Remove(monitoredAddress)) this.log.Debug($"Monitored address '{monitoredAddress}' has expired and has been removed from the set.");
-            else this.log.Debug($"Monitored address '{monitoredAddress}' has expired but could not be removed from the set.");
+            if (!this.monitoredAddresses.Remove(monitoredAddress))
+                throw new SanityCheckException($"Monitored address '{monitoredAddress}' has expired but could not be removed from the set.");
+
+            this.log.Debug($"Monitored address '{monitoredAddress}' has expired and has been removed from the set.");
         }
 
         this.log.Debug($"|$|={result.Count}");
