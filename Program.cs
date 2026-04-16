@@ -135,6 +135,7 @@ public static class Program
             // Electrum RPC connectivity and related services.
             _ = builder.Services.AddSingleton<ElectrumRpcClient>();
             _ = builder.Services.AddSingleton<SwapProviderFetcher>();
+            _ = builder.Services.AddSingleton<BlockchainDataMonitor>();
 
             // WebSocket services.
             _ = builder.Services.AddSingleton<IProtocolMessageProcessorFactory, ProtocolMessageProcessorFactory>();

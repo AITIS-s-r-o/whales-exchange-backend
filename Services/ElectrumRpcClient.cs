@@ -207,4 +207,75 @@ internal class ElectrumRpcClient
         this.log.Debug($"$=`{result}`");
         return result;
     }
+
+    /// <summary>
+    /// Calls Electrum's <c>getinfo</c> RPC method.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>Information about the Electrum connection and blockchain.</returns>
+    /// <exception cref="ElectrumRpcException ">Thrown when the Electrum server responded with an error.</exception>
+    /// <exception cref="OperationFailedException">Thrown when the operation failed except for error returned by the Electrum server.</exception>
+    public async Task<ElectrumGetInfoResponse> GetInfoAsync(CancellationToken cancellationToken)
+    {
+        this.log.Debug("*");
+
+        ElectrumGetInfoResponse result = await this.CallAsync<ElectrumGetInfoResponse>(method: "getinfo", parameters: null, cancellationToken).ConfigureAwait(false);
+
+        this.log.Debug($"$='{result}'");
+        return result;
+    }
+
+    /// <summary>
+    /// Calls Electrum's <c>getaddressunspent</c> RPC method.
+    /// </summary>
+    /// <param name="address">Bitcoin address to query for unspent outputs.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>List of unspent outputs for the specified address.</returns>
+    /// <exception cref="ElectrumRpcException ">Thrown when the Electrum server responded with an error.</exception>
+    /// <exception cref="OperationFailedException">Thrown when the operation failed except for error returned by the Electrum server.</exception>
+    public async Task<ElectrumGetAddressUnspentResponse> GetAddressUnspentAsync(string address, CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(address)}='{address}'");
+
+        Dictionary<string, object> parameters = new()
+        {
+            { "address", address },
+        };
+
+        ElectrumGetAddressUnspentResponse result = await this.CallAsync<ElectrumGetAddressUnspentResponse>(method: "getaddressunspent", parameters, cancellationToken)
+            .ConfigureAwait(false);
+
+        this.log.Debug($"|$|={result.Count}");
+        return result;
+    }
+
+    /// <summary>
+    /// Calls Electrum's <c>gettransaction</c> RPC method.
+    /// </summary>
+    /// <param name="transactionId">Bitcoin transaction ID in hex format.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>Raw transaction data in hex format, or <c>null</c> if the transaction ID could not be found.</returns>
+    /// <exception cref="ElectrumRpcException ">Thrown when the Electrum server responded with an error.</exception>
+    public async Task<string?> GetTransactionAsync(string transactionId, CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(transactionId)}='{transactionId}'");
+
+        Dictionary<string, object> parameters = new()
+        {
+            { "txid", transactionId },
+        };
+
+        string? result = null;
+        try
+        {
+            result = await this.CallAsync<string>(method: "gettransaction", parameters, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationFailedException)
+        {
+            // Unknown transaction ID.
+        }
+
+        this.log.Debug($"$='{result}'");
+        return result;
+    }
 }

@@ -7,8 +7,8 @@ namespace WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
 /// </summary>
 internal class SwapStatusTransaction
 {
-    /// <summary>Raw Bitcoin transaction in hex format.</summary>
-    public string Hex { get; }
+    /// <summary>Raw Bitcoin transaction in hex format, or <c>null</c> if not available.</summary>
+    public string? Hex { get; }
 
     /// <summary>Bitcoin transaction ID in hex format.</summary>
     public string Id { get; }
@@ -16,9 +16,9 @@ internal class SwapStatusTransaction
     /// <summary>
     /// Creates a new instance of the object.
     /// </summary>
-    /// <param name="hex">Raw Bitcoin transaction in hex format.</param>
+    /// <param name="hex">Raw Bitcoin transaction in hex format, or <c>null</c> if not available.</param>
     /// <param name="id">Bitcoin transaction ID in hex format.</param>
-    public SwapStatusTransaction(string hex, string id)
+    public SwapStatusTransaction(string? hex, string id)
     {
         this.Hex = hex;
         this.Id = id;

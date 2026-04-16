@@ -78,6 +78,9 @@ internal class SwapProviderFetcher : System.IAsyncDisposable
     {
         this.log.Debug("*");
 
+        // Yield the thread to avoid blocking the caller by putting this execution in the background.
+        await Task.Yield().ConfigureAwait(false);
+
         CancellationToken cancellationToken = this.shutdownTokenSource.Token;
 
         try

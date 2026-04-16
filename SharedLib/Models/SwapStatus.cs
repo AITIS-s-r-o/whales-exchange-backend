@@ -23,14 +23,17 @@ internal enum SwapStatus
     /// <summary>Client paid both invoices and provider broadcasted the funding transaction.</summary>
     FundingTxCreated = 4,
 
+    /// <summary>Funding transaction has enough confirmations for the client to proceed.</summary>
+    FundingTxConfirmed = 5,
+
     /// <summary>Client spent the funding transaction output.</summary>
-    FundingTxSpent = 6,
+    FundingTxSpent = 7,
 
     /// <summary>Error occurred before the request was accepted. This includes unreachable provider, or provider actively rejecting the swap.</summary>
     ProviderErrorNotAccepted = 101,
 
     /// <summary>Client failed to spend the funding transaction before expiration.</summary>
-    ClientErrorFundingTxNotSpent = 205,
+    ClientErrorFundingTxNotSpent = 206,
 
     /// <summary>Either the user did not pay both invoices, or the provider failed to create the funding transaction before expiration.</summary>
     ErrorFundingTxNotCreated = 303,
