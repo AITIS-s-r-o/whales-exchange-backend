@@ -24,6 +24,11 @@ internal class AddressUnspentInfo
     [JsonPropertyName("value")]
     public long AmountSats { get; }
 
+    /// <summary><c>true</c> if the transaction is in the mempool, <c>false</c> if it has at least one confirmation.</summary>
+    [JsonIgnore]
+    public bool InMempool
+        => this.BlockHeight == 0;
+
     /// <summary>
     /// Creates a new instance of the object.
     /// </summary>

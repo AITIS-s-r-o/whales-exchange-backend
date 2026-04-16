@@ -5,7 +5,7 @@ namespace WhalesExchangeBackend.Services.DataProvider;
 /// </summary>
 internal enum MonitoredAddressAction
 {
-    /// <summary>Transaction spending to the address is in the mempool.</summary>
+    /// <summary>Transaction spending to the swap destination address is in the mempool.</summary>
     InMempool = 1,
 
     /// <summary>Transaction spending to the address is confirmed.</summary>

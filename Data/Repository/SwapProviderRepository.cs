@@ -8,6 +8,7 @@ using WhalesExchangeBackend.SharedLib.Data;
 using WhalesExchangeBackend.SharedLib.Exceptions;
 using WhalesExchangeBackend.SharedLib.Helpers;
 using WhalesExchangeBackend.SharedLib.Models;
+using WhalesSecret.TradeScriptLib.Exceptions;
 using WhalesSecret.TradeScriptLib.Logging;
 
 namespace WhalesExchangeBackend.Data.Repository;
@@ -194,6 +195,18 @@ internal class SwapProviderRepository : RepositoryBase
             DbSwap? dbRecord = await db.Swaps.FindAsync(swapId).ConfigureAwait(false);
             if (dbRecord is not null)
             {
+                if (!isConfirmed && (dbRecord.Status != SwapStatus.Accepted))
+                {
+                    throw new SanityCheckException($"Changing status of swap ID {swapId} to {SwapStatus.FundingTxCreated} requires the swap status to be in {
+                        SwapStatus.Accepted} status, but its status is {dbRecord.Status}.");
+                }
+
+                if (isConfirmed && (dbRecord.Status != SwapStatus.Accepted) && (dbRecord.Status != SwapStatus.FundingTxCreated))
+                {
+                    throw new SanityCheckException($"Changing status of swap ID {swapId} to {SwapStatus.FundingTxConfirmed} requires the swap status to be either in {
+                        SwapStatus.Accepted} or {SwapStatus.FundingTxCreated} status, but its status is {dbRecord.Status}.");
+                }
+
                 dbRecord.FundingTxId = transactionId;
                 dbRecord.FundingTxData = transactionData;
 
@@ -243,6 +256,12 @@ internal class SwapProviderRepository : RepositoryBase
             DbSwap? dbRecord = await db.Swaps.FindAsync(swapId).ConfigureAwait(false);
             if (dbRecord is not null)
             {
+                if (dbRecord.Status != SwapStatus.Accepted)
+                {
+                    throw new SanityCheckException($"Changing status of swap ID {swapId} to {SwapStatus.ErrorFundingTxNotCreated} requires the swap status to be in {
+                        SwapStatus.Accepted} status, but its status is {dbRecord.Status}.");
+                }
+
                 dbRecord.FailTime = DateTime.UtcNow;
                 dbRecord.Status = SwapStatus.ErrorFundingTxNotCreated;
 

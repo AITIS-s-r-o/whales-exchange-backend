@@ -20,9 +20,17 @@ namespace WhalesExchangeBackend.Services;
 internal class BlockchainDataMonitor : System.IAsyncDisposable
 {
     /// <summary>Frequency with which the information about the Electrum blockchain height is updated.</summary>
+    /// <remarks>The value here was selected in order to provide reasonable frequency of udpates while distributing queries to Electrum server in time.</remarks>
     private static readonly TimeSpan blockchainHeightUpdateFrequency = TimeSpan.FromSeconds(63);
 
     /// <summary>Frequency with which the monitored addresses are checked for matching transactions.</summary>
+    /// <remarks>
+    /// The value here was selected in order to provide reasonable frequency of udpates while distributing queries to Electrum server in time.
+    /// <para>
+    /// Specifically in case of transaction updates, the frequency should be higher in order to deliver the information as soon as possible to the frontend, but not too high to
+    /// waste too many resources.
+    /// </para>
+    /// </remarks>
     private static readonly TimeSpan monitoredAddressTransactionUpdateFrequency = TimeSpan.FromSeconds(13);
 
     /// <summary>Instance logger.</summary>
@@ -34,10 +42,10 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <summary>Cancellation source announcing termination of the instance, i.e. disconnection.</summary>
     private readonly CancellationTokenSource shutdownTokenSource;
 
-    /// <summary>Background task that checks for and processes updates to blockchain height.</summary>
+    /// <summary>Background task that checks and processes updates to blockchain height.</summary>
     private readonly JoinableTask blockHeightSyncTask;
 
-    /// <summary>Background task that checks for and processes matches to monitored addresses.</summary>
+    /// <summary>Background task that checks and processes matches to monitored addresses.</summary>
     private readonly JoinableTask transactionMonitorTask;
 
     /// <summary>List of subscribed callbacks to be called when a monitored address action occurs.</summary>
@@ -152,7 +160,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                                 }
                             }
 
-                            this.log.Debug($"{expiredMonitoredAddresses.Count} monitored addresses timed out, {callbacks.Length} will be called.");
+                            this.log.Debug($"{expiredMonitoredAddresses.Count} monitored addresses timed out, {callbacks.Length} callbacks will be called.");
 
                             foreach (MonitoredAddress monitoredAddress in expiredMonitoredAddresses)
                             {
@@ -231,7 +239,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                     {
                         // Electrum returns unspent outputs sorted by block height in ascending order, so the last one is the newest. However, if the transaction is still in its mempool,
                         // the block height is returned as 0. We can ignore all records with block height prior to monitoring start.
-                        if ((response[^1].BlockHeight == 0) || (response[^1].BlockHeight > monitoredAddress.MonitoringStartedAtHeight))
+                        bool isLastUtxoInMempool = response[^1].BlockHeight == 0;
+                        if (isLastUtxoInMempool || (response[^1].BlockHeight > monitoredAddress.MonitoringStartedAtHeight))
                         {
                             OnMonitoredAddressActionCallback[] callbacks = Array.Empty<OnMonitoredAddressActionCallback>();
                             lock (this.dataLock)
@@ -239,17 +248,18 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                                 callbacks = this.onMonitoredAddressActions.ToArray();
                             }
 
+                            // Iterate in reverse to process records with higher block heights first.
                             for (int i = response.Count - 1; i >= 0; i--)
                             {
                                 AddressUnspentInfo unspentInfo = response[i];
 
-                                if ((unspentInfo.BlockHeight != 0) && (unspentInfo.BlockHeight < monitoredAddress.MonitoringStartedAtHeight))
+                                if (!unspentInfo.InMempool && (unspentInfo.BlockHeight < monitoredAddress.MonitoringStartedAtHeight))
                                     break;
 
                                 MonitoredAddressAction? action = null;
                                 if (unspentInfo.AmountSats >= monitoredAddress.AmountSats)
                                 {
-                                    if (unspentInfo.BlockHeight == 0)
+                                    if (unspentInfo.InMempool)
                                     {
                                         if (!monitoredAddress.MempoolActionReported)
                                         {
@@ -275,13 +285,24 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                                 else
                                 {
                                     this.log.Debug($"Value of unspent output '{unspentInfo.TransactionHash}:{unspentInfo.OutputIndex}' is {unspentInfo.AmountSats} < {
-                                        monitoredAddress.AmountSats}. Skipping.");
+                                        monitoredAddress.AmountSats}. Ignoring and continuing monitoring.");
                                 }
 
                                 if (action is not null)
                                 {
+                                    this.log.Debug($"Action set to {action} for monitored address '{monitoredAddress}'.");
+
                                     string txHash = unspentInfo.TransactionHash;
-                                    string? transactionData = await this.electrumRpcClient.GetTransactionAsync(txHash, cancellationToken).ConfigureAwait(false);
+                                    string? transactionData = null;
+
+                                    try
+                                    {
+                                        transactionData = await this.electrumRpcClient.GetTransactionAsync(txHash, cancellationToken).ConfigureAwait(false);
+                                    }
+                                    catch (ElectrumRpcException e)
+                                    {
+                                        this.log.Error($"Electrum server reported error when querying transaction ID '{txHash}': {e}");
+                                    }
 
                                     foreach (OnMonitoredAddressActionCallback callback in callbacks)
                                     {
@@ -359,8 +380,10 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
         foreach (MonitoredAddress monitoredAddress in result)
         {
-            if (this.monitoredAddresses.Remove(monitoredAddress)) this.log.Debug($"Monitored address '{monitoredAddress}' has expired and has been removed from the set.");
-            else this.log.Debug($"Monitored address '{monitoredAddress}' has expired but could not be removed from the set.");
+            if (!this.monitoredAddresses.Remove(monitoredAddress))
+                throw new SanityCheckException($"Monitored address '{monitoredAddress}' has expired but could not be removed from the set.");
+
+            this.log.Debug($"Monitored address '{monitoredAddress}' has expired and has been removed from the set.");
         }
 
         this.log.Debug($"|$|={result.Count}");
