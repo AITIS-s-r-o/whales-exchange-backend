@@ -1,13 +1,12 @@
 using System.Globalization;
 using System.Text.Json.Serialization;
 using WhalesExchangeBackend.Controllers;
-using WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
 using WhalesSecret.TradeScriptLib.Logging;
 
 namespace WhalesExchangeBackend.Models;
 
 /// <summary>
-/// Response for <see cref="RestApiController.GetSwapTransactionAsync(string)"/>.
+/// Response for <see cref="RestApiController.GetSwapTransactionAsync(GetSwapTransactionRequest)"/>.
 /// </summary>
 internal class GetSwapTransactionResponse
 {
