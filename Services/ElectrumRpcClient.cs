@@ -219,7 +219,7 @@ internal class ElectrumRpcClient
     {
         this.log.Debug("*");
 
-        ElectrumGetInfoResponse result = await this.CallAsync<ElectrumGetInfoResponse>(method: "get_submarine_swap_providers", parameters: null, cancellationToken)
+        ElectrumGetInfoResponse result = await this.CallAsync<ElectrumGetInfoResponse>(method: "getinfo", parameters: null, cancellationToken)
             .ConfigureAwait(false);
 
         this.log.Debug($"$='{result}'");
