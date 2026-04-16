@@ -370,7 +370,7 @@ internal class RestApiController : InternalControllerBase
             else
             {
                 this.log.Debug($"Swap frontend ID '{id}' does not exist.");
-                response = new($"Could not find swap with ID '{id}'.");
+                response = new($"Could not find swap with frontend ID '{id}'.");
             }
         }
         catch (Exception e)
