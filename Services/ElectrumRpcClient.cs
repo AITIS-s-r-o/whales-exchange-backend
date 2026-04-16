@@ -219,8 +219,7 @@ internal class ElectrumRpcClient
     {
         this.log.Debug("*");
 
-        ElectrumGetInfoResponse result = await this.CallAsync<ElectrumGetInfoResponse>(method: "getinfo", parameters: null, cancellationToken)
-            .ConfigureAwait(false);
+        ElectrumGetInfoResponse result = await this.CallAsync<ElectrumGetInfoResponse>(method: "getinfo", parameters: null, cancellationToken).ConfigureAwait(false);
 
         this.log.Debug($"$='{result}'");
         return result;
