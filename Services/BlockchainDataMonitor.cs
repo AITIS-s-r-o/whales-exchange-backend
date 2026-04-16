@@ -42,10 +42,10 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <summary>Cancellation source announcing termination of the instance, i.e. disconnection.</summary>
     private readonly CancellationTokenSource shutdownTokenSource;
 
-    /// <summary>Background task that checks for and processes updates to blockchain height.</summary>
+    /// <summary>Background task that checks and processes updates to blockchain height.</summary>
     private readonly JoinableTask blockHeightSyncTask;
 
-    /// <summary>Background task that checks for and processes matches to monitored addresses.</summary>
+    /// <summary>Background task that checks and processes matches to monitored addresses.</summary>
     private readonly JoinableTask transactionMonitorTask;
 
     /// <summary>List of subscribed callbacks to be called when a monitored address action occurs.</summary>
