@@ -160,7 +160,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                                 }
                             }
 
-                            this.log.Debug($"{expiredMonitoredAddresses.Count} monitored addresses timed out, {callbacks.Length} will be called.");
+                            this.log.Debug($"{expiredMonitoredAddresses.Count} monitored addresses timed out, {callbacks.Length} callbacks will be called.");
 
                             foreach (MonitoredAddress monitoredAddress in expiredMonitoredAddresses)
                             {
