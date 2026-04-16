@@ -142,11 +142,6 @@ public static class Program
             _ = builder.Services.AddScoped<IClientConnectionHandlerFactory, ClientConnectionHandlerFactory>();
             _ = builder.Services.AddSingleton<SubscriptionManager>();
 
-            // WebSocket services.
-            _ = builder.Services.AddSingleton<IProtocolMessageProcessorFactory, ProtocolMessageProcessorFactory>();
-            _ = builder.Services.AddScoped<IClientConnectionHandlerFactory, ClientConnectionHandlerFactory>();
-            _ = builder.Services.AddSingleton<SubscriptionManager>();
-
             // These configuration files are used when "dotnet ef" command is executed.
             _ = builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: false);
 
