@@ -8,7 +8,7 @@ namespace WhalesExchangeBackend.Services.DataProvider;
 /// </summary>
 internal class MonitoredAddress
 {
-    /// <summary>Lock object to be used when accessing <see cref="MempoolActionReported"/>.</summary>
+    /// <summary>Lock object to be used when accessing the field of <see cref="MempoolActionReported"/>.</summary>
     private readonly Lock statusLock;
 
     /// <summary>ID of the swap that the monitored address is related to.</summary>
@@ -31,7 +31,6 @@ internal class MonitoredAddress
     public int MonitoringStartedAtHeight { get; }
 
     /// <summary>Last action on the monitored address that has been reported already, or <c>null</c> if no action has been reported for this monitored address yet.</summary>
-    /// <remarks>All access has to be protected by <see cref="statusLock"/>.</remarks>
     public bool MempoolActionReported
     {
         get
