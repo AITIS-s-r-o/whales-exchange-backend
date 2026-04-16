@@ -23,7 +23,7 @@ internal enum SwapStatus
     /// <summary>Client paid both invoices and provider broadcasted the funding transaction.</summary>
     FundingTxCreated = 4,
 
-    /// <summary>The funding transaction has enough confirmations for the client to proceed.</summary>
+    /// <summary>Funding transaction has enough confirmations for the client to proceed.</summary>
     FundingTxConfirmed = 5,
 
     /// <summary>Client spent the funding transaction output.</summary>
