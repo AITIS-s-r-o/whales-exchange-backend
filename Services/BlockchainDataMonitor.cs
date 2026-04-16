@@ -289,7 +289,15 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                                 if (action is not null)
                                 {
                                     string txHash = unspentInfo.TransactionHash;
-                                    string? transactionData = await this.electrumRpcClient.GetTransactionAsync(txHash, cancellationToken).ConfigureAwait(false);
+                                    string? transactionData = null;
+                                    try
+                                    {
+                                        transactionData = await this.electrumRpcClient.GetTransactionAsync(txHash, cancellationToken).ConfigureAwait(false);
+                                    }
+                                    catch (ElectrumRpcException e)
+                                    {
+                                        this.log.Error($"Electrum server reported error when querying transaction ID '{txHash}': {e}");
+                                    }
 
                                     foreach (OnMonitoredAddressActionCallback callback in callbacks)
                                     {
