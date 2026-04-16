@@ -237,8 +237,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
                     if ((response is not null) && (response.Count > 0))
                     {
-                        // Electrum returns unspent outputs sorted by block height in ascending order, so the last one is the newest. However, if the transaction is still in its mempool,
-                        // the block height is returned as 0. We can ignore all records with block height prior to monitoring start.
+                        // Electrum returns unspent outputs sorted by block height in ascending order, so the last one is the newest. However, if the transaction is still in its
+                        // mempool, the block height is returned as 0. We can ignore all records with block height prior to monitoring start.
                         bool isLastUtxoInMempool = response[^1].BlockHeight == 0;
                         if (isLastUtxoInMempool || (response[^1].BlockHeight > monitoredAddress.MonitoringStartedAtHeight))
                         {
@@ -275,8 +275,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                                     {
                                         int confirmations = currentBlockHeight - unspentInfo.BlockHeight + 1;
                                         this.log.Debug($"Monitored address '{monitoredAddress.Address}' received a new unspent output with amount {
-                                            unspentInfo.AmountSats} satoshis at blockchain height {unspentInfo.BlockHeight}. Current height is {currentBlockHeight}, so the output has {
-                                            confirmations}/{monitoredAddress.RequiredConfirmations} confirmations.");
+                                            unspentInfo.AmountSats} satoshis at blockchain height {unspentInfo.BlockHeight}. Current height is {
+                                            currentBlockHeight}, so the output has {confirmations}/{monitoredAddress.RequiredConfirmations} confirmations.");
 
                                         if (confirmations >= monitoredAddress.RequiredConfirmations)
                                             action = MonitoredAddressAction.Confirmed;
