@@ -248,6 +248,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                                 callbacks = this.onMonitoredAddressActions.ToArray();
                             }
 
+                            // Iterate in reverse to process records with higher block heights first.
                             for (int i = response.Count - 1; i >= 0; i--)
                             {
                                 AddressUnspentInfo unspentInfo = response[i];
