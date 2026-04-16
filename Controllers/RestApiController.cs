@@ -364,7 +364,7 @@ internal class RestApiController : InternalControllerBase
                 else
                 {
                     this.log.Debug($"Swap frontend ID '{id}' does not have funding transaction yet.");
-                    response = new("No coins were locked up yet.");
+                    response = new($"No coins were locked up yet for swap '{id}'.");
                 }
             }
             else
