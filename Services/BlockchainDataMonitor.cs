@@ -253,13 +253,13 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                             {
                                 AddressUnspentInfo unspentInfo = response[i];
 
-                                if ((unspentInfo.BlockHeight != 0) && (unspentInfo.BlockHeight < monitoredAddress.MonitoringStartedAtHeight))
+                                if (!unspentInfo.InMempool && (unspentInfo.BlockHeight < monitoredAddress.MonitoringStartedAtHeight))
                                     break;
 
                                 MonitoredAddressAction? action = null;
                                 if (unspentInfo.AmountSats >= monitoredAddress.AmountSats)
                                 {
-                                    if (unspentInfo.BlockHeight == 0)
+                                    if (unspentInfo.InMempool)
                                     {
                                         if (!monitoredAddress.MempoolActionReported)
                                         {
