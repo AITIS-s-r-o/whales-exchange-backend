@@ -168,6 +168,11 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                                         .ConfigureAwait(false);
                                 }
                             }
+
+                            lock (this.dataLock)
+                            {
+                                this.StopMonitoringAddressesLocked(expiredMonitoredAddresses);
+                            }
                         }
                         else this.log.Debug($"Electrum server is at blockchain height {response.BlockchainHeight}, not synced with its server at {response.ServerHeight}.");
                     }
@@ -325,18 +330,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
                 lock (this.dataLock)
                 {
-                    foreach (MonitoredAddress monitoredAddress in monitoredAddressesToRemove)
-                    {
-                        if (this.monitoredAddresses.Remove(monitoredAddress))
-                        {
-                            this.log.Debug($"Monitored address '{monitoredAddress}' has been removed from the set after a matching transaction was found.");
-                        }
-                        else
-                        {
-                            this.log.Debug($"Monitored address '{
-                                monitoredAddress}' should be removed from the set after a matching transaction was found, but it was not found in the set.");
-                        }
-                    }
+                    this.StopMonitoringAddressesLocked(monitoredAddressesToRemove);
                 }
 
                 this.log.Debug($"Wait {monitoredAddressTransactionUpdateFrequency} before next round.");
@@ -428,6 +422,30 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
             this.log.Debug($"Monitored address `{monitoredAddress}` registered at height {this.blockchainHeight}. Currently, {
                 this.monitoredAddresses.Count} addresses are monitored.");
+        }
+
+        this.log.Debug("$");
+    }
+
+    /// <summary>
+    /// Stops monitoring the given bitcoin addresses.
+    /// </summary>
+    /// <param name="monitoredAddressesToRemove">Monitored bitcoin addresses to stop monitoring.</param>
+    /// <remarks>The caller is responsible for holding <see cref="dataLock"/>.</remarks>
+    private void StopMonitoringAddressesLocked(IReadOnlyList<MonitoredAddress> monitoredAddressesToRemove)
+    {
+        this.log.Debug($"* |{nameof(monitoredAddressesToRemove)}|={monitoredAddressesToRemove.Count}");
+
+        foreach (MonitoredAddress monitoredAddress in monitoredAddressesToRemove)
+        {
+            if (this.monitoredAddresses.Remove(monitoredAddress))
+            {
+                this.log.Debug($"Monitored address '{monitoredAddress}' has been removed from the set after a matching transaction was found.");
+            }
+            else
+            {
+                this.log.Debug($"Monitored address '{monitoredAddress}' should be removed from the set after a matching transaction was found, but it was not found in the set.");
+            }
         }
 
         this.log.Debug("$");
