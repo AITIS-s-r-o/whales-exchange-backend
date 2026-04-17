@@ -55,11 +55,6 @@ internal class RestApiController : InternalControllerBase
     /// <summary>Monitor of blockchain data fetched from the Electrum backend client.</summary>
     private readonly BlockchainDataMonitor blockchainDataMonitor;
 
-    /// <summary>Manager of swap subscriptions.</summary>
-    private readonly SubscriptionManager subscriptionManager;
-
-    private static volatile bool Registered = false;
-
     /// <summary>
     /// Creates a new instance of the object.
     /// </summary>
@@ -83,59 +78,8 @@ internal class RestApiController : InternalControllerBase
         this.swapRepository = swapRepository;
         this.electrumRpcClient = electrumRpcClient;
         this.blockchainDataMonitor = blockchainDataMonitor;
-        this.subscriptionManager = subscriptionManager;
-
-        if (!Registered)
-        {
-            Registered = true;
-            this.blockchainDataMonitor.RegisterOnMonitoredAddressActionCallback(this.OnMonitoredAddressActionAsync);
-        }
 
         this.log.Debug("*$");
-    }
-
-    /// <inheritdoc cref="BlockchainDataMonitor.OnMonitoredAddressActionCallback"/>
-    private async Task OnMonitoredAddressActionAsync(MonitoredAddressAction action, MonitoredAddress monitoredAddress, string? transactionId, string? transactionData,
-        CancellationToken cancellationToken)
-    {
-        this.log.Debug($"* {nameof(action)}={action},{nameof(monitoredAddress)}='{monitoredAddress}',{nameof(transactionId)}='{transactionId}',{
-            nameof(transactionData)}='{transactionData.ToBoundedString()}'");
-
-        DbSwap? swap = null;
-        try
-        {
-            switch (action)
-            {
-                case MonitoredAddressAction.InMempool:
-                case MonitoredAddressAction.Confirmed:
-                    if (transactionId is null)
-                        throw new SanityCheckException($"Transaction ID is required for action {action}.");
-
-                    bool isConfirmed = action == MonitoredAddressAction.Confirmed;
-                    swap = await this.swapProviderRepository.FundingTransactionSetAsync(monitoredAddress.SwapId, isConfirmed, transactionId: transactionId,
-                        transactionData: transactionData).ConfigureAwait(false);
-                    break;
-
-                case MonitoredAddressAction.Timeout:
-                    swap = await this.swapProviderRepository.FundingTransactionTimeoutAsync(monitoredAddress.SwapId).ConfigureAwait(false);
-                    break;
-
-                default:
-                    throw new SanityCheckException($"Invalid action provided {action}.");
-            }
-        }
-        catch (DatabaseException e)
-        {
-            this.log.Error($"Exception occurred while trying to update database record of swap ID {monitoredAddress.SwapId}: {e}");
-        }
-
-        if (swap is not null)
-        {
-            SwapUpdate swapUpdate = SwapUpdate.FromDbSwap(swap);
-            await this.subscriptionManager.PropagateSwapUpdateAsync(swapUpdate, cancellationToken).ConfigureAwait(false);
-        }
-
-        this.log.Debug("$");
     }
 
     /// <summary>

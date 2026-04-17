@@ -5,9 +5,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Threading;
+using WhalesExchangeBackend.Data.Repository;
 using WhalesExchangeBackend.Services.DataProvider;
 using WhalesExchangeBackend.Services.ElectrumRpc;
+using WhalesExchangeBackend.SharedLib.Data;
 using WhalesExchangeBackend.SharedLib.Exceptions;
+using WhalesExchangeBackend.SharedLib.Services.WebSocket;
+using WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
 using WhalesSecret.TradeScriptLib.Exceptions;
 using WhalesSecret.TradeScriptLib.Logging;
 
@@ -20,12 +24,12 @@ namespace WhalesExchangeBackend.Services;
 internal class BlockchainDataMonitor : System.IAsyncDisposable
 {
     /// <summary>Frequency with which the information about the Electrum blockchain height is updated.</summary>
-    /// <remarks>The value here was selected in order to provide reasonable frequency of udpates while distributing queries to Electrum server in time.</remarks>
+    /// <remarks>The value here was selected in order to provide reasonable frequency of updates while distributing queries to Electrum server in time.</remarks>
     private static readonly TimeSpan blockchainHeightUpdateFrequency = TimeSpan.FromSeconds(63);
 
     /// <summary>Frequency with which the monitored addresses are checked for matching transactions.</summary>
     /// <remarks>
-    /// The value here was selected in order to provide reasonable frequency of udpates while distributing queries to Electrum server in time.
+    /// The value here was selected in order to provide reasonable frequency of updates while distributing queries to Electrum server in time.
     /// <para>
     /// Specifically in case of transaction updates, the frequency should be higher in order to deliver the information as soon as possible to the frontend, but not too high to
     /// waste too many resources.
@@ -38,6 +42,12 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
     /// <summary>Client that communicates with Electrum RPC server.</summary>
     private readonly ElectrumRpcClient electrumRpcClient;
+
+    /// <summary>Provider of access to swap providers and their offers in the database.</summary>
+    private readonly SwapProviderRepository swapProviderRepository;
+
+    /// <summary>Manager of swap subscriptions.</summary>
+    private readonly SubscriptionManager subscriptionManager;
 
     /// <summary>Cancellation source announcing termination of the instance, i.e. disconnection.</summary>
     private readonly CancellationTokenSource shutdownTokenSource;
@@ -86,8 +96,11 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// Creates a new instance of the object.
     /// </summary>
     /// <param name="electrumRpcClient">Client that communicates with Electrum RPC server.</param>
+    /// <param name="swapProviderRepository">Provider of access to swap providers and their offers in the database.</param>
+    /// <param name="subscriptionManager">Manager of swap subscriptions.</param>
     /// <param name="joinableTaskFactory">Factory for starting async tasks running in the background.</param>
-    public BlockchainDataMonitor(ElectrumRpcClient electrumRpcClient, JoinableTaskFactory joinableTaskFactory)
+    public BlockchainDataMonitor(ElectrumRpcClient electrumRpcClient, SwapProviderRepository swapProviderRepository, SubscriptionManager subscriptionManager,
+        JoinableTaskFactory joinableTaskFactory)
     {
         this.log.Debug("*");
 
@@ -96,8 +109,12 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
         this.shutdownTokenSource = new();
 
         this.electrumRpcClient = electrumRpcClient;
+        this.swapProviderRepository = swapProviderRepository;
+        this.subscriptionManager = subscriptionManager;
 
         this.onMonitoredAddressActions = new();
+        this.onMonitoredAddressActions.Add(this.OnMonitoredAddressActionAsync);
+
         this.monitoredAddresses = new();
 
         this.blockHeightSyncTask = joinableTaskFactory.RunAsync(this.BlockHeightSyncLoopAsync, JoinableTaskCreationOptions.LongRunning);
@@ -394,6 +411,50 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
         this.log.Debug("$");
     }
 
+    /// <inheritdoc cref="BlockchainDataMonitor.OnMonitoredAddressActionCallback"/>
+    private async Task OnMonitoredAddressActionAsync(MonitoredAddressAction action, MonitoredAddress monitoredAddress, string? transactionId, string? transactionData,
+        CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(action)}={action},{nameof(monitoredAddress)}='{monitoredAddress}',{nameof(transactionId)}='{transactionId}',{
+            nameof(transactionData)}='{transactionData.ToBoundedString()}'");
+
+        DbSwap? swap = null;
+        try
+        {
+            switch (action)
+            {
+                case MonitoredAddressAction.InMempool:
+                case MonitoredAddressAction.Confirmed:
+                    if (transactionId is null)
+                        throw new SanityCheckException($"Transaction ID is required for action {action}.");
+
+                    bool isConfirmed = action == MonitoredAddressAction.Confirmed;
+                    swap = await this.swapProviderRepository.FundingTransactionSetAsync(monitoredAddress.SwapId, isConfirmed, transactionId: transactionId,
+                        transactionData: transactionData).ConfigureAwait(false);
+                    break;
+
+                case MonitoredAddressAction.Timeout:
+                    swap = await this.swapProviderRepository.FundingTransactionTimeoutAsync(monitoredAddress.SwapId).ConfigureAwait(false);
+                    break;
+
+                default:
+                    throw new SanityCheckException($"Invalid action provided {action}.");
+            }
+        }
+        catch (DatabaseException e)
+        {
+            this.log.Error($"Exception occurred while trying to update database record of swap ID {monitoredAddress.SwapId}: {e}");
+        }
+
+        if (swap is not null)
+        {
+            SwapUpdate swapUpdate = SwapUpdate.FromDbSwap(swap);
+            await this.subscriptionManager.PropagateSwapUpdateAsync(swapUpdate, cancellationToken).ConfigureAwait(false);
+        }
+
+        this.log.Debug("$");
+    }
+
     /// <summary>
     /// Registers a new Bitcoin address to be monitored for incoming transactions relevant to the swap with the specified ID.
     /// </summary>
@@ -427,7 +488,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// </summary>
     /// <param name="monitoredAddressesToRemove">Monitored bitcoin addresses to stop monitoring.</param>
     /// <remarks>The caller is responsible for holding <see cref="dataLock"/>.</remarks>
-    private void StopMonitoringAddressesLocked(IReadOnlyList<MonitoredAddress> monitoredAddressesToRemove)
+    private void StopMonitoringAddressesLocked(List<MonitoredAddress> monitoredAddressesToRemove)
     {
         this.log.Debug($"* |{nameof(monitoredAddressesToRemove)}|={monitoredAddressesToRemove.Count}");
 
