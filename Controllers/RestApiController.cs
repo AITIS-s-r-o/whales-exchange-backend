@@ -58,6 +58,8 @@ internal class RestApiController : InternalControllerBase
     /// <summary>Manager of swap subscriptions.</summary>
     private readonly SubscriptionManager subscriptionManager;
 
+    private static volatile bool Registered = false;
+
     /// <summary>
     /// Creates a new instance of the object.
     /// </summary>
@@ -83,7 +85,11 @@ internal class RestApiController : InternalControllerBase
         this.blockchainDataMonitor = blockchainDataMonitor;
         this.subscriptionManager = subscriptionManager;
 
-        this.blockchainDataMonitor.RegisterOnMonitoredAddressActionCallback(this.OnMonitoredAddressActionAsync);
+        if (!Registered)
+        {
+            Registered = true;
+            this.blockchainDataMonitor.RegisterOnMonitoredAddressActionCallback(this.OnMonitoredAddressActionAsync);
+        }
 
         this.log.Debug("*$");
     }
