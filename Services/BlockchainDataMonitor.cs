@@ -168,14 +168,6 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                                         .ConfigureAwait(false);
                                 }
                             }
-
-                            if (expiredMonitoredAddresses.Count > 0)
-                            {
-                                lock (this.dataLock)
-                                {
-                                    this.StopMonitoringAddressesLocked(expiredMonitoredAddresses);
-                                }
-                            }
                         }
                         else this.log.Debug($"Electrum server is at blockchain height {response.BlockchainHeight}, not synced with its server at {response.ServerHeight}.");
                     }
