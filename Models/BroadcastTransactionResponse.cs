@@ -20,6 +20,7 @@ internal class BroadcastTransactionResponse
     /// Creates a new instance of the object.
     /// </summary>
     /// <param name="transactionId">Transaction ID in hex format.</param>
+    [JsonConstructor]
     public BroadcastTransactionResponse(string transactionId)
     {
         this.TransactionId = transactionId;
