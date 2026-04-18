@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Text;
 
 namespace WhalesExchangeBackend.Services.ElectrumRpc;
@@ -17,17 +18,11 @@ internal class ElectrumGetSubmarineSwapProviderResponse : Dictionary<string, Ele
         StringBuilder sb = new();
         _ = sb.Append('{');
 
-        int i = 0;
+        int i = 1;
         foreach ((string key, ElectrumSwapProvider provider) in this)
         {
+            _ = sb.AppendLine(CultureInfo.InvariantCulture, $"${i}: {key} -> {provider}");
             i++;
-            _ = sb.Append('#');
-            _ = sb.Append(i);
-            _ = sb.Append(": ");
-            _ = sb.Append(key);
-            _ = sb.Append("->");
-            _ = sb.Append(provider);
-            _ = sb.Append(';');
         }
 
         _ = sb.Append('}');

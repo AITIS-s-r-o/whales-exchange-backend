@@ -195,13 +195,6 @@ internal class SwapProviderRepository : RepositoryBase
             DbSwap? dbRecord = await db.Swaps.FindAsync(swapId).ConfigureAwait(false);
             if (dbRecord is not null)
             {
-                // Information that the funding transaction has been seen in the mempool (but not yet confirmed) can be received multiple times.
-                if (!isConfirmed && (dbRecord.Status != SwapStatus.FundingTxCreated))
-                {
-                    this.log.Debug("$<MEMPOOL_ALREADY_KNOWN>");
-                    return null;
-                }
-
                 if (!isConfirmed && (dbRecord.Status != SwapStatus.Accepted))
                 {
                     throw new SanityCheckException($"Changing status of swap ID {swapId} to {SwapStatus.FundingTxCreated} requires the swap status to be in {

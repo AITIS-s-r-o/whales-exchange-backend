@@ -58,15 +58,11 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <summary>Background task that checks and processes matches to monitored addresses.</summary>
     private readonly JoinableTask transactionMonitorTask;
 
-    /// <summary>List of subscribed callbacks to be called when a monitored address action occurs.</summary>
-    /// <remarks>All access has to be protected by <see cref="dataLock"/>.</remarks>
-    private readonly List<OnMonitoredAddressActionCallback> onMonitoredAddressActions;
-
     /// <summary>Set of monitored Bitcoin addresses.</summary>
     /// <remarks>All access has to be protected by <see cref="dataLock"/>.</remarks>
     private readonly HashSet<MonitoredAddress> monitoredAddresses;
 
-    /// <summary>Lock object to be used when accessing <see cref="blockchainHeight"/>, <see cref="onMonitoredAddressActions"/>, and <see cref="monitoredAddresses"/>.</summary>
+    /// <summary>Lock object to be used when accessing <see cref="blockchainHeight"/> and <see cref="monitoredAddresses"/>.</summary>
     private readonly Lock dataLock;
 
     /// <summary>Lock object to be used when accessing <see cref="disposedValue"/>.</summary>
@@ -79,18 +75,6 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <summary>Current blockchain height.</summary>
     /// <remarks>All access has to be protected by <see cref="dataLock"/>.</remarks>
     private int blockchainHeight;
-
-    /// <summary>
-    /// Callback method to be called when a monitored address action occurs.
-    /// </summary>
-    /// <param name="action">Action that occurred on the monitored address.</param>
-    /// <param name="monitoredAddress">Monitored address that triggered the action.</param>
-    /// <param name="transactionId">Bitcoin transaction ID in hex format, or <c>null</c> if <paramref name="action"/> is <see cref="MonitoredAddressAction.Timeout"/>.</param>
-    /// <param name="transactionData">Raw transaction data in hex format, or <c>null</c> if <paramref name="action"/> is <see cref="MonitoredAddressAction.Timeout"/>.</param>
-    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    public delegate Task OnMonitoredAddressActionCallback(MonitoredAddressAction action, MonitoredAddress monitoredAddress, string? transactionId, string? transactionData,
-        CancellationToken cancellationToken);
 
     /// <summary>
     /// Creates a new instance of the object.
@@ -111,9 +95,6 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
         this.electrumRpcClient = electrumRpcClient;
         this.swapProviderRepository = swapProviderRepository;
         this.subscriptionManager = subscriptionManager;
-
-        this.onMonitoredAddressActions = new();
-        this.onMonitoredAddressActions.Add(this.OnMonitoredAddressActionAsync);
 
         this.monitoredAddresses = new();
 
@@ -162,7 +143,6 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                         {
                             this.log.Debug($"Electrum server is synced at blockchain height {response.BlockchainHeight}.");
 
-                            OnMonitoredAddressActionCallback[] callbacks = Array.Empty<OnMonitoredAddressActionCallback>();
                             IReadOnlyList<MonitoredAddress> expiredMonitoredAddresses = Array.Empty<MonitoredAddress>();
                             lock (this.dataLock)
                             {
@@ -170,20 +150,15 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                                 {
                                     this.blockchainHeight = response.BlockchainHeight;
                                     expiredMonitoredAddresses = this.ProcessNewBlockchainHeightLocked(this.blockchainHeight);
-                                    if (expiredMonitoredAddresses.Count > 0)
-                                        callbacks = this.onMonitoredAddressActions.ToArray();
                                 }
                             }
 
-                            this.log.Debug($"{expiredMonitoredAddresses.Count} monitored addresses timed out, {callbacks.Length} callbacks will be called.");
+                            this.log.Debug($"{expiredMonitoredAddresses.Count} monitored addresses timed out.");
 
                             foreach (MonitoredAddress monitoredAddress in expiredMonitoredAddresses)
                             {
-                                foreach (OnMonitoredAddressActionCallback callback in callbacks)
-                                {
-                                    await callback(MonitoredAddressAction.Timeout, monitoredAddress, transactionId: null, transactionData: null, cancellationToken)
-                                        .ConfigureAwait(false);
-                                }
+                                await this.OnMonitoredAddressActionAsync(MonitoredAddressAction.Timeout, monitoredAddress, transactionId: null, transactionData: null,
+                                    cancellationToken).ConfigureAwait(false);
                             }
                         }
                         else this.log.Debug($"Electrum server is at blockchain height {response.BlockchainHeight}, not synced with its server at {response.ServerHeight}.");
@@ -257,12 +232,6 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                         bool isLastUtxoInMempool = response[^1].BlockHeight == 0;
                         if (isLastUtxoInMempool || (response[^1].BlockHeight > monitoredAddress.MonitoringStartedAtHeight))
                         {
-                            OnMonitoredAddressActionCallback[] callbacks = Array.Empty<OnMonitoredAddressActionCallback>();
-                            lock (this.dataLock)
-                            {
-                                callbacks = this.onMonitoredAddressActions.ToArray();
-                            }
-
                             // Iterate in reverse to process records with higher block heights first.
                             for (int i = response.Count - 1; i >= 0; i--)
                             {
@@ -319,11 +288,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                                         this.log.Error($"Electrum server reported error when querying transaction ID '{txHash}': {e}");
                                     }
 
-                                    foreach (OnMonitoredAddressActionCallback callback in callbacks)
-                                    {
-                                        await callback(action.Value, monitoredAddress, transactionId: unspentInfo.TransactionHash, transactionData: transactionData,
-                                            cancellationToken).ConfigureAwait(false);
-                                    }
+                                    await this.OnMonitoredAddressActionAsync(action.Value, monitoredAddress, transactionId: unspentInfo.TransactionHash,
+                                        transactionData: transactionData, cancellationToken).ConfigureAwait(false);
 
                                     if (action.Value == MonitoredAddressAction.Confirmed)
                                         monitoredAddressesToRemove.Add(monitoredAddress);
@@ -395,23 +361,14 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     }
 
     /// <summary>
-    /// Registers a callback method to be called when a monitored address action occurs.
+    /// Callback method to be called when a monitored address action occurs.
     /// </summary>
-    /// <param name="callback">Callback method to be called when a monitored address action occurs.</param>
-    public void RegisterOnMonitoredAddressActionCallback(OnMonitoredAddressActionCallback callback)
-    {
-        this.log.Debug("*");
-
-        lock (this.dataLock)
-        {
-            this.onMonitoredAddressActions.Add(callback);
-            this.log.Debug($"Currently {this.onMonitoredAddressActions.Count} addresses are monitored.");
-        }
-
-        this.log.Debug("$");
-    }
-
-    /// <inheritdoc cref="BlockchainDataMonitor.OnMonitoredAddressActionCallback"/>
+    /// <param name="action">Action that occurred on the monitored address.</param>
+    /// <param name="monitoredAddress">Monitored address that triggered the action.</param>
+    /// <param name="transactionId">Bitcoin transaction ID in hex format, or <c>null</c> if <paramref name="action"/> is <see cref="MonitoredAddressAction.Timeout"/>.</param>
+    /// <param name="transactionData">Raw transaction data in hex format, or <c>null</c> if <paramref name="action"/> is <see cref="MonitoredAddressAction.Timeout"/>.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     private async Task OnMonitoredAddressActionAsync(MonitoredAddressAction action, MonitoredAddress monitoredAddress, string? transactionId, string? transactionData,
         CancellationToken cancellationToken)
     {
