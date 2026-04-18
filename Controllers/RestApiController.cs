@@ -63,9 +63,8 @@ internal class RestApiController : InternalControllerBase
     /// <param name="swapRepository">Provider of access to swaps in the database.</param>
     /// <param name="electrumRpcClient">Client that communicates with Electrum RPC server.</param>
     /// <param name="blockchainDataMonitor">Monitor of blockchain data fetched from the Electrum backend client.</param>
-    /// <param name="subscriptionManager">Manager of swap subscriptions.</param>
     public RestApiController(IHttpContextAccessor httpContextAccessor, SwapProviderRepository swapProviderRepository, SwapRepository swapRepository,
-        ElectrumRpcClient electrumRpcClient, BlockchainDataMonitor blockchainDataMonitor, SubscriptionManager subscriptionManager)
+        ElectrumRpcClient electrumRpcClient, BlockchainDataMonitor blockchainDataMonitor)
     {
         this.httpContextAccessor = httpContextAccessor;
         HttpContext? context = this.httpContextAccessor.HttpContext;
