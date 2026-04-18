@@ -455,7 +455,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                 }
                 else
                 {
-                    this.log.Debug($"Monitored address '{monitoredAddress}' should be removed from the set after a matching transaction was found, but it was not found in the set.");
+                    this.log.Debug($"Monitored address '{
+                        monitoredAddress}' should be removed from the set after a matching transaction was found, but it was not found in the set.");
                 }
             }
         }
