@@ -338,7 +338,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
         List<MonitoredAddress> result = new();
         foreach (MonitoredAddress monitoredAddress in this.monitoredAddresses)
         {
-            if (monitoredAddress.TimeoutHeight >= blockchainHeight)
+            if (monitoredAddress.TimeoutHeight <= blockchainHeight)
             {
                 this.log.Debug($"Monitored address `{monitoredAddress}` has timed out at blockchain height {blockchainHeight}.");
                 result.Add(monitoredAddress);
