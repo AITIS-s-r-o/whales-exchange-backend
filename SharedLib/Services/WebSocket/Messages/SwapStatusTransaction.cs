@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json.Serialization;
 
 namespace WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
 
@@ -8,9 +9,11 @@ namespace WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
 internal class SwapStatusTransaction
 {
     /// <summary>Raw Bitcoin transaction in hex format, or <c>null</c> if not available.</summary>
+    [JsonPropertyName("hex")]
     public string? Hex { get; }
 
     /// <summary>Bitcoin transaction ID in hex format.</summary>
+    [JsonPropertyName("id")]
     public string Id { get; }
 
     /// <summary>
@@ -18,6 +21,7 @@ internal class SwapStatusTransaction
     /// </summary>
     /// <param name="hex">Raw Bitcoin transaction in hex format, or <c>null</c> if not available.</param>
     /// <param name="id">Bitcoin transaction ID in hex format.</param>
+    [JsonConstructor]
     public SwapStatusTransaction(string? hex, string id)
     {
         this.Hex = hex;
