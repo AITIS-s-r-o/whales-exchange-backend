@@ -306,10 +306,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                     }
                 }
 
-                lock (this.dataLock)
-                {
-                    this.StopMonitoringAddressesLocked(monitoredAddressesToRemove);
-                }
+                this.StopMonitoringAddresses(monitoredAddressesToRemove);
 
                 this.log.Debug($"Wait {monitoredAddressTransactionUpdateFrequency} before next round.");
                 await Task.Delay(monitoredAddressTransactionUpdateFrequency, cancellationToken).ConfigureAwait(false);
@@ -441,23 +438,25 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     }
 
     /// <summary>
-    /// Stops monitoring the given bitcoin addresses.
+    /// Stops monitoring the given Bitcoin addresses.
     /// </summary>
-    /// <param name="monitoredAddressesToRemove">Monitored bitcoin addresses to stop monitoring.</param>
-    /// <remarks>The caller is responsible for holding <see cref="dataLock"/>.</remarks>
-    private void StopMonitoringAddressesLocked(List<MonitoredAddress> monitoredAddressesToRemove)
+    /// <param name="monitoredAddressesToRemove">Monitored Bitcoin addresses to stop monitoring.</param>
+    private void StopMonitoringAddresses(List<MonitoredAddress> monitoredAddressesToRemove)
     {
         this.log.Debug($"* |{nameof(monitoredAddressesToRemove)}|={monitoredAddressesToRemove.Count}");
 
-        foreach (MonitoredAddress monitoredAddress in monitoredAddressesToRemove)
+        lock (this.dataLock)
         {
-            if (this.monitoredAddresses.Remove(monitoredAddress))
+            foreach (MonitoredAddress monitoredAddress in monitoredAddressesToRemove)
             {
-                this.log.Debug($"Monitored address '{monitoredAddress}' has been removed from the set after a matching transaction was found.");
-            }
-            else
-            {
-                this.log.Debug($"Monitored address '{monitoredAddress}' should be removed from the set after a matching transaction was found, but it was not found in the set.");
+                if (this.monitoredAddresses.Remove(monitoredAddress))
+                {
+                    this.log.Debug($"Monitored address '{monitoredAddress}' has been removed from the set after a matching transaction was found.");
+                }
+                else
+                {
+                    this.log.Debug($"Monitored address '{monitoredAddress}' should be removed from the set after a matching transaction was found, but it was not found in the set.");
+                }
             }
         }
 
