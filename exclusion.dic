@@ -1,6 +1,8 @@
 appsettings
 createswap
 locktime
+mempool
+Mempool
 onchain
 Npub
 pubkey
@@ -9,3 +11,4 @@ satoshis
 Sats
 Upsert
 Upserting
+Utxo
