@@ -220,7 +220,7 @@ internal class SwapProviderRepository : RepositoryBase
                 _ = db.SaveChanges();
                 transaction.Commit();
 
-                this.log.Debug($"Swap ID status changed to {dbRecord.Status}. Funding time set to {dbRecord.FundingTime}.");
+                this.log.Debug($"Swap ID {swapId} status changed to {dbRecord.Status}. Funding time set to {dbRecord.FundingTime}.");
                 result = dbRecord;
             }
             else this.log.Error($"Swap ID {swapId} has not been found in the database.");

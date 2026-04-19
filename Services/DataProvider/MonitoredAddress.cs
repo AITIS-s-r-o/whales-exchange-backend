@@ -30,7 +30,7 @@ internal class MonitoredAddress
     /// <summary>Blockchain height at which the monitoring started.</summary>
     public int MonitoringStartedAtHeight { get; }
 
-    /// <summary>Last action on the monitored address that has been reported already, or <c>null</c> if no action has been reported for this monitored address yet.</summary>
+    /// <summary><c>true</c> if the mempool action was already reported, <c>false</c> otherwise.</summary>
     public bool MempoolActionReported
     {
         get
