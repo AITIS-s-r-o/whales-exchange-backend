@@ -25,7 +25,7 @@ internal class MonitoredAddress
     public int RequiredConfirmations { get; }
 
     /// <summary>Blockchain height at which the monitoring should timeout.</summary>
-    public int TimeoutHeight { get; }
+    public long TimeoutHeight { get; }
 
     /// <summary>Blockchain height at which the monitoring started.</summary>
     public int MonitoringStartedAtHeight { get; }
@@ -63,7 +63,7 @@ internal class MonitoredAddress
     /// <param name="timeoutHeight">Blockchain height at which the monitoring should timeout.</param>
     /// <param name="monitoringStartedAtHeight">Blockchain height at which the monitoring started.</param>
     /// <param name="isLockupAddress"><c>true</c> if the monitored address is the lockup address in the funding transaction, <c>false</c> if it is the destination address.</param>
-    public MonitoredAddress(long swapId, string address, long amountSats, int requiredConfirmations, int timeoutHeight, int monitoringStartedAtHeight, bool isLockupAddress)
+    public MonitoredAddress(long swapId, string address, long amountSats, int requiredConfirmations, long timeoutHeight, int monitoringStartedAtHeight, bool isLockupAddress)
     {
         this.statusLock = new();
         this.SwapId = swapId;
