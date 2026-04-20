@@ -30,7 +30,7 @@ internal class MonitoredAddress
     /// <summary>Blockchain height at which the monitoring started.</summary>
     public int MonitoringStartedAtHeight { get; }
 
-    /// <summary><c>true</c> if the monitored address is the lockup address in the funding transaction, <c>false</c> if it is the destination address.</summary>
+    /// <summary><c>true</c> if the monitored address is the lockup address in the funding transaction, <c>false</c> if it is the client address.</summary>
     public bool IsLockupAddress { get; }
 
     /// <summary><c>true</c> if the mempool action was already reported, <c>false</c> otherwise.</summary>
@@ -62,7 +62,7 @@ internal class MonitoredAddress
     /// <param name="amountSats">Amount expected to be received to this address in satoshis.</param>
     /// <param name="timeoutHeight">Blockchain height at which the monitoring should timeout.</param>
     /// <param name="monitoringStartedAtHeight">Blockchain height at which the monitoring started.</param>
-    /// <param name="isLockupAddress"><c>true</c> if the monitored address is the lockup address in the funding transaction, <c>false</c> if it is the destination address.</param>
+    /// <param name="isLockupAddress"><c>true</c> if the monitored address is the lockup address in the funding transaction, <c>false</c> if it is the client address.</param>
     public MonitoredAddress(long swapId, string address, long amountSats, int requiredConfirmations, long timeoutHeight, int monitoringStartedAtHeight, bool isLockupAddress)
     {
         this.statusLock = new();
