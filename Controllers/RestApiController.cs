@@ -151,7 +151,7 @@ internal class RestApiController : InternalControllerBase
         catch (DatabaseException e)
         {
             this.log.Error($"Exception occurred while trying to get swap provider with pubkey '{providerPk}' from the database: {e}");
-            response = new($"Getting swap provider with pubkey '{providerPk}' failed. {e.Message}");
+            response = new($"Getting swap provider with pubkey '{providerPk}' failed.");
             result = this.Ok(response);
 
             this.log.Debug("$<GET_PROVIDER_DB_ERROR>");
