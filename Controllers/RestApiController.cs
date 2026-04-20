@@ -1,19 +1,17 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using WhalesExchangeBackend.Controllers.InternalSupport;
 using WhalesExchangeBackend.Data.Repository;
 using WhalesExchangeBackend.Models;
 using WhalesExchangeBackend.Services;
-using WhalesExchangeBackend.Services.DataProvider;
 using WhalesExchangeBackend.Services.ElectrumRpc;
 using WhalesExchangeBackend.SharedLib.Data;
 using WhalesExchangeBackend.SharedLib.Exceptions;
-using WhalesExchangeBackend.SharedLib.Services.WebSocket;
 using WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
 using WhalesSecret.TradeScriptLib.Exceptions;
 using WhalesSecret.TradeScriptLib.Logging;
@@ -329,6 +327,43 @@ internal class RestApiController : InternalControllerBase
         }
 
         result = this.Ok(response);
+
+        this.log.Debug("$");
+        return result;
+    }
+
+    /// <summary>
+    /// Action that is executed when a transaction broadcasting is requested.
+    /// </summary>
+    /// <param name="request">Request to broadcast a transaction.</param>
+    /// <returns>Result of the action method.</returns>
+    [HttpPost]
+    [Route("broadcasttransaction")]
+    public async Task<IActionResult> BroadcastTransactionAsync([FromBody] BroadcastTransactionRequest request)
+    {
+        this.log.Debug($"* {nameof(request)}='{request}'");
+
+        HttpContext? context = this.httpContextAccessor.HttpContext;
+        if (context is null)
+            throw new SanityCheckException("HTTP context is null.");
+
+        IActionResult result;
+
+        if (request.Currency == "BTC")
+        {
+            try
+            {
+                string transactionId = await this.electrumRpcClient.BroadcastAsync(request.TransactionHex, context.RequestAborted).ConfigureAwait(false);
+                BroadcastTransactionResponse response = new(transactionId);
+                result = this.Ok(response);
+            }
+            catch (Exception e)
+            {
+                this.log.Error($"Exception occurred while broadcasting transaction: {e}");
+                result = this.BadRequest($"Broadcasting transaction failed. {e.Message}");
+            }
+        }
+        else result = this.BadRequest("Only BTC transactions are supported.");
 
         this.log.Debug("$");
         return result;

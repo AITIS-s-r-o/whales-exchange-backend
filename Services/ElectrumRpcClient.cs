@@ -77,7 +77,7 @@ internal class ElectrumRpcClient
     /// <param name="parameters">Array of parameters.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns>Electrum RPC response.</returns>
-    /// <exception cref="ElectrumRpcException ">Thrown when the Electrum server responded with an error.</exception>
+    /// <exception cref="ElectrumRpcException">Thrown when the Electrum server responded with an error.</exception>
     /// <exception cref="OperationFailedException">Thrown when the operation failed except for error returned by the Electrum server.</exception>
     private async Task<TResult> CallAsync<TResult>(string method, Dictionary<string, object>? parameters, CancellationToken cancellationToken)
     {
@@ -152,7 +152,7 @@ internal class ElectrumRpcClient
     /// <param name="queryTimeSec">Timeout for how long the relays should be queried for provider announcements.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns>List of electrum swap providers.</returns>
-    /// <exception cref="ElectrumRpcException ">Thrown when the Electrum server responded with an error.</exception>
+    /// <exception cref="ElectrumRpcException">Thrown when the Electrum server responded with an error.</exception>
     /// <exception cref="OperationFailedException">Thrown when the operation failed except for error returned by the Electrum server.</exception>
     public async Task<ElectrumSwapProvider[]> GetSubmarineSwapProvidersAsync(int queryTimeSec, CancellationToken cancellationToken)
     {
@@ -184,7 +184,7 @@ internal class ElectrumRpcClient
     /// <param name="providerPk">Public key of the swap provider.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns>Information about the initiated reverse swap.</returns>
-    /// <exception cref="ElectrumRpcException ">Thrown when the Electrum server responded with an error.</exception>
+    /// <exception cref="ElectrumRpcException">Thrown when the Electrum server responded with an error.</exception>
     /// <exception cref="OperationFailedException">Thrown when the operation failed except for error returned by the Electrum server.</exception>
     public async Task<ElectrumSwapData> ReverseSwapAsync(long lnAmountSats, long onChainAmountSats, long prepaymentSats, string preimageHash, string claimPk, string providerPk,
         CancellationToken cancellationToken)
@@ -213,7 +213,7 @@ internal class ElectrumRpcClient
     /// </summary>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns>Information about the Electrum connection and blockchain.</returns>
-    /// <exception cref="ElectrumRpcException ">Thrown when the Electrum server responded with an error.</exception>
+    /// <exception cref="ElectrumRpcException">Thrown when the Electrum server responded with an error.</exception>
     /// <exception cref="OperationFailedException">Thrown when the operation failed except for error returned by the Electrum server.</exception>
     public async Task<ElectrumGetInfoResponse> GetInfoAsync(CancellationToken cancellationToken)
     {
@@ -231,7 +231,7 @@ internal class ElectrumRpcClient
     /// <param name="address">Bitcoin address to query for unspent outputs.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns>List of unspent outputs for the specified address.</returns>
-    /// <exception cref="ElectrumRpcException ">Thrown when the Electrum server responded with an error.</exception>
+    /// <exception cref="ElectrumRpcException">Thrown when the Electrum server responded with an error.</exception>
     /// <exception cref="OperationFailedException">Thrown when the operation failed except for error returned by the Electrum server.</exception>
     public async Task<ElectrumGetAddressUnspentResponse> GetAddressUnspentAsync(string address, CancellationToken cancellationToken)
     {
@@ -255,7 +255,7 @@ internal class ElectrumRpcClient
     /// <param name="transactionId">Bitcoin transaction ID in hex format.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns>Raw transaction data in hex format, or <c>null</c> if the transaction ID could not be found.</returns>
-    /// <exception cref="ElectrumRpcException ">Thrown when the Electrum server responded with an error.</exception>
+    /// <exception cref="ElectrumRpcException">Thrown when the Electrum server responded with an error.</exception>
     public async Task<string?> GetTransactionAsync(string transactionId, CancellationToken cancellationToken)
     {
         this.log.Debug($"* {nameof(transactionId)}='{transactionId}'");
@@ -274,6 +274,29 @@ internal class ElectrumRpcClient
         {
             // Unknown transaction ID.
         }
+
+        this.log.Debug($"$='{result}'");
+        return result;
+    }
+
+    /// <summary>
+    /// Calls Electrum's <c>broadcast</c> RPC method.
+    /// </summary>
+    /// <param name="transactionData">Bitcoin transaction data in hex format.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>Bitcoin transaction ID.</returns>
+    /// <exception cref="ElectrumRpcException">Thrown when the Electrum server responded with an error.</exception>
+    /// <exception cref="OperationFailedException">Thrown when the operation failed except for error returned by the Electrum server.</exception>
+    public async Task<string> BroadcastAsync(string transactionData, CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(transactionData)}='{transactionData.ToBoundedString()}'");
+
+        Dictionary<string, object> parameters = new()
+        {
+            { "tx", transactionData },
+        };
+
+        string result = await this.CallAsync<string>(method: "broadcast", parameters, cancellationToken).ConfigureAwait(false);
 
         this.log.Debug($"$='{result}'");
         return result;
