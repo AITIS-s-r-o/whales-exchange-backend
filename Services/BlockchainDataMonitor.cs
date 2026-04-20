@@ -417,15 +417,16 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <param name="amountSats">Amount expected to be received to this address in satoshis.</param>
     /// <param name="requiredConfirmations">Number of confirmations required.</param>
     /// <param name="timeoutHeight">Blockchain height at which the monitoring should timeout.</param>
-    public void RegisterMonitoredAddress(long swapId, string address, long amountSats, int requiredConfirmations, int timeoutHeight)
+    /// <param name="isLockupAddress"><c>true</c> if the monitored address is the lockup address in the funding transaction, <c>false</c> if it is the destination address.</param>
+    public void RegisterMonitoredAddress(long swapId, string address, long amountSats, int requiredConfirmations, int timeoutHeight, bool isLockupAddress)
     {
         this.log.Debug($"* {nameof(swapId)}={swapId},{nameof(address)}='{address}',{nameof(amountSats)}={amountSats},{nameof(requiredConfirmations)}={requiredConfirmations},{
-            nameof(timeoutHeight)}={timeoutHeight}");
+            nameof(timeoutHeight)}={timeoutHeight},{nameof(isLockupAddress)}={isLockupAddress}");
 
         lock (this.dataLock)
         {
             MonitoredAddress monitoredAddress = new(swapId: swapId, address, amountSats: amountSats, requiredConfirmations: requiredConfirmations, timeoutHeight: timeoutHeight,
-                monitoringStartedAtHeight: this.blockchainHeight);
+                monitoringStartedAtHeight: this.blockchainHeight, isLockupAddress);
 
             if (!this.monitoredAddresses.Add(monitoredAddress))
                 throw new SanityCheckException($"Unable to add monitored address '{monitoredAddress}' to the set.");

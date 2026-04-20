@@ -202,7 +202,7 @@ internal class RestApiController : InternalControllerBase
                         int requiredConfirmations = this.GetRequiredConfirmationsForAmount(request.ExpectedAmount);
                         int timeoutHeight = (int)electrumSwapData.Locktime - requiredConfirmations - LockupAddressTimeoutBuffer;
                         this.blockchainDataMonitor.RegisterMonitoredAddress(swapId: swap.Id, electrumSwapData.LockupAddress, amountSats: request.ExpectedAmount,
-                            requiredConfirmations: requiredConfirmations, timeoutHeight: timeoutHeight);
+                            requiredConfirmations: requiredConfirmations, timeoutHeight: timeoutHeight, isLockupAddress: true);
 
                         await this.swapRepository.MarkSwapAcceptedAsync(id: swap.Id, electrumSwapData.LockupAddress, timeoutBlockHeight: electrumSwapData.Locktime)
                             .ConfigureAwait(false);
