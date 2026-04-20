@@ -253,6 +253,46 @@ internal class RestApiController : InternalControllerBase
     }
 
     /// <summary>
+    /// Action that is executed when a swap is requested to be deleted.
+    /// </summary>
+    /// <param name="request">Request to remove a swap.</param>
+    /// <returns>Result of the action method.</returns>
+    [HttpPost]
+    [Route("delete-swap")]
+    public async Task<IActionResult> RemoveSwapAsync([FromBody] RemoveSwapRequest request)
+    {
+        this.log.Debug($"* {nameof(request)}='{request}'");
+
+        HttpContext? context = this.httpContextAccessor.HttpContext;
+        if (context is null)
+            throw new SanityCheckException("HTTP context is null.");
+
+        IPAddress? ipAddress = context.Connection.RemoteIpAddress;
+        if (ipAddress is null)
+            throw new SanityCheckException("Remote IP address is null.");
+
+        IActionResult result;
+
+        RemoveSwapResponse response;
+        try
+        {
+            bool removed = await this.swapRepository.RemoveAsync(frontendId: request.Id, userIpAddress: ipAddress.ToString()).ConfigureAwait(false);
+            if (removed) response = new();
+            else response = new($"Could not find swap with frontend ID '{request.Id}' that belongs to the user IP address.");
+        }
+        catch (Exception e)
+        {
+            this.log.Error($"Exception occurred while removing swap with frontend ID '{request.Id}': {e}");
+            response = new($"Removing swap with frontend ID '{request.Id}' from the database failed. {e.Message}");
+        }
+
+        result = this.Ok(response);
+
+        this.log.Debug("$");
+        return result;
+    }
+
+    /// <summary>
     /// Gets number of confirmations required for the funding transaction based on the amount being swapped.
     /// </summary>
     /// <param name="amountSats">Amount being swapped in satoshis.</param>

@@ -218,6 +218,47 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
         this.log.Debug("$");
     }
 
+    /// <summary>
+    /// Removes a swap from the database.
+    /// </summary>
+    /// <param name="frontendId">Frontend ID of the swap.</param>
+    /// <param name="userIpAddress">IP address of the user.</param>
+    /// <returns><c>true</c> if the swap record was deleted from the database, otherwise <c>false</c>.</returns>
+    /// <remarks>Note that <c>false</c> is returned if the swap does not exist or if the swap was created under a different IP address.</remarks>
+    /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
+    public async Task<bool> RemoveAsync(string frontendId, string userIpAddress)
+    {
+        this.log.Debug($"* {nameof(frontendId)}='{frontendId}',{nameof(userIpAddress)}='{userIpAddress}'");
+
+        bool result = false;
+        try
+        {
+            using ApplicationDbContext db = this.dbContextFactory.CreateDbContext();
+            using IDisposable dbLocked = await this.dbLock.EnterAsync().ConfigureAwait(false);
+            using IDbContextTransaction transaction = db.BeginTransaction();
+
+            int rowsDeleted = await db.Swaps.Where(s => s.FrontendId == frontendId && s.UserIpAddress == userIpAddress).ExecuteDeleteAsync().ConfigureAwait(false);
+            if (rowsDeleted > 0)
+            {
+                _ = db.SaveChanges();
+                transaction.Commit();
+
+                this.log.Debug($"Swap with frontend ID '{frontendId}' has been removed from the database.");
+                result = true;
+            }
+            else this.log.Debug($"Swap with frontend ID '{frontendId}' cannot be found in the database.");
+        }
+        catch (Exception e)
+        {
+            this.log.Error($"Deleting swap with the frontend ID '{frontendId}' from the database failed with exception: {e}");
+            this.log.Debug("$<DB_EXCEPTION>");
+            throw new DatabaseException($"Deleting swap with the frontend ID '{frontendId}' from the database failed.", e);
+        }
+
+        this.log.Debug($"$={result}");
+        return result;
+    }
+
     /// <inheritdoc/>
     public async Task<DbSwap?[]> GetSwapsByFrontendIdsAsync(string[] frontendIds)
     {
