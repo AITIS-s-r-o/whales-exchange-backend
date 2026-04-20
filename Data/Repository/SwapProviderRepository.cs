@@ -136,7 +136,7 @@ internal class SwapProviderRepository : RepositoryBase
             throw new DatabaseException("Getting list of swap providers from the database failed.", e);
         }
 
-        this.log.Debug($"$='{result}'");
+        this.log.Debug($"|$|={result.Length}");
         return result;
     }
 
