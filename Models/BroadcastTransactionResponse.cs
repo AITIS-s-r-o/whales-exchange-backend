@@ -13,7 +13,7 @@ namespace WhalesExchangeBackend.Models;
 internal class BroadcastTransactionResponse
 {
     /// <summary>Transaction ID in hex format.</summary>
-    [JsonPropertyName("transactionId")]
+    [JsonPropertyName("id")]
     public string TransactionId { get; }
 
     /// <summary>
