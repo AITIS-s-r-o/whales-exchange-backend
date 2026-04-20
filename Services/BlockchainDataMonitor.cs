@@ -157,8 +157,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
                             foreach (MonitoredAddress monitoredAddress in expiredMonitoredAddresses)
                             {
-                                await this.OnMonitoredAddressActionAsync(MonitoredAddressAction.Timeout, monitoredAddress, transactionId: null, transactionData: null,
-                                    cancellationToken).ConfigureAwait(false);
+                                await this.OnMonitoredAddressActionAsync(MonitoredAddressAction.Timeout, monitoredAddress, transactionId: null, outputIndex: null,
+                                    transactionData: null, cancellationToken).ConfigureAwait(false);
                             }
                         }
                         else this.log.Debug($"Electrum server is at blockchain height {response.BlockchainHeight}, not synced with its server at {response.ServerHeight}.");
@@ -288,7 +288,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                                         this.log.Error($"Electrum server reported error when querying transaction ID '{txHash}': {e}");
                                     }
 
-                                    await this.OnMonitoredAddressActionAsync(action.Value, monitoredAddress, transactionId: unspentInfo.TransactionHash,
+                                    await this.OnMonitoredAddressActionAsync(action.Value, monitoredAddress, transactionId: unspentInfo.TransactionHash, unspentInfo.OutputIndex,
                                         transactionData: transactionData, cancellationToken).ConfigureAwait(false);
 
                                     if (action.Value == MonitoredAddressAction.Confirmed)
@@ -363,47 +363,55 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <param name="action">Action that occurred on the monitored address.</param>
     /// <param name="monitoredAddress">Monitored address that triggered the action.</param>
     /// <param name="transactionId">Bitcoin transaction ID in hex format, or <c>null</c> if <paramref name="action"/> is <see cref="MonitoredAddressAction.Timeout"/>.</param>
+    /// <param name="outputIndex">Index of the output in the Bitcoin transaction, or <c>null</c> if <paramref name="action"/> is <see cref="MonitoredAddressAction.Timeout"/>.
+    /// </param>
     /// <param name="transactionData">Raw transaction data in hex format, or <c>null</c> if <paramref name="action"/> is <see cref="MonitoredAddressAction.Timeout"/>.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    private async Task OnMonitoredAddressActionAsync(MonitoredAddressAction action, MonitoredAddress monitoredAddress, string? transactionId, string? transactionData,
-        CancellationToken cancellationToken)
+    private async Task OnMonitoredAddressActionAsync(MonitoredAddressAction action, MonitoredAddress monitoredAddress, string? transactionId, int? outputIndex,
+        string? transactionData, CancellationToken cancellationToken)
     {
-        this.log.Debug($"* {nameof(action)}={action},{nameof(monitoredAddress)}='{monitoredAddress}',{nameof(transactionId)}='{transactionId}',{
+        this.log.Debug($"* {nameof(action)}={action},{nameof(monitoredAddress)}='{monitoredAddress}',{nameof(transactionId)}='{transactionId}',{nameof(outputIndex)}={outputIndex},{
             nameof(transactionData)}='{transactionData.ToBoundedString()}'");
 
-        DbSwap? swap = null;
-        try
+        if (monitoredAddress.IsLockupAddress)
         {
-            switch (action)
+            DbSwap? swap = null;
+            try
             {
-                case MonitoredAddressAction.InMempool:
-                case MonitoredAddressAction.Confirmed:
-                    if (transactionId is null)
-                        throw new SanityCheckException($"Transaction ID is required for action {action}.");
+                switch (action)
+                {
+                    case MonitoredAddressAction.InMempool:
+                    case MonitoredAddressAction.Confirmed:
+                        if (transactionId is null)
+                            throw new SanityCheckException($"Transaction ID is required for action {action}.");
 
-                    bool isConfirmed = action == MonitoredAddressAction.Confirmed;
-                    swap = await this.swapProviderRepository.FundingTransactionSetAsync(monitoredAddress.SwapId, isConfirmed, transactionId: transactionId,
-                        transactionData: transactionData).ConfigureAwait(false);
-                    break;
+                        if (outputIndex is null)
+                            throw new SanityCheckException($"Output index is required for action {action}.");
 
-                case MonitoredAddressAction.Timeout:
-                    swap = await this.swapProviderRepository.FundingTransactionTimeoutAsync(monitoredAddress.SwapId).ConfigureAwait(false);
-                    break;
+                        bool isConfirmed = action == MonitoredAddressAction.Confirmed;
+                        swap = await this.swapProviderRepository.FundingTransactionSetAsync(monitoredAddress.SwapId, isConfirmed, transactionId: transactionId,
+                            outputIndex: outputIndex.Value, transactionData: transactionData).ConfigureAwait(false);
+                        break;
 
-                default:
-                    throw new SanityCheckException($"Invalid action provided {action}.");
+                    case MonitoredAddressAction.Timeout:
+                        swap = await this.swapProviderRepository.FundingTransactionTimeoutAsync(monitoredAddress.SwapId).ConfigureAwait(false);
+                        break;
+
+                    default:
+                        throw new SanityCheckException($"Invalid action provided {action}.");
+                }
             }
-        }
-        catch (DatabaseException e)
-        {
-            this.log.Error($"Exception occurred while trying to update database record of swap ID {monitoredAddress.SwapId}: {e}");
-        }
+            catch (DatabaseException e)
+            {
+                this.log.Error($"Exception occurred while trying to update database record of swap ID {monitoredAddress.SwapId}: {e}");
+            }
 
-        if (swap is not null)
-        {
-            SwapUpdate swapUpdate = SwapUpdate.FromDbSwap(swap);
-            await this.subscriptionManager.PropagateSwapUpdateAsync(swapUpdate, cancellationToken).ConfigureAwait(false);
+            if (swap is not null)
+            {
+                SwapUpdate swapUpdate = SwapUpdate.FromDbSwap(swap);
+                await this.subscriptionManager.PropagateSwapUpdateAsync(swapUpdate, cancellationToken).ConfigureAwait(false);
+            }
         }
 
         this.log.Debug("$");

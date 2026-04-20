@@ -34,11 +34,13 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     /// <param name="providerPubkey">Public key of the swap provider as a hex string.</param>
     /// <param name="amountToPaySats">Amount the client paid or should pay (including all fees) in satoshis.</param>
     /// <param name="amountToReceiveSats">Amount the client received or should receive in satoshis.</param>
+    /// <param name="claimAddress">Bitcoin address that will be used to claim the on-chain funds.</param>
     /// <returns>Newly created database record.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
-    public async Task<DbSwap> InsertReverseAsync(string providerPubkey, long amountToPaySats, long amountToReceiveSats)
+    public async Task<DbSwap> InsertReverseAsync(string providerPubkey, long amountToPaySats, long amountToReceiveSats, string claimAddress)
     {
-        this.log.Debug($"* {nameof(providerPubkey)}='{providerPubkey}',{nameof(amountToPaySats)}={amountToPaySats},{nameof(amountToReceiveSats)}={amountToReceiveSats}");
+        this.log.Debug($"* {nameof(providerPubkey)}='{providerPubkey}',{nameof(amountToPaySats)}={amountToPaySats},{nameof(amountToReceiveSats)}={amountToReceiveSats},{
+            nameof(claimAddress)}='{claimAddress}'");
 
         DbSwap result;
         try
@@ -59,8 +61,8 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
             DateTime now = DateTime.UtcNow;
             string frontendId = RandomStringGenerator.Generate(DbSwap.FrontendIdLength);
             DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, isForward: false, SwapStatus.Created, amountToPaySats: amountToPaySats,
-                amountToReceiveSats: amountToReceiveSats, lockupAddress: null, lockupOutputIndex: null, fundingTxId: null, timeoutBlockHeight: null, createdTime: now,
-                acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, fundingTxData: null, dbSwapProvider);
+                amountToReceiveSats: amountToReceiveSats, clientAddress: claimAddress, lockupAddress: null, lockupOutputIndex: null, fundingTxId: null, timeoutBlockHeight: null,
+                createdTime: now, acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, fundingTxData: null, dbSwapProvider);
 
             _ = db.Swaps.Add(dbRecord);
             _ = db.SaveChanges();

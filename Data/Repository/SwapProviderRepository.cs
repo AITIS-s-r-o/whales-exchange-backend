@@ -177,12 +177,13 @@ internal class SwapProviderRepository : RepositoryBase
     /// <param name="swapId">ID of the swap.</param>
     /// <param name="isConfirmed"><c>true</c> if the transaction was confirmed sufficiently, <c>false</c> if it has been only seen in a mempool.</param>
     /// <param name="transactionId">Transaction ID of the funding transaction in hex format.</param>
+    /// <param name="outputIndex">Output index of the funding transaction output that holds the swapped funds.</param>
     /// <param name="transactionData">Raw transaction data in hex format, or <c>null</c> if not available.</param>
     /// <returns>Update swap database record, or <c>null</c> if the swap ID was not found in the database.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
-    public async Task<DbSwap?> FundingTransactionSetAsync(long swapId, bool isConfirmed, string transactionId, string? transactionData)
+    public async Task<DbSwap?> FundingTransactionSetAsync(long swapId, bool isConfirmed, string transactionId, int outputIndex, string? transactionData)
     {
-        this.log.Debug($"* {nameof(swapId)}={swapId},{nameof(isConfirmed)}={isConfirmed},{nameof(transactionId)}='{transactionId}',{
+        this.log.Debug($"* {nameof(swapId)}={swapId},{nameof(isConfirmed)}={isConfirmed},{nameof(transactionId)}='{transactionId}',{nameof(outputIndex)}={outputIndex},{
             nameof(transactionData)}='{transactionData.ToBoundedString()}'");
 
         DbSwap? result = null;
@@ -208,6 +209,7 @@ internal class SwapProviderRepository : RepositoryBase
                 }
 
                 dbRecord.FundingTxId = transactionId;
+                dbRecord.LockupOutputIndex = outputIndex;
                 dbRecord.FundingTxData = transactionData;
 
                 if (dbRecord.FundingTime is null)

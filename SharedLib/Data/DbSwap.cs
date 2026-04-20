@@ -40,11 +40,15 @@ internal class DbSwap
     /// <remarks>The setter is needed for the serializer.</remarks>
     public long AmountToReceiveSats { get; set; }
 
+    /// <summary>Claim address for reverse swaps, refund address for forward swaps.</summary>
+    /// <remarks>The setter is needed for the serializer.</remarks>
+    public string ClientAddress { get; set; }
+
     /// <summary>Bitcoin address to which the reverse swap funding Bitcoin transaction spends the funds to be claimed by the client, or <c>null</c> for forward swaps.</summary>
     /// <remarks>The setter is needed for the serializer.</remarks>
     public string? LockupAddress { get; set; }
 
-    /// <summary>Index of the output in the funding Bitcoin transaction that spends to the <see cref="LockupAddress"/>, or <c>null</c> for forward swaps.</summary>
+    /// <summary>Index of the output in the funding Bitcoin transaction that holds the swapped funds, or <c>null</c> for forward swaps.</summary>
     /// <remarks>The setter is needed for the serializer.</remarks>
     public int? LockupOutputIndex { get; set; }
 
@@ -101,8 +105,9 @@ internal class DbSwap
     /// </summary>
     public DbSwap()
     {
-        this.FrontendId = null!;
+        this.FrontendId = string.Empty;
         this.ProviderPubkey = string.Empty;
+        this.ClientAddress = string.Empty;
         this.Provider = null!;
     }
 
@@ -116,10 +121,10 @@ internal class DbSwap
     /// <param name="status">Status of the swap.</param>
     /// <param name="amountToPaySats">Amount the client paid or should pay (including all fees) in satoshis.</param>
     /// <param name="amountToReceiveSats">Amount the client received or should receive in satoshis.</param>
+    /// <param name="clientAddress">Claim address for reverse swaps, refund address for forward swaps.</param>
     /// <param name="lockupAddress">Bitcoin address to which the reverse swap funding Bitcoin transaction spends the funds to be claimed by the client, or <c>null</c> for forward
     /// swaps.</param>
-    /// <param name="lockupOutputIndex">Index of the output in the funding Bitcoin transaction that spends to the <see cref="LockupAddress"/>, or <c>null</c> for forward swaps.
-    /// </param>
+    /// <param name="lockupOutputIndex">Index of the output in the funding Bitcoin transaction that holds the swapped funds, or <c>null</c> for forward swaps.</param>
     /// <param name="fundingTxId">ID of the funding Bitcoin transaction, or <c>null</c> if not funded yet.</param>
     /// <param name="timeoutBlockHeight">Block height after which the swap is considered expired, or <c>null</c> if not set yet.</param>
     /// <param name="createdTime">UTC time when the swap was created by the user.</param>
@@ -129,9 +134,9 @@ internal class DbSwap
     /// <param name="failTime">UTC time since when the swap is considered as failed, or <c>null</c> if the swap is not failed.</param>
     /// <param name="fundingTxData">Funding transaction data in hex format, or <c>null</c> if not funded yet.</param>
     /// <param name="provider">Provider of the swap.</param>
-    public DbSwap(long id, string frontendId, string providerPubkey, bool isForward, SwapStatus status, long amountToPaySats, long amountToReceiveSats, string? lockupAddress,
-        int? lockupOutputIndex, string? fundingTxId, long? timeoutBlockHeight, DateTime createdTime, DateTime? acceptedTime, DateTime? fundingTime, DateTime? spentTime,
-        DateTime? failTime, string? fundingTxData, DbSwapProvider provider)
+    public DbSwap(long id, string frontendId, string providerPubkey, bool isForward, SwapStatus status, long amountToPaySats, long amountToReceiveSats, string clientAddress,
+        string? lockupAddress, int? lockupOutputIndex, string? fundingTxId, long? timeoutBlockHeight, DateTime createdTime, DateTime? acceptedTime, DateTime? fundingTime,
+        DateTime? spentTime, DateTime? failTime, string? fundingTxData, DbSwapProvider provider)
     {
         this.Id = id;
         this.FrontendId = frontendId;
@@ -140,6 +145,7 @@ internal class DbSwap
         this.Status = status;
         this.AmountToPaySats = amountToPaySats;
         this.AmountToReceiveSats = amountToReceiveSats;
+        this.ClientAddress = clientAddress;
         this.LockupAddress = lockupAddress;
         this.LockupOutputIndex = lockupOutputIndex;
         this.FundingTxId = fundingTxId;
@@ -156,8 +162,8 @@ internal class DbSwap
     /// <inheritdoc/>
     public override string ToString()
     {
-        string format = "[{0}={1},{2}=`{3}`,{4}=`{5}`,{6}={7},{8}={9},{10}={11},{12}={13},{14}=`{15}`,{16}={17},{18}=`{19}`,{20}={21},{22}={23},{24}={25},{26}={27},{28}={29},"
-            + "{30}={31},{32}=`{33}`]";
+        string format = "[{0}={1},{2}=`{3}`,{4}=`{5}`,{6}={7},{8}={9},{10}={11},{12}={13},{14}=`{15}`,{16}=`{17}`,{18}={19},{20}=`{21}`,{22}={23},{24}={25},{26}={27},{28}={29},"
+            + "{30}={31},{32}={33},{34}=`{35}`]";
 
         return string.Format
         (
@@ -170,6 +176,7 @@ internal class DbSwap
             nameof(this.Status), this.Status,
             nameof(this.AmountToPaySats), this.AmountToPaySats,
             nameof(this.AmountToReceiveSats), this.AmountToReceiveSats,
+            nameof(this.ClientAddress), this.ClientAddress,
             nameof(this.LockupAddress), this.LockupAddress,
             nameof(this.LockupOutputIndex), this.LockupOutputIndex,
             nameof(this.FundingTxId), this.FundingTxId,
