@@ -46,7 +46,7 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
             using IDisposable dbLocked = await this.dbLock.EnterAsync().ConfigureAwait(false);
             using IDbContextTransaction transaction = db.BeginTransaction();
 
-            result = await db.Swaps.CountAsync(x => x.UserIpAddress == ipAddress && x.Status <= SwapStatus.FundingTxConfirmed).ConfigureAwait(false);
+            result = await db.Swaps.CountAsync(x => x.UserIpAddress == ipAddress && x.Status <= SwapStatus.Accepted).ConfigureAwait(false);
 
             this.log.Debug($"Number of active swaps from IP '{ipAddress}' is {result}.");
         }
