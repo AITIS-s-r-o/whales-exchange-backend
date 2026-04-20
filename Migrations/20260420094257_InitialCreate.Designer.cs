@@ -11,7 +11,7 @@ using WhalesExchangeBackend.Data;
 namespace WhalesExchangeBackend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260420093349_InitialCreate")]
+    [Migration("20260420094257_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
