@@ -157,6 +157,11 @@ internal class ApplicationDbContext : DbContext
             .HasMaxLength(64);
 
         _ = entity
+            .Property(q => q.UserIpAddress)
+            .IsRequired()
+            .HasMaxLength(64);
+
+        _ = entity
             .Property(q => q.IsForward)
             .IsRequired();
 

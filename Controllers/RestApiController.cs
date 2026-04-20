@@ -1,10 +1,10 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using WhalesExchangeBackend.Controllers.InternalSupport;
 using WhalesExchangeBackend.Data.Repository;
 using WhalesExchangeBackend.Models;
@@ -34,6 +34,9 @@ internal class RestApiController : InternalControllerBase
 
     /// <summary>Number of satoshis that are considered high enough to justify waiting for two confirmations instead of one.</summary>
     private const long TwoConfirmationAmountThresholdSats = 1_000_000;
+
+    /// <summary>Maximum number of active swaps for each IP address.</summary>
+    private const int MaximumActiveSwapsForIp = 5;
 
     /// <summary>Instance logger.</summary>
     private readonly WsLogger log;
@@ -132,6 +135,10 @@ internal class RestApiController : InternalControllerBase
         if (context is null)
             throw new SanityCheckException("HTTP context is null.");
 
+        IPAddress? ipAddress = context.Connection.RemoteIpAddress;
+        if (ipAddress is null)
+            throw new SanityCheckException("Remote IP address is null.");
+
         IActionResult result;
         CreateSwapResponse response;
 
@@ -184,28 +191,35 @@ internal class RestApiController : InternalControllerBase
                 {
                     if (request.ClaimPublicKey is not null)
                     {
-                        swap = await this.swapRepository.InsertReverseAsync(providerPubkey: providerPk, amountToPaySats: request.InvoiceAmount.Value,
-                            amountToReceiveSats: request.ExpectedAmount).ConfigureAwait(false);
+                        string userIpAddress = ipAddress.ToString();
+                        int activeSwaps = await this.swapRepository.GetNumberOfActiveSwapsAsync(userIpAddress).ConfigureAwait(false);
 
-                        long prepaymentSats = 2 * provider.MiningFeeReverseSat;
-                        ElectrumSwapData electrumSwapData = await this.electrumRpcClient.ReverseSwapAsync(lnAmountSats: request.InvoiceAmount.Value,
-                            onChainAmountSats: request.ExpectedAmount, prepaymentSats: prepaymentSats, preimageHash: request.PreimageHash, claimPk: request.ClaimPublicKey,
-                            providerPk: providerPk, context.RequestAborted).ConfigureAwait(false);
+                        if (activeSwaps < MaximumActiveSwapsForIp)
+                        {
+                            swap = await this.swapRepository.InsertReverseAsync(providerPubkey: providerPk, userIpAddress: userIpAddress,
+                                amountToPaySats: request.InvoiceAmount.Value, amountToReceiveSats: request.ExpectedAmount).ConfigureAwait(false);
 
-                        SwapResponse swapResponse = new(id: swap.FrontendId, reverse: true, asset: "BTC", invoice: electrumSwapData.Invoice,
-                            feeInvoice: electrumSwapData.FeeInvoice, timeoutBlockHeight: electrumSwapData.Locktime, sendAmountSats: electrumSwapData.LightningAmountSats,
-                            receiveAmountSats: request.ExpectedAmount, onChainAmountSats: electrumSwapData.OnChainAmountSats, redeemScript: electrumSwapData.RedeemScriptHex,
-                            lockupAddress: electrumSwapData.LockupAddress);
+                            long prepaymentSats = 2 * provider.MiningFeeReverseSat;
+                            ElectrumSwapData electrumSwapData = await this.electrumRpcClient.ReverseSwapAsync(lnAmountSats: request.InvoiceAmount.Value,
+                                onChainAmountSats: request.ExpectedAmount, prepaymentSats: prepaymentSats, preimageHash: request.PreimageHash, claimPk: request.ClaimPublicKey,
+                                providerPk: providerPk, context.RequestAborted).ConfigureAwait(false);
 
-                        response = new(swapResponse);
+                            SwapResponse swapResponse = new(id: swap.FrontendId, reverse: true, asset: "BTC", invoice: electrumSwapData.Invoice,
+                                feeInvoice: electrumSwapData.FeeInvoice, timeoutBlockHeight: electrumSwapData.Locktime, sendAmountSats: electrumSwapData.LightningAmountSats,
+                                receiveAmountSats: request.ExpectedAmount, onChainAmountSats: electrumSwapData.OnChainAmountSats, redeemScript: electrumSwapData.RedeemScriptHex,
+                                lockupAddress: electrumSwapData.LockupAddress);
 
-                        int requiredConfirmations = this.GetRequiredConfirmationsForAmount(request.ExpectedAmount);
-                        int timeoutHeight = (int)electrumSwapData.Locktime - requiredConfirmations - LockupAddressTimeoutBuffer;
-                        this.blockchainDataMonitor.RegisterMonitoredAddress(swapId: swap.Id, electrumSwapData.LockupAddress, amountSats: request.ExpectedAmount,
-                            requiredConfirmations: requiredConfirmations, timeoutHeight: timeoutHeight);
+                            response = new(swapResponse);
 
-                        await this.swapRepository.MarkSwapAcceptedAsync(id: swap.Id, electrumSwapData.LockupAddress, timeoutBlockHeight: electrumSwapData.Locktime)
-                            .ConfigureAwait(false);
+                            int requiredConfirmations = this.GetRequiredConfirmationsForAmount(request.ExpectedAmount);
+                            int timeoutHeight = (int)electrumSwapData.Locktime - requiredConfirmations - LockupAddressTimeoutBuffer;
+                            this.blockchainDataMonitor.RegisterMonitoredAddress(swapId: swap.Id, electrumSwapData.LockupAddress, amountSats: request.ExpectedAmount,
+                                requiredConfirmations: requiredConfirmations, timeoutHeight: timeoutHeight);
+
+                            await this.swapRepository.MarkSwapAcceptedAsync(id: swap.Id, electrumSwapData.LockupAddress, timeoutBlockHeight: electrumSwapData.Locktime)
+                                .ConfigureAwait(false);
+                        }
+                        else response = new("Too many active swaps for the given IP address.");
                     }
                     else response = new($"'{nameof(request.ClaimPublicKey)}' is mandatory for reverse swaps.");
                 }

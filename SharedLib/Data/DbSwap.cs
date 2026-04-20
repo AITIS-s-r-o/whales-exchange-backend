@@ -25,6 +25,13 @@ internal class DbSwap
     /// <remarks>The setter is needed for the serializer.</remarks>
     public string ProviderPubkey { get; set; }
 
+    /// <summary>IP address of the machine that created the swap.</summary>
+    /// <remarks>
+    /// The IP address is kept until the swap is finished. Successfully or not.
+    /// <para>The setter is needed for the serializer.</para>
+    /// </remarks>
+    public string UserIpAddress { get; set; }
+
     /// <summary><c>true</c> for forward swaps, <c>false</c> for reverse swaps.</summary>
     /// <remarks>The setter is needed for the serializer.</remarks>
     public bool IsForward { get; set; }
@@ -104,6 +111,7 @@ internal class DbSwap
         this.FrontendId = null!;
         this.ProviderPubkey = string.Empty;
         this.Provider = null!;
+        this.UserIpAddress = null!;
     }
 
     /// <summary>
@@ -112,6 +120,7 @@ internal class DbSwap
     /// <param name="id">Unique ID of the swap.</param>
     /// <param name="frontendId">Unique ID of the swap provided to the frontend.</param>
     /// <param name="providerPubkey">Public key of the swap provider as a hex string.</param>
+    /// <param name="userIpAddress">IP address of the machine that created the swap.</param>
     /// <param name="isForward"><c>true</c> for forward swaps, <c>false</c> for reverse swaps.</param>
     /// <param name="status">Status of the swap.</param>
     /// <param name="amountToPaySats">Amount the client paid or should pay (including all fees) in satoshis.</param>
@@ -129,13 +138,14 @@ internal class DbSwap
     /// <param name="failTime">UTC time since when the swap is considered as failed, or <c>null</c> if the swap is not failed.</param>
     /// <param name="fundingTxData">Funding transaction data in hex format, or <c>null</c> if not funded yet.</param>
     /// <param name="provider">Provider of the swap.</param>
-    public DbSwap(long id, string frontendId, string providerPubkey, bool isForward, SwapStatus status, long amountToPaySats, long amountToReceiveSats, string? lockupAddress,
-        int? lockupOutputIndex, string? fundingTxId, long? timeoutBlockHeight, DateTime createdTime, DateTime? acceptedTime, DateTime? fundingTime, DateTime? spentTime,
-        DateTime? failTime, string? fundingTxData, DbSwapProvider provider)
+    public DbSwap(long id, string frontendId, string providerPubkey, string userIpAddress, bool isForward, SwapStatus status, long amountToPaySats, long amountToReceiveSats,
+        string? lockupAddress, int? lockupOutputIndex, string? fundingTxId, long? timeoutBlockHeight, DateTime createdTime, DateTime? acceptedTime, DateTime? fundingTime,
+        DateTime? spentTime, DateTime? failTime, string? fundingTxData, DbSwapProvider provider)
     {
         this.Id = id;
         this.FrontendId = frontendId;
         this.ProviderPubkey = providerPubkey;
+        this.UserIpAddress = userIpAddress;
         this.IsForward = isForward;
         this.Status = status;
         this.AmountToPaySats = amountToPaySats;
@@ -156,8 +166,8 @@ internal class DbSwap
     /// <inheritdoc/>
     public override string ToString()
     {
-        string format = "[{0}={1},{2}=`{3}`,{4}=`{5}`,{6}={7},{8}={9},{10}={11},{12}={13},{14}=`{15}`,{16}={17},{18}=`{19}`,{20}={21},{22}={23},{24}={25},{26}={27},{28}={29},"
-            + "{30}={31},{32}=`{33}`]";
+        string format = "[{0}={1},{2}=`{3}`,{4}=`{5}`,{6}=`{7}`,{8}={9},{10}={11},{12}={13},{14}={15},{16}=`{17}`,{18}={19},{20}=`{21}`,{22}={23},{24}={25},{26}={27},{28}={29},"
+            + "{30}={31},{32}={33},{34}=`{35}`]";
 
         return string.Format
         (
@@ -166,6 +176,7 @@ internal class DbSwap
             nameof(this.Id), this.Id,
             nameof(this.FrontendId), this.FrontendId,
             nameof(this.ProviderPubkey), this.ProviderPubkey,
+            nameof(this.UserIpAddress), this.UserIpAddress,
             nameof(this.IsForward), this.IsForward,
             nameof(this.Status), this.Status,
             nameof(this.AmountToPaySats), this.AmountToPaySats,

@@ -29,16 +29,51 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     }
 
     /// <summary>
+    /// Gets the number of active swaps created from the given IP address.
+    /// </summary>
+    /// <param name="ipAddress">Remote IP address of the user.</param>
+    /// <returns>Number of active swaps created from the given IP address.</returns>
+    /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
+    public async Task<int> GetNumberOfActiveSwapsAsync(string ipAddress)
+    {
+        this.log.Debug($"* {nameof(ipAddress)}='{ipAddress}'");
+
+        int result = 0;
+
+        try
+        {
+            using ApplicationDbContext db = this.dbContextFactory.CreateDbContext();
+            using IDisposable dbLocked = await this.dbLock.EnterAsync().ConfigureAwait(false);
+            using IDbContextTransaction transaction = db.BeginTransaction();
+
+            result = await db.Swaps.CountAsync(x => x.UserIpAddress == ipAddress && x.Status <= SwapStatus.FundingTxConfirmed).ConfigureAwait(false);
+
+            this.log.Debug($"Number of active swaps from IP '{ipAddress}' is {result}.");
+        }
+        catch (Exception e)
+        {
+            this.log.Error($"Getting the number of active swaps for IP '{ipAddress}' in the database failed with exception: {e}");
+            this.log.Debug("$<DB_EXCEPTION>");
+            throw new DatabaseException($"Getting the number of active swaps for IP '{ipAddress}' in the database failed.", e);
+        }
+
+        this.log.Debug($"$={result}");
+        return result;
+    }
+
+    /// <summary>
     /// Inserts or a new reverse swap to the database.
     /// </summary>
     /// <param name="providerPubkey">Public key of the swap provider as a hex string.</param>
+    /// <param name="userIpAddress">Remote IP address of the user.</param>
     /// <param name="amountToPaySats">Amount the client paid or should pay (including all fees) in satoshis.</param>
     /// <param name="amountToReceiveSats">Amount the client received or should receive in satoshis.</param>
     /// <returns>Newly created database record.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
-    public async Task<DbSwap> InsertReverseAsync(string providerPubkey, long amountToPaySats, long amountToReceiveSats)
+    public async Task<DbSwap> InsertReverseAsync(string providerPubkey, string userIpAddress, long amountToPaySats, long amountToReceiveSats)
     {
-        this.log.Debug($"* {nameof(providerPubkey)}='{providerPubkey}',{nameof(amountToPaySats)}={amountToPaySats},{nameof(amountToReceiveSats)}={amountToReceiveSats}");
+        this.log.Debug($"* {nameof(providerPubkey)}='{providerPubkey}',{nameof(userIpAddress)}='{userIpAddress}',{nameof(amountToPaySats)}={amountToPaySats},{
+            nameof(amountToReceiveSats)}={amountToReceiveSats}");
 
         DbSwap result;
         try
@@ -58,9 +93,9 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
 
             DateTime now = DateTime.UtcNow;
             string frontendId = RandomStringGenerator.Generate(DbSwap.FrontendIdLength);
-            DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, isForward: false, SwapStatus.Created, amountToPaySats: amountToPaySats,
-                amountToReceiveSats: amountToReceiveSats, lockupAddress: null, lockupOutputIndex: null, fundingTxId: null, timeoutBlockHeight: null, createdTime: now,
-                acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, fundingTxData: null, dbSwapProvider);
+            DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, userIpAddress: userIpAddress, isForward: false, SwapStatus.Created,
+                amountToPaySats: amountToPaySats, amountToReceiveSats: amountToReceiveSats, lockupAddress: null, lockupOutputIndex: null, fundingTxId: null,
+                timeoutBlockHeight: null, createdTime: now, acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, fundingTxData: null, dbSwapProvider);
 
             _ = db.Swaps.Add(dbRecord);
             _ = db.SaveChanges();
