@@ -27,8 +27,7 @@ internal class ElectrumTransactionInput
     [JsonPropertyName("prevout_n")]
     public int PrevoutIndex { get; }
 
-    /// <summary>Unlocking script for this input in hex format.
-    /// </summary>
+    /// <summary>Unlocking script for this input in hex format.</summary>
     [JsonPropertyName("scriptSig")]
     public string ScriptSig { get; }
 
