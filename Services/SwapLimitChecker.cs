@@ -17,11 +17,14 @@ internal class SwapLimitChecker
     /// <summary>Instance logger.</summary>
     private readonly WsLogger log = WsLogger.GetCurrentClassLogger();
 
-    /// <summary>Lock object to be used when accessing <see cref="activeSwaps"/>.</summary>
-    private readonly Lock dataLock;
-
     /// <summary>Mapping of IP addresses to their respective number of active swaps.</summary>
-    private readonly Dictionary<string, long> activeSwaps;
+    private readonly Dictionary<string, HashSet<string>> ipToSwapsMap;
+
+    /// <summary>Mapping of frontend swap IDs to their respective IP addresses.</summary>
+    private readonly Dictionary<string, string> swapToIpMap;
+
+    /// <summary>Lock object to be used when accessing <see cref="ipToSwapsMap"/>, and <see cref="swapToIpMap"/>.</summary>
+    private readonly Lock dataLock;
 
     /// <summary>
     /// Creates a new instance of the object.
@@ -30,7 +33,8 @@ internal class SwapLimitChecker
     {
         this.log.Debug("*");
 
-        this.activeSwaps = new();
+        this.ipToSwapsMap = new();
+        this.swapToIpMap = new();
         this.dataLock = new();
 
         this.log.Debug("$");
@@ -40,23 +44,31 @@ internal class SwapLimitChecker
     /// Tried to increment the number of active swaps created from the given IP address.
     /// </summary>
     /// <param name="ipAddress">Remote IP address of the user.</param>
+    /// <param name="frontendSwapId">Frontend swap ID.</param>
     /// <returns><c>true</c> if a new swap can be created for the IP address, <c>false</c> otherwise.</returns>
-    public bool TryIncrementSwapCount(string ipAddress)
+    public bool RegisterSwap(string ipAddress, string frontendSwapId)
     {
-        this.log.Debug($"* {nameof(ipAddress)}='{ipAddress}'");
+        this.log.Debug($"* {nameof(ipAddress)}='{ipAddress}',{nameof(frontendSwapId)}='{frontendSwapId}'");
 
         bool result = false;
-        long activeSwapCount;
+        int activeSwapCount;
 
         lock (this.dataLock)
         {
-            _ = this.activeSwaps.TryGetValue(ipAddress, out activeSwapCount);
-
-            if (activeSwapCount < MaximumUncommittedSwapsForIp)
+            if (!this.ipToSwapsMap.TryGetValue(ipAddress, out HashSet<string>? swaps))
             {
-                this.activeSwaps[ipAddress] = activeSwapCount + 1;
+                swaps = new HashSet<string>();
+                this.ipToSwapsMap[ipAddress] = swaps;
+            }
+
+            if (swaps.Count < MaximumUncommittedSwapsForIp)
+            {
+                _ = swaps.Add(frontendSwapId);
                 result = true;
             }
+
+            activeSwapCount = swaps.Count;
+            this.swapToIpMap[frontendSwapId] = ipAddress;
         }
 
         this.log.Debug($"Number of active swaps originated from IP '{ipAddress}' is {activeSwapCount}.");
@@ -69,21 +81,21 @@ internal class SwapLimitChecker
     /// Tries to decrement the number of active swaps created from the given IP address.
     /// </summary>
     /// <param name="ipAddress">Remote IP address of the user.</param>
+    /// <param name="frontendSwapId">Frontend swap ID.</param>
     /// <returns><c>true</c> if the number of active swaps was decremented for the given IP address, <c>false</c> otherwise.</returns>
-    public bool TryDecrementSwapCount(string ipAddress)
+    public bool UnregisterSwap(string ipAddress, string frontendSwapId)
     {
-        this.log.Debug($"* {nameof(ipAddress)}='{ipAddress}'");
+        this.log.Debug($"* {nameof(ipAddress)}='{ipAddress}',{nameof(frontendSwapId)}='{frontendSwapId}'");
 
         bool result = false;
-        long activeSwapCount;
+        long activeSwapCount = 0;
 
         lock (this.dataLock)
         {
-            _ = this.activeSwaps.TryGetValue(ipAddress, out activeSwapCount);
-
-            if (activeSwapCount > 0)
+            if (this.ipToSwapsMap.TryGetValue(ipAddress, out HashSet<string>? swaps))
             {
-                this.activeSwaps[ipAddress] = activeSwapCount - 1;
+                _ = swaps.Remove(frontendSwapId);
+                activeSwapCount = swaps.Count;
                 result = true;
             }
         }

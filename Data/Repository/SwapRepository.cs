@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore.Storage;
 using WhalesExchangeBackend.SharedLib.Data;
 using WhalesExchangeBackend.SharedLib.Exceptions;
 using WhalesExchangeBackend.SharedLib.Models;
-using WhalesExchangeBackend.Utils;
 using WhalesSecret.TradeScriptLib.Exceptions;
 using WhalesSecret.TradeScriptLib.Logging;
 
@@ -32,6 +31,7 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     /// <summary>
     /// Inserts or a new reverse swap to the database.
     /// </summary>
+    /// <param name="frontendId">Frontend ID of the swap.</param>
     /// <param name="providerPubkey">Public key of the swap provider as a hex string.</param>
     /// <param name="userIpAddress">Remote IP address of the user.</param>
     /// <param name="amountToPaySats">Amount the client paid or should pay (including all fees) in satoshis.</param>
@@ -39,10 +39,11 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     /// <param name="claimAddress">Bitcoin address that will be used to claim the on-chain funds.</param>
     /// <returns>Newly created database record.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
-    public async Task<DbSwap> InsertReverseAsync(string providerPubkey, string userIpAddress, long amountToPaySats, long amountToReceiveSats, string claimAddress)
+    public async Task<DbSwap> InsertReverseAsync(string frontendId, string providerPubkey, string userIpAddress, long amountToPaySats, long amountToReceiveSats,
+        string claimAddress)
     {
-        this.log.Debug($"* {nameof(providerPubkey)}='{providerPubkey}',{nameof(userIpAddress)}='{userIpAddress}',{nameof(amountToPaySats)}={amountToPaySats},{
-            nameof(amountToReceiveSats)}={amountToReceiveSats},{nameof(claimAddress)}='{claimAddress}'");
+        this.log.Debug($"* {nameof(frontendId)}='{frontendId}',{nameof(providerPubkey)}='{providerPubkey}',{nameof(userIpAddress)}='{userIpAddress}',{
+            nameof(amountToPaySats)}={amountToPaySats},{nameof(amountToReceiveSats)}={amountToReceiveSats},{nameof(claimAddress)}='{claimAddress}'");
 
         DbSwap result;
         try
@@ -61,7 +62,6 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
             }
 
             DateTime now = DateTime.UtcNow;
-            string frontendId = RandomStringGenerator.Generate(DbSwap.FrontendIdLength);
             DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, isForward: false, SwapStatus.Created, amountToPaySats: amountToPaySats,
                 amountToReceiveSats: amountToReceiveSats, clientAddress: claimAddress, lockupAddress: null, lockupOutputIndex: null, fundingTxId: null, timeoutBlockHeight: null,
                 createdTime: now, acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, fundingTxData: null, clientTxId: null, clientTxData: null,

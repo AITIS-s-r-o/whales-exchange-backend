@@ -13,6 +13,7 @@ using WhalesExchangeBackend.Services.ElectrumRpc;
 using WhalesExchangeBackend.SharedLib.Data;
 using WhalesExchangeBackend.SharedLib.Exceptions;
 using WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
+using WhalesExchangeBackend.Utils;
 using WhalesSecret.TradeScriptLib.Exceptions;
 using WhalesSecret.TradeScriptLib.Logging;
 
@@ -193,12 +194,12 @@ internal class RestApiController : InternalControllerBase
                 {
                     if (request.ClaimPublicKey is not null)
                     {
+                        string frontendId = RandomStringGenerator.Generate(DbSwap.FrontendIdLength);
                         string userIpAddress = ipAddress.ToString();
-                        bool isPermitted = this.swapLimitChecker.TryIncrementSwapCount(userIpAddress);
-
+                        bool isPermitted = this.swapLimitChecker.RegisterSwap(ipAddress: userIpAddress, frontendSwapId: frontendId);
                         if (isPermitted)
                         {
-                            swap = await this.swapRepository.InsertReverseAsync(providerPubkey: providerPk, userIpAddress: userIpAddress,
+                            swap = await this.swapRepository.InsertReverseAsync(frontendId: frontendId, providerPubkey: providerPk, userIpAddress: userIpAddress,
                                 amountToPaySats: request.InvoiceAmount.Value, amountToReceiveSats: request.ExpectedAmount, claimAddress: request.ClientAddress)
                                 .ConfigureAwait(false);
 
@@ -285,7 +286,7 @@ internal class RestApiController : InternalControllerBase
             bool removed = await this.swapRepository.RemoveAsync(frontendId: request.Id).ConfigureAwait(false);
             if (removed)
             {
-                _ = this.swapLimitChecker.TryDecrementSwapCount(ipAddress.ToString());
+                _ = this.swapLimitChecker.UnregisterSwap(ipAddress: ipAddress.ToString(), frontendSwapId: request.Id);
                 response = new();
             }
             else response = new($"Could not find swap with frontend ID '{request.Id}' that belongs to the user IP address.");
