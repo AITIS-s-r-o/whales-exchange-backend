@@ -1,10 +1,9 @@
-using System.Text.Json.Serialization;
 using WhalesExchangeBackend.Controllers;
 
 namespace WhalesExchangeBackend.Models;
 
 /// <summary>
-/// Response to <see cref="RestApiController.RemoveSwapAsync(string)"/> call.
+/// Response to <see cref="RestApiController.RemoveSwapAsync(RemoveSwapRequest)"/> call.
 /// </summary>
 internal class RemoveSwapResponse : RestResponseBase
 {

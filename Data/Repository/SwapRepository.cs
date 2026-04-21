@@ -95,9 +95,9 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
 
             DateTime now = DateTime.UtcNow;
             string frontendId = RandomStringGenerator.Generate(DbSwap.FrontendIdLength);
-            DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, userIpAddress: userIpAddress, isForward: false, SwapStatus.Created, 
-                amountToPaySats: amountToPaySats, amountToReceiveSats: amountToReceiveSats, clientAddress: claimAddress, lockupAddress: null, lockupOutputIndex: null, 
-                fundingTxId: null, timeoutBlockHeight: null, createdTime: now, acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, fundingTxData: null, 
+            DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, userIpAddress: userIpAddress, isForward: false, SwapStatus.Created,
+                amountToPaySats: amountToPaySats, amountToReceiveSats: amountToReceiveSats, clientAddress: claimAddress, lockupAddress: null, lockupOutputIndex: null,
+                fundingTxId: null, timeoutBlockHeight: null, createdTime: now, acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, fundingTxData: null,
                 clientTxId: null, clientTxData: null, dbSwapProvider);
 
             _ = db.Swaps.Add(dbRecord);
