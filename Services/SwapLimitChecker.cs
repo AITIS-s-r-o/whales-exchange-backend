@@ -98,6 +98,8 @@ internal class SwapLimitChecker
                 activeSwapCount = swaps.Count;
                 result = true;
             }
+
+            _ = this.swapToIpMap.Remove(frontendSwapId);
         }
 
         this.log.Debug($"Number of active swaps originated from IP '{ipAddress}' is now {activeSwapCount}.");
