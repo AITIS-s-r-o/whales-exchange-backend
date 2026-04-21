@@ -29,6 +29,7 @@ internal class ElectrumTransactionOutput
     /// <param name="address">Destination address of this output.</param>
     /// <param name="valueSats">Value of the output in satoshis.</param>
     /// <param name="scriptPubKey">Locking script for this output in hex format.</param>
+    [JsonConstructor]
     public ElectrumTransactionOutput(string address, ulong valueSats, string scriptPubKey)
     {
         this.Address = address;

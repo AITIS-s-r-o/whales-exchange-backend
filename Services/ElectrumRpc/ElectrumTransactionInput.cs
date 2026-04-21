@@ -45,6 +45,7 @@ internal class ElectrumTransactionInput
     /// <param name="prevoutIndex">Index of the previous output being spent.</param>
     /// <param name="scriptSig">Unlocking script for this input in hex format.</param>
     /// <param name="witness">List of hex-encoded witness stack items for this input.</param>
+    [JsonConstructor]
     public ElectrumTransactionInput(bool coinbase, ulong sequence, string prevoutHash, int prevoutIndex, string scriptSig, string[] witness)
     {
         this.Coinbase = coinbase;

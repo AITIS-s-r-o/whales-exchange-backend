@@ -36,6 +36,7 @@ internal class ElectrumTransaction
     /// <param name="lockTime">Locktime of the transaction.</param>
     /// <param name="inputs">List of inputs in the transaction.</param>
     /// <param name="outputs">List of outputs in the transaction.</param>
+    [JsonConstructor]
     public ElectrumTransaction(int version, ulong lockTime, List<ElectrumTransactionInput> inputs, List<ElectrumTransactionOutput> outputs)
     {
         this.Version = version;
@@ -50,7 +51,7 @@ internal class ElectrumTransaction
         return string.Format
         (
             CultureInfo.InvariantCulture,
-            "[{0}={1},{2}={3},{4}|={5},{6}={7}]",
+            "[{0}={1},{2}={3},{4}={5},{6}={7}]",
             nameof(this.Version), this.Version,
             nameof(this.LockTime), this.LockTime,
             nameof(this.Inputs), this.Inputs.LogJoin(),
