@@ -1,10 +1,13 @@
 appsettings
+coinbase
 createswap
+deserializer
 locktime
 mempool
 Mempool
 onchain
 Npub
+Prevout
 pubkey
 reversesubmarine
 satoshis

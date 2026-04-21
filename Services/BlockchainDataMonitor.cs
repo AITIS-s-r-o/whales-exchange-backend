@@ -454,8 +454,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                     if (transactionId is null)
                         throw new SanityCheckException($"Transaction ID is required for action {action}.");
 
-                    swap = await this.HandleClientAddressTransactionAsync(monitoredAddress, transactionId: transactionId, transactionData: transactionData,
-                        cancellationToken).ConfigureAwait(false);
+                    swap = await this.HandleClientAddressTransactionAsync(monitoredAddress, transactionId: transactionId, transactionData: transactionData, cancellationToken)
+                        .ConfigureAwait(false);
                     break;
 
                 case MonitoredAddressAction.Timeout:
