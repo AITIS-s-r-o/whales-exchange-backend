@@ -11,7 +11,7 @@ using WhalesExchangeBackend.Data;
 namespace WhalesExchangeBackend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260421103122_InitialCreate")]
+    [Migration("20260421151421_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -95,11 +95,6 @@ namespace WhalesExchangeBackend.Migrations
 
                     b.Property<long?>("TimeoutBlockHeight")
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("UserIpAddress")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 

@@ -30,39 +30,6 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     }
 
     /// <summary>
-    /// Gets the number of active swaps created from the given IP address.
-    /// </summary>
-    /// <param name="ipAddress">Remote IP address of the user.</param>
-    /// <returns>Number of active swaps created from the given IP address.</returns>
-    /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
-    public async Task<int> GetNumberOfActiveSwapsAsync(string ipAddress)
-    {
-        this.log.Debug($"* {nameof(ipAddress)}='{ipAddress}'");
-
-        int result = 0;
-
-        try
-        {
-            using ApplicationDbContext db = this.dbContextFactory.CreateDbContext();
-            using IDisposable dbLocked = await this.dbLock.EnterAsync().ConfigureAwait(false);
-            using IDbContextTransaction transaction = db.BeginTransaction();
-
-            result = await db.Swaps.CountAsync(x => x.UserIpAddress == ipAddress && x.Status <= SwapStatus.Accepted).ConfigureAwait(false);
-
-            this.log.Debug($"Number of active swaps from IP '{ipAddress}' is {result}.");
-        }
-        catch (Exception e)
-        {
-            this.log.Error($"Getting the number of active swaps for IP '{ipAddress}' in the database failed with exception: {e}");
-            this.log.Debug("$<DB_EXCEPTION>");
-            throw new DatabaseException($"Getting the number of active swaps for IP '{ipAddress}' in the database failed.", e);
-        }
-
-        this.log.Debug($"$={result}");
-        return result;
-    }
-
-    /// <summary>
     /// Inserts or a new reverse swap to the database.
     /// </summary>
     /// <param name="providerPubkey">Public key of the swap provider as a hex string.</param>
@@ -95,10 +62,10 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
 
             DateTime now = DateTime.UtcNow;
             string frontendId = RandomStringGenerator.Generate(DbSwap.FrontendIdLength);
-            DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, userIpAddress: userIpAddress, isForward: false, SwapStatus.Created,
-                amountToPaySats: amountToPaySats, amountToReceiveSats: amountToReceiveSats, clientAddress: claimAddress, lockupAddress: null, lockupOutputIndex: null,
-                fundingTxId: null, timeoutBlockHeight: null, createdTime: now, acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, fundingTxData: null,
-                clientTxId: null, clientTxData: null, dbSwapProvider);
+            DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, isForward: false, SwapStatus.Created, amountToPaySats: amountToPaySats,
+                amountToReceiveSats: amountToReceiveSats, clientAddress: claimAddress, lockupAddress: null, lockupOutputIndex: null, fundingTxId: null, timeoutBlockHeight: null,
+                createdTime: now, acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, fundingTxData: null, clientTxId: null, clientTxData: null,
+                dbSwapProvider);
 
             _ = db.Swaps.Add(dbRecord);
             _ = db.SaveChanges();
@@ -225,13 +192,11 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     /// Removes a swap from the database.
     /// </summary>
     /// <param name="frontendId">Frontend ID of the swap.</param>
-    /// <param name="userIpAddress">IP address of the user.</param>
-    /// <returns><c>true</c> if the swap record was deleted from the database, otherwise <c>false</c>.</returns>
-    /// <remarks>Note that <c>false</c> is returned if the swap does not exist or if the swap was created under a different IP address.</remarks>
+    /// <returns><c>true</c> if the swap record was deleted from the database, otherwise <c>false</c> if the swap does not exists.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
-    public async Task<bool> RemoveAsync(string frontendId, string userIpAddress)
+    public async Task<bool> RemoveAsync(string frontendId)
     {
-        this.log.Debug($"* {nameof(frontendId)}='{frontendId}',{nameof(userIpAddress)}='{userIpAddress}'");
+        this.log.Debug($"* {nameof(frontendId)}='{frontendId}'");
 
         bool result = false;
         try
@@ -240,7 +205,7 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
             using IDisposable dbLocked = await this.dbLock.EnterAsync().ConfigureAwait(false);
             using IDbContextTransaction transaction = db.BeginTransaction();
 
-            int rowsDeleted = await db.Swaps.Where(s => (s.FrontendId == frontendId) && (s.UserIpAddress == userIpAddress)).ExecuteDeleteAsync().ConfigureAwait(false);
+            int rowsDeleted = await db.Swaps.Where(s => s.FrontendId == frontendId).ExecuteDeleteAsync().ConfigureAwait(false);
             if (rowsDeleted > 0)
             {
                 _ = db.SaveChanges();

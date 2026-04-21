@@ -93,11 +93,6 @@ namespace WhalesExchangeBackend.Migrations
                     b.Property<long?>("TimeoutBlockHeight")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("UserIpAddress")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("TEXT");
-
                     b.HasKey("Id");
 
                     b.HasIndex("FrontendId");

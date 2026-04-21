@@ -43,7 +43,6 @@ namespace WhalesExchangeBackend.Migrations
                         .Annotation("Sqlite:Autoincrement", true),
                     FrontendId = table.Column<string>(type: "TEXT", maxLength: 16, nullable: false),
                     ProviderPubkey = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
-                    UserIpAddress = table.Column<string>(type: "TEXT", maxLength: 64, nullable: false),
                     IsForward = table.Column<bool>(type: "INTEGER", nullable: false),
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
                     AmountToPaySats = table.Column<long>(type: "INTEGER", nullable: false),

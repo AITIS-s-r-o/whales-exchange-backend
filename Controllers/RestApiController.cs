@@ -24,6 +24,9 @@ namespace WhalesExchangeBackend.Controllers;
 [SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by ASP.NET Core DI.")]
 internal class RestApiController : InternalControllerBase
 {
+    /// <summary>Number of satoshis that are considered high enough to justify waiting for two confirmations instead of one.</summary>
+    private const long TwoConfirmationAmountThresholdSats = 1_000_000;
+
     /// <summary>Number of blocks to serve as a safe buffer before for a lockup address timeout scenario.</summary>
     /// <remarks>
     /// When the swap provider publishes the funding transaction with an output paying to the lockup address, the client must be provided with enough time to spend this output
@@ -32,17 +35,14 @@ internal class RestApiController : InternalControllerBase
     /// </remarks>
     private const int LockupAddressTimeoutBuffer = 5;
 
-    /// <summary>Number of satoshis that are considered high enough to justify waiting for two confirmations instead of one.</summary>
-    private const long TwoConfirmationAmountThresholdSats = 1_000_000;
-
-    /// <summary>Maximum number of uncommitted swaps for each IP address.</summary>
-    private const int MaximumUncommittedSwapsForIp = 5;
-
     /// <summary>Instance logger.</summary>
     private readonly WsLogger log;
 
     /// <summary>Provides access to the current <see cref="HttpContext"/>.</summary>
     private readonly IHttpContextAccessor httpContextAccessor;
+
+    /// <summary>Service that checks user swap limits.</summary>
+    private readonly SwapLimitChecker swapLimitChecker;
 
     /// <summary>Provider of access to swap providers and their offers in the database.</summary>
     private readonly SwapProviderRepository swapProviderRepository;
@@ -60,12 +60,13 @@ internal class RestApiController : InternalControllerBase
     /// Creates a new instance of the object.
     /// </summary>
     /// <param name="httpContextAccessor">Provides access to the current <see cref="HttpContext"/>.</param>
+    /// <param name="swapLimitChecker">Service that checks user swap limits.</param>
     /// <param name="swapProviderRepository">Provider of access to swap providers and their offers in the database.</param>
     /// <param name="swapRepository">Provider of access to swaps in the database.</param>
     /// <param name="electrumRpcClient">Client that communicates with Electrum RPC server.</param>
     /// <param name="blockchainDataMonitor">Monitor of blockchain data fetched from the Electrum backend client.</param>
-    public RestApiController(IHttpContextAccessor httpContextAccessor, SwapProviderRepository swapProviderRepository, SwapRepository swapRepository,
-        ElectrumRpcClient electrumRpcClient, BlockchainDataMonitor blockchainDataMonitor)
+    public RestApiController(IHttpContextAccessor httpContextAccessor, SwapLimitChecker swapLimitChecker, SwapProviderRepository swapProviderRepository,
+        SwapRepository swapRepository, ElectrumRpcClient electrumRpcClient, BlockchainDataMonitor blockchainDataMonitor)
     {
         this.httpContextAccessor = httpContextAccessor;
         HttpContext? context = this.httpContextAccessor.HttpContext;
@@ -74,6 +75,7 @@ internal class RestApiController : InternalControllerBase
 
         this.log = new(this.GetType().FullName!, $"{context.Connection.RemoteIpAddress}");
 
+        this.swapLimitChecker = swapLimitChecker;
         this.swapProviderRepository = swapProviderRepository;
         this.swapRepository = swapRepository;
         this.electrumRpcClient = electrumRpcClient;
@@ -192,9 +194,9 @@ internal class RestApiController : InternalControllerBase
                     if (request.ClaimPublicKey is not null)
                     {
                         string userIpAddress = ipAddress.ToString();
-                        int activeSwaps = await this.swapRepository.GetNumberOfActiveSwapsAsync(userIpAddress).ConfigureAwait(false);
+                        bool isPermitted = this.swapLimitChecker.TryIncrementSwapCount(userIpAddress);
 
-                        if (activeSwaps < MaximumUncommittedSwapsForIp)
+                        if (isPermitted)
                         {
                             swap = await this.swapRepository.InsertReverseAsync(providerPubkey: providerPk, userIpAddress: userIpAddress,
                                 amountToPaySats: request.InvoiceAmount.Value, amountToReceiveSats: request.ExpectedAmount, claimAddress: request.ClientAddress)
@@ -280,8 +282,12 @@ internal class RestApiController : InternalControllerBase
         RemoveSwapResponse response;
         try
         {
-            bool removed = await this.swapRepository.RemoveAsync(frontendId: request.Id, userIpAddress: ipAddress.ToString()).ConfigureAwait(false);
-            if (removed) response = new();
+            bool removed = await this.swapRepository.RemoveAsync(frontendId: request.Id).ConfigureAwait(false);
+            if (removed)
+            {
+                _ = this.swapLimitChecker.TryDecrementSwapCount(ipAddress.ToString());
+                response = new();
+            }
             else response = new($"Could not find swap with frontend ID '{request.Id}' that belongs to the user IP address.");
         }
         catch (Exception e)
