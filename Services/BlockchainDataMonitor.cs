@@ -300,8 +300,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                                     if (success)
                                     {
                                         // If the monitoring address is a lockup address, we need to wait for confirmation, so we only stop monitoring after the transaction is
-                                        // confirmed. In case of claim/refund transactions, we can stop monitoring as soon as we see the transaction in mempool, because the timelock
-                                        // is what protect us there and the secret is gone at that point as well, so there is nothing we can do about it later anyway.
+                                        // confirmed. In case of claim/refund transactions, we can stop monitoring as soon as we see the transaction in mempool, because the
+                                        // timelock is what protect us there and the secret is gone at that point as well, so there is nothing we can do about it later anyway.
                                         MonitoredAddressAction act = action.Value;
                                         bool stopMonitoring = (monitoredAddress.IsLockupAddress && (act == MonitoredAddressAction.Confirmed))
                                             || (!monitoredAddress.IsLockupAddress && ((act == MonitoredAddressAction.InMempool) || (act == MonitoredAddressAction.Confirmed)));
