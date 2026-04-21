@@ -521,9 +521,9 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
             {
                 swap = await this.swapRepository.GetSwapByIdAsync(monitoredAddress.SwapId).ConfigureAwait(false);
             }
-            catch (Exception e)
+            catch (DatabaseException e)
             {
-                this.log.Error($"Electrum server reported error when deserializing transaction data for transaction ID '{transactionId}': {e}");
+                this.log.Error($"Exception occurred while trying to get swap ID {monitoredAddress.SwapId} from the database: {e}");
             }
 
             if (swap is not null)
