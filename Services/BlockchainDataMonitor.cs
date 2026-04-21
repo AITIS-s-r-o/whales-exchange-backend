@@ -43,8 +43,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <summary>Client that communicates with Electrum RPC server.</summary>
     private readonly ElectrumRpcClient electrumRpcClient;
 
-    /// <summary>Provider of access to swap providers and their offers in the database.</summary>
-    private readonly SwapProviderRepository swapProviderRepository;
+    /// <summary>Provider of access to swaps in the database.</summary>
+    private readonly SwapRepository swapRepository;
 
     /// <summary>Manager of swap subscriptions.</summary>
     private readonly SubscriptionManager subscriptionManager;
@@ -80,10 +80,10 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// Creates a new instance of the object.
     /// </summary>
     /// <param name="electrumRpcClient">Client that communicates with Electrum RPC server.</param>
-    /// <param name="swapProviderRepository">Provider of access to swap providers and their offers in the database.</param>
+    /// <param name="swapRepository">Provider of access to swaps in the database.</param>
     /// <param name="subscriptionManager">Manager of swap subscriptions.</param>
     /// <param name="joinableTaskFactory">Factory for starting async tasks running in the background.</param>
-    public BlockchainDataMonitor(ElectrumRpcClient electrumRpcClient, SwapProviderRepository swapProviderRepository, SubscriptionManager subscriptionManager,
+    public BlockchainDataMonitor(ElectrumRpcClient electrumRpcClient, SwapRepository swapRepository, SubscriptionManager subscriptionManager,
         JoinableTaskFactory joinableTaskFactory)
     {
         this.log.Debug("*");
@@ -93,7 +93,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
         this.shutdownTokenSource = new();
 
         this.electrumRpcClient = electrumRpcClient;
-        this.swapProviderRepository = swapProviderRepository;
+        this.swapRepository = swapRepository;
         this.subscriptionManager = subscriptionManager;
 
         this.monitoredAddresses = new();
@@ -155,11 +155,17 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
                             this.log.Debug($"{expiredMonitoredAddresses.Count} monitored addresses timed out.");
 
+                            List<MonitoredAddress> monitoredAddressesToRemove = new();
                             foreach (MonitoredAddress monitoredAddress in expiredMonitoredAddresses)
                             {
-                                await this.OnMonitoredAddressActionAsync(MonitoredAddressAction.Timeout, monitoredAddress, transactionId: null, transactionData: null,
-                                    cancellationToken).ConfigureAwait(false);
+                                bool stopMonitoring = await this.OnMonitoredAddressActionAsync(MonitoredAddressAction.Timeout, monitoredAddress, transactionId: null,
+                                    outputIndex: null, transactionData: null, cancellationToken).ConfigureAwait(false);
+
+                                if (stopMonitoring)
+                                    monitoredAddressesToRemove.Add(monitoredAddress);
                             }
+
+                            this.StopMonitoringAddresses(monitoredAddressesToRemove);
                         }
                         else this.log.Debug($"Electrum server is at blockchain height {response.BlockchainHeight}, not synced with its server at {response.ServerHeight}.");
                     }
@@ -288,11 +294,22 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                                         this.log.Error($"Electrum server reported error when querying transaction ID '{txHash}': {e}");
                                     }
 
-                                    await this.OnMonitoredAddressActionAsync(action.Value, monitoredAddress, transactionId: unspentInfo.TransactionHash,
-                                        transactionData: transactionData, cancellationToken).ConfigureAwait(false);
+                                    bool success = await this.OnMonitoredAddressActionAsync(action.Value, monitoredAddress, transactionId: unspentInfo.TransactionHash,
+                                        unspentInfo.OutputIndex, transactionData: transactionData, cancellationToken).ConfigureAwait(false);
 
-                                    if (action.Value == MonitoredAddressAction.Confirmed)
-                                        monitoredAddressesToRemove.Add(monitoredAddress);
+                                    if (success)
+                                    {
+                                        // If the monitoring address is a lockup address, we need to wait for confirmation, so we only stop monitoring after the transaction is
+                                        // confirmed. In case of claim/refund transactions, we can stop monitoring as soon as we see the transaction in mempool, because the
+                                        // timelock is what protect us there and the secret is gone at that point as well, so there is nothing we can do about it later anyway.
+                                        MonitoredAddressAction act = action.Value;
+                                        bool stopMonitoring = (monitoredAddress.IsLockupAddress && (act == MonitoredAddressAction.Confirmed))
+                                            || (!monitoredAddress.IsLockupAddress && ((act == MonitoredAddressAction.InMempool) || (act == MonitoredAddressAction.Confirmed)));
+
+                                        if (stopMonitoring)
+                                            monitoredAddressesToRemove.Add(monitoredAddress);
+                                    }
+                                    else this.log.Warn($"Monitoring of address '{monitoredAddress.Address}' will continue as processing the action {action} failed.");
 
                                     break;
                                 }
@@ -363,18 +380,73 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <param name="action">Action that occurred on the monitored address.</param>
     /// <param name="monitoredAddress">Monitored address that triggered the action.</param>
     /// <param name="transactionId">Bitcoin transaction ID in hex format, or <c>null</c> if <paramref name="action"/> is <see cref="MonitoredAddressAction.Timeout"/>.</param>
+    /// <param name="outputIndex">Index of the output in the Bitcoin transaction, or <c>null</c> if <paramref name="action"/> is <see cref="MonitoredAddressAction.Timeout"/>.
+    /// </param>
     /// <param name="transactionData">Raw transaction data in hex format, or <c>null</c> if <paramref name="action"/> is <see cref="MonitoredAddressAction.Timeout"/>.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
-    /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
-    private async Task OnMonitoredAddressActionAsync(MonitoredAddressAction action, MonitoredAddress monitoredAddress, string? transactionId, string? transactionData,
-        CancellationToken cancellationToken)
+    /// <returns><c>true</c> if the function succeeded, <c>false</c> otherwise. If <c>true</c> is returned, the address monitoring may stop.</returns>
+    private async Task<bool> OnMonitoredAddressActionAsync(MonitoredAddressAction action, MonitoredAddress monitoredAddress, string? transactionId, int? outputIndex,
+        string? transactionData, CancellationToken cancellationToken)
     {
-        this.log.Debug($"* {nameof(action)}={action},{nameof(monitoredAddress)}='{monitoredAddress}',{nameof(transactionId)}='{transactionId}',{
+        this.log.Debug($"* {nameof(action)}={action},{nameof(monitoredAddress)}='{monitoredAddress}',{nameof(transactionId)}='{transactionId}',{nameof(outputIndex)}={outputIndex},{
             nameof(transactionData)}='{transactionData.ToBoundedString()}'");
 
-        DbSwap? swap = null;
-        try
+        bool result = false;
+
+        if (monitoredAddress.IsLockupAddress)
         {
+            DbSwap? swap = null;
+            try
+            {
+                switch (action)
+                {
+                    case MonitoredAddressAction.InMempool:
+                    case MonitoredAddressAction.Confirmed:
+                        if (transactionId is null)
+                            throw new SanityCheckException($"Transaction ID is required for action {action}.");
+
+                        if (outputIndex is null)
+                            throw new SanityCheckException($"Output index is required for action {action}.");
+
+                        bool isConfirmed = action == MonitoredAddressAction.Confirmed;
+                        swap = await this.swapRepository.FundingTransactionSetAsync(monitoredAddress.SwapId, isConfirmed, transactionId: transactionId,
+                            outputIndex: outputIndex.Value, transactionData: transactionData).ConfigureAwait(false);
+                        break;
+
+                    case MonitoredAddressAction.Timeout:
+                        swap = await this.swapRepository.FundingOrClaimTransactionTimeoutAsync(monitoredAddress.SwapId, isFundingTransaction: true).ConfigureAwait(false);
+                        break;
+
+                    default:
+                        throw new SanityCheckException($"Invalid action provided {action}.");
+                }
+            }
+            catch (DatabaseException e)
+            {
+                this.log.Error($"Exception occurred while trying to update database record of swap ID {monitoredAddress.SwapId}: {e}");
+            }
+
+            if (swap is not null)
+            {
+                if (action == MonitoredAddressAction.Confirmed)
+                {
+                    if (swap.TimeoutBlockHeight is null)
+                        throw new SanityCheckException($"Timeout block height is null for swap ID {swap.Id}.");
+
+                    // Before we propagate the update to the frontend, which will cause the frontend to claim the funding transaction output, we need to start monitoring
+                    // the client address.
+                    this.RegisterMonitoredAddress(swapId: swap.Id, address: swap.ClientAddress, amountSats: swap.AmountToReceiveSats, requiredConfirmations: 1,
+                        timeoutHeight: swap.TimeoutBlockHeight.Value, isLockupAddress: false);
+                }
+
+                SwapUpdate swapUpdate = SwapUpdate.FromDbSwap(swap);
+                await this.subscriptionManager.PropagateSwapUpdateAsync(swapUpdate, cancellationToken).ConfigureAwait(false);
+                result = true;
+            }
+        }
+        else
+        {
+            DbSwap? swap = null;
             switch (action)
             {
                 case MonitoredAddressAction.InMempool:
@@ -382,31 +454,119 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                     if (transactionId is null)
                         throw new SanityCheckException($"Transaction ID is required for action {action}.");
 
-                    bool isConfirmed = action == MonitoredAddressAction.Confirmed;
-                    swap = await this.swapProviderRepository.FundingTransactionSetAsync(monitoredAddress.SwapId, isConfirmed, transactionId: transactionId,
-                        transactionData: transactionData).ConfigureAwait(false);
+                    swap = await this.HandleClientAddressTransactionAsync(monitoredAddress, transactionId: transactionId, transactionData: transactionData, cancellationToken)
+                        .ConfigureAwait(false);
                     break;
 
                 case MonitoredAddressAction.Timeout:
-                    swap = await this.swapProviderRepository.FundingTransactionTimeoutAsync(monitoredAddress.SwapId).ConfigureAwait(false);
+                    try
+                    {
+                        swap = await this.swapRepository.FundingOrClaimTransactionTimeoutAsync(monitoredAddress.SwapId, isFundingTransaction: false).ConfigureAwait(false);
+                    }
+                    catch (DatabaseException e)
+                    {
+                        this.log.Error($"Exception occurred while trying to update database record of swap ID {monitoredAddress.SwapId}: {e}");
+                    }
+
                     break;
 
                 default:
                     throw new SanityCheckException($"Invalid action provided {action}.");
             }
-        }
-        catch (DatabaseException e)
-        {
-            this.log.Error($"Exception occurred while trying to update database record of swap ID {monitoredAddress.SwapId}: {e}");
+
+            if (swap is not null)
+            {
+                SwapUpdate swapUpdate = SwapUpdate.FromDbSwap(swap);
+                await this.subscriptionManager.PropagateSwapUpdateAsync(swapUpdate, cancellationToken).ConfigureAwait(false);
+                result = true;
+            }
         }
 
-        if (swap is not null)
+        this.log.Debug($"$={result}");
+        return result;
+    }
+
+    /// <summary>
+    /// Handles the confirmation of a transaction that spends to a client address. Anyone can send funds to a monitored client address, so we need to check whether the transaction
+    /// is relevant to the swap, which is when the input of the transaction references the swap's lockup output.
+    /// </summary>
+    /// <param name="monitoredAddress">Monitored address that triggered the action.</param>
+    /// <param name="transactionId">Bitcoin transaction ID in hex format, or <c>null</c>.</param>
+    /// <param name="transactionData">Bitcoin transaction data in hex format, or <c>null</c> if not available.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>The updated swap, or <c>null</c> if no relevant swap was found.</returns>
+    private async Task<DbSwap?> HandleClientAddressTransactionAsync(MonitoredAddress monitoredAddress, string transactionId, string? transactionData,
+        CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(monitoredAddress)}='{monitoredAddress}',{nameof(transactionId)}='{transactionId}',{
+            nameof(transactionData)}='{transactionData.ToBoundedString()}'");
+
+        if (transactionData is null)
         {
-            SwapUpdate swapUpdate = SwapUpdate.FromDbSwap(swap);
-            await this.subscriptionManager.PropagateSwapUpdateAsync(swapUpdate, cancellationToken).ConfigureAwait(false);
+            try
+            {
+                transactionData = await this.electrumRpcClient.GetTransactionAsync(transactionId, cancellationToken).ConfigureAwait(false);
+            }
+            catch (ElectrumRpcException e)
+            {
+                this.log.Error($"Electrum server reported error when querying transaction ID '{transactionId}': {e}");
+            }
         }
 
-        this.log.Debug("$");
+        DbSwap? result = null;
+        if (transactionData is not null)
+        {
+            DbSwap? swap = null;
+            try
+            {
+                swap = await this.swapRepository.GetSwapByIdAsync(monitoredAddress.SwapId).ConfigureAwait(false);
+            }
+            catch (DatabaseException e)
+            {
+                this.log.Error($"Exception occurred while trying to get swap ID {monitoredAddress.SwapId} from the database: {e}");
+            }
+
+            if (swap is not null)
+            {
+                if ((swap.FundingTxId is not null) && (swap.LockupOutputIndex is not null))
+                {
+                    ElectrumTransaction? transaction = null;
+                    try
+                    {
+                        transaction = await this.electrumRpcClient.DeserializeAsync(transactionData, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        this.log.Error($"Electrum server reported error when deserializing transaction data for transaction ID '{transactionId}': {e}");
+                    }
+
+                    if (transaction is not null)
+                    {
+                        bool spendsLockupOutput = false;
+                        foreach (ElectrumTransactionInput input in transaction.Inputs)
+                        {
+                            if ((input.PrevoutHash == swap.FundingTxId) && (input.PrevoutIndex == swap.LockupOutputIndex.Value))
+                            {
+                                this.log.Debug($"Transaction '{transactionId}' spends the lockup output {swap.FundingTxId}:{swap.LockupOutputIndex.Value} of swap {swap.Id}.");
+                                spendsLockupOutput = true;
+                                break;
+                            }
+                        }
+
+                        if (spendsLockupOutput)
+                        {
+                            this.log.Debug($"Swap {swap.Id} was claimed.");
+                            result = await this.swapRepository.ReverseSwapClaimedAsync(monitoredAddress.SwapId, transactionId, transactionData).ConfigureAwait(false);
+                        }
+                    }
+                }
+                else this.log.Debug($"Swap ID {swap.Id} has no funding transaction information.");
+            }
+        }
+        else this.log.Debug($"Transaction ID '{transactionId}' cannot be found.");
+
+        this.log.Debug($"$='{result}'");
+        return result;
     }
 
     /// <summary>
@@ -417,15 +577,16 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <param name="amountSats">Amount expected to be received to this address in satoshis.</param>
     /// <param name="requiredConfirmations">Number of confirmations required.</param>
     /// <param name="timeoutHeight">Blockchain height at which the monitoring should timeout.</param>
-    public void RegisterMonitoredAddress(long swapId, string address, long amountSats, int requiredConfirmations, int timeoutHeight)
+    /// <param name="isLockupAddress"><c>true</c> if the monitored address is the lockup address in the funding transaction, <c>false</c> if it is the destination address.</param>
+    public void RegisterMonitoredAddress(long swapId, string address, long amountSats, int requiredConfirmations, long timeoutHeight, bool isLockupAddress)
     {
         this.log.Debug($"* {nameof(swapId)}={swapId},{nameof(address)}='{address}',{nameof(amountSats)}={amountSats},{nameof(requiredConfirmations)}={requiredConfirmations},{
-            nameof(timeoutHeight)}={timeoutHeight}");
+            nameof(timeoutHeight)}={timeoutHeight},{nameof(isLockupAddress)}={isLockupAddress}");
 
         lock (this.dataLock)
         {
             MonitoredAddress monitoredAddress = new(swapId: swapId, address, amountSats: amountSats, requiredConfirmations: requiredConfirmations, timeoutHeight: timeoutHeight,
-                monitoringStartedAtHeight: this.blockchainHeight);
+                monitoringStartedAtHeight: this.blockchainHeight, isLockupAddress);
 
             if (!this.monitoredAddresses.Add(monitoredAddress))
                 throw new SanityCheckException($"Unable to add monitored address '{monitoredAddress}' to the set.");

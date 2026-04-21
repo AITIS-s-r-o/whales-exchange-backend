@@ -7,7 +7,7 @@ namespace WhalesExchangeBackend.Services.ElectrumRpc;
 /// <summary>
 /// Target output (address and amount) for claiming the funding UTXO.
 /// </summary>
-[SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by the REST API controller.")]
+[SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by JSON deserializer.")]
 internal class ClaimToOutput
 {
     /// <summary>Address to send the claimed funds to.</summary>
