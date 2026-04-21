@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using WhalesExchangeBackend.Controllers.InternalSupport;
 using WhalesExchangeBackend.Data.Repository;
 using WhalesExchangeBackend.Models;
@@ -185,7 +184,7 @@ internal class RestApiController : InternalControllerBase
                     if (request.ClaimPublicKey is not null)
                     {
                         swap = await this.swapRepository.InsertReverseAsync(providerPubkey: providerPk, amountToPaySats: request.InvoiceAmount.Value,
-                            amountToReceiveSats: request.ExpectedAmount).ConfigureAwait(false);
+                            amountToReceiveSats: request.ExpectedAmount, claimAddress: request.ClientAddress).ConfigureAwait(false);
 
                         long prepaymentSats = 2 * provider.MiningFeeReverseSat;
                         ElectrumSwapData electrumSwapData = await this.electrumRpcClient.ReverseSwapAsync(lnAmountSats: request.InvoiceAmount.Value,
@@ -201,8 +200,11 @@ internal class RestApiController : InternalControllerBase
 
                         int requiredConfirmations = this.GetRequiredConfirmationsForAmount(request.ExpectedAmount);
                         int timeoutHeight = (int)electrumSwapData.Locktime - requiredConfirmations - LockupAddressTimeoutBuffer;
-                        this.blockchainDataMonitor.RegisterMonitoredAddress(swapId: swap.Id, electrumSwapData.LockupAddress, amountSats: request.ExpectedAmount,
-                            requiredConfirmations: requiredConfirmations, timeoutHeight: timeoutHeight);
+
+                        // Register the lockup address to be monitored by the blockchain data monitor. This will allow the client to be notified when the funding transaction is
+                        // seen and when it gets confirmed. Note that the required amount here needs to include the fees for the on-chain transaction that will claim the funds.
+                        this.blockchainDataMonitor.RegisterMonitoredAddress(swapId: swap.Id, electrumSwapData.LockupAddress, amountSats: electrumSwapData.OnChainAmountSats,
+                            requiredConfirmations: requiredConfirmations, timeoutHeight: timeoutHeight, isLockupAddress: true);
 
                         await this.swapRepository.MarkSwapAcceptedAsync(id: swap.Id, electrumSwapData.LockupAddress, timeoutBlockHeight: electrumSwapData.Locktime)
                             .ConfigureAwait(false);

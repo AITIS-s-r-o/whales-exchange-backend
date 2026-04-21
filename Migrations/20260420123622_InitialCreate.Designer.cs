@@ -11,7 +11,7 @@ using WhalesExchangeBackend.Data;
 namespace WhalesExchangeBackend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260412154853_InitialCreate")]
+    [Migration("20260420123622_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -34,6 +34,20 @@ namespace WhalesExchangeBackend.Migrations
 
                     b.Property<long>("AmountToReceiveSats")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("ClientAddress")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .IsUnicode(true)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClientTxData")
+                        .HasMaxLength(2097152)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ClientTxId")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedTime")
                         .HasColumnType("TEXT");
@@ -61,7 +75,7 @@ namespace WhalesExchangeBackend.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("LockupAddress")
-                        .HasMaxLength(64)
+                        .HasMaxLength(100)
                         .IsUnicode(true)
                         .HasColumnType("TEXT");
 

@@ -47,7 +47,8 @@ namespace WhalesExchangeBackend.Migrations
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
                     AmountToPaySats = table.Column<long>(type: "INTEGER", nullable: false),
                     AmountToReceiveSats = table.Column<long>(type: "INTEGER", nullable: false),
-                    LockupAddress = table.Column<string>(type: "TEXT", maxLength: 64, nullable: true),
+                    ClientAddress = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    LockupAddress = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
                     LockupOutputIndex = table.Column<int>(type: "INTEGER", nullable: true),
                     FundingTxId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: true),
                     TimeoutBlockHeight = table.Column<long>(type: "INTEGER", nullable: true),
@@ -56,7 +57,9 @@ namespace WhalesExchangeBackend.Migrations
                     FundingTime = table.Column<DateTime>(type: "TEXT", nullable: true),
                     SpentTime = table.Column<DateTime>(type: "TEXT", nullable: true),
                     FailTime = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    FundingTxData = table.Column<string>(type: "TEXT", maxLength: 2097152, nullable: true)
+                    FundingTxData = table.Column<string>(type: "TEXT", maxLength: 2097152, nullable: true),
+                    ClientTxId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: true),
+                    ClientTxData = table.Column<string>(type: "TEXT", maxLength: 2097152, nullable: true)
                 },
                 constraints: table =>
                 {
