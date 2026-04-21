@@ -35,8 +35,8 @@ internal class RestApiController : InternalControllerBase
     /// <summary>Number of satoshis that are considered high enough to justify waiting for two confirmations instead of one.</summary>
     private const long TwoConfirmationAmountThresholdSats = 1_000_000;
 
-    /// <summary>Maximum number of active swaps for each IP address.</summary>
-    private const int MaximumActiveSwapsForIp = 5;
+    /// <summary>Maximum number of uncommitted swaps for each IP address.</summary>
+    private const int MaximumUncommittedSwapsForIp = 5;
 
     /// <summary>Instance logger.</summary>
     private readonly WsLogger log;
@@ -194,7 +194,7 @@ internal class RestApiController : InternalControllerBase
                         string userIpAddress = ipAddress.ToString();
                         int activeSwaps = await this.swapRepository.GetNumberOfActiveSwapsAsync(userIpAddress).ConfigureAwait(false);
 
-                        if (activeSwaps < MaximumActiveSwapsForIp)
+                        if (activeSwaps < MaximumUncommittedSwapsForIp)
                         {
                             swap = await this.swapRepository.InsertReverseAsync(providerPubkey: providerPk, userIpAddress: userIpAddress,
                                 amountToPaySats: request.InvoiceAmount.Value, amountToReceiveSats: request.ExpectedAmount, claimAddress: request.ClientAddress)
