@@ -74,8 +74,8 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
     public async Task<DbSwap> InsertReverseAsync(string providerPubkey, string userIpAddress, long amountToPaySats, long amountToReceiveSats, string claimAddress)
     {
-        this.log.Debug($"* {nameof(providerPubkey)}='{providerPubkey}',{nameof(userIpAddress)}='{userIpAddress}',{nameof(amountToPaySats)}={amountToPaySats},{nameof(amountToReceiveSats)}={amountToReceiveSats},{
-            nameof(claimAddress)}='{claimAddress}'");
+        this.log.Debug($"* {nameof(providerPubkey)}='{providerPubkey}',{nameof(userIpAddress)}='{userIpAddress}',{nameof(amountToPaySats)}={amountToPaySats},{
+            nameof(amountToReceiveSats)}={amountToReceiveSats},{nameof(claimAddress)}='{claimAddress}'");
 
         DbSwap result;
         try
@@ -95,10 +95,10 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
 
             DateTime now = DateTime.UtcNow;
             string frontendId = RandomStringGenerator.Generate(DbSwap.FrontendIdLength);
-            DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, userIpAddress: userIpAddress, isForward: false, SwapStatus.Created, amountToPaySats: amountToPaySats,
-                amountToReceiveSats: amountToReceiveSats, clientAddress: claimAddress, lockupAddress: null, lockupOutputIndex: null, fundingTxId: null, timeoutBlockHeight: null,
-                createdTime: now, acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, fundingTxData: null, clientTxId: null, clientTxData: null,
-                dbSwapProvider);
+            DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, userIpAddress: userIpAddress, isForward: false, SwapStatus.Created,
+                amountToPaySats: amountToPaySats, amountToReceiveSats: amountToReceiveSats, clientAddress: claimAddress, lockupAddress: null, lockupOutputIndex: null,
+                fundingTxId: null, timeoutBlockHeight: null, createdTime: now, acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, fundingTxData: null,
+                clientTxId: null, clientTxData: null, dbSwapProvider);
 
             _ = db.Swaps.Add(dbRecord);
             _ = db.SaveChanges();
