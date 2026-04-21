@@ -92,7 +92,7 @@ internal class SwapUpdate
 
                 case SwapStatus.ErrorFundingTxNotCreated:
                 {
-                    failureReason = "Either the lightning invoices were not paid or the swap provider failed to broadcast the funding transaction.";
+                    failureReason = "Either the lightning invoices have not been paid on time or the swap provider failed to broadcast the funding transaction.";
                     break;
                 }
             }
