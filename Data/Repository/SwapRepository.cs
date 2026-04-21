@@ -9,6 +9,7 @@ using WhalesExchangeBackend.SharedLib.Data;
 using WhalesExchangeBackend.SharedLib.Exceptions;
 using WhalesExchangeBackend.SharedLib.Models;
 using WhalesExchangeBackend.Utils;
+using WhalesSecret.TradeScriptLib.Exceptions;
 using WhalesSecret.TradeScriptLib.Logging;
 
 namespace WhalesExchangeBackend.Data.Repository;
@@ -68,12 +69,13 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     /// <param name="userIpAddress">Remote IP address of the user.</param>
     /// <param name="amountToPaySats">Amount the client paid or should pay (including all fees) in satoshis.</param>
     /// <param name="amountToReceiveSats">Amount the client received or should receive in satoshis.</param>
+    /// <param name="claimAddress">Bitcoin address that will be used to claim the on-chain funds.</param>
     /// <returns>Newly created database record.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
-    public async Task<DbSwap> InsertReverseAsync(string providerPubkey, string userIpAddress, long amountToPaySats, long amountToReceiveSats)
+    public async Task<DbSwap> InsertReverseAsync(string providerPubkey, string userIpAddress, long amountToPaySats, long amountToReceiveSats, string claimAddress)
     {
-        this.log.Debug($"* {nameof(providerPubkey)}='{providerPubkey}',{nameof(userIpAddress)}='{userIpAddress}',{nameof(amountToPaySats)}={amountToPaySats},{
-            nameof(amountToReceiveSats)}={amountToReceiveSats}");
+        this.log.Debug($"* {nameof(providerPubkey)}='{providerPubkey}',{nameof(userIpAddress)}='{userIpAddress}',{nameof(amountToPaySats)}={amountToPaySats},{nameof(amountToReceiveSats)}={amountToReceiveSats},{
+            nameof(claimAddress)}='{claimAddress}'");
 
         DbSwap result;
         try
@@ -93,9 +95,10 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
 
             DateTime now = DateTime.UtcNow;
             string frontendId = RandomStringGenerator.Generate(DbSwap.FrontendIdLength);
-            DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, userIpAddress: userIpAddress, isForward: false, SwapStatus.Created,
-                amountToPaySats: amountToPaySats, amountToReceiveSats: amountToReceiveSats, lockupAddress: null, lockupOutputIndex: null, fundingTxId: null,
-                timeoutBlockHeight: null, createdTime: now, acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, fundingTxData: null, dbSwapProvider);
+            DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, userIpAddress: userIpAddress, isForward: false, SwapStatus.Created, amountToPaySats: amountToPaySats,
+                amountToReceiveSats: amountToReceiveSats, clientAddress: claimAddress, lockupAddress: null, lockupOutputIndex: null, fundingTxId: null, timeoutBlockHeight: null,
+                createdTime: now, acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, fundingTxData: null, clientTxId: null, clientTxData: null,
+                dbSwapProvider);
 
             _ = db.Swaps.Add(dbRecord);
             _ = db.SaveChanges();
@@ -291,6 +294,214 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
         }
 
         this.log.Debug($"|$|={result.Length}");
+        return result;
+    }
+
+    /// <summary>
+    /// Gets swaps from the database.
+    /// </summary>
+    /// <param name="id">ID of the swap to retrieve.</param>
+    /// <returns>Requested swap, or <c>null</c> if the ID is not found in the database.</returns>
+    /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
+    public async Task<DbSwap?> GetSwapByIdAsync(long id)
+    {
+        this.log.Debug($"* {nameof(id)}={id}");
+
+        DbSwap? result;
+        try
+        {
+            using ApplicationDbContext db = this.dbContextFactory.CreateDbContext();
+            using IDisposable dbLocked = await this.dbLock.EnterAsync().ConfigureAwait(false);
+
+            result = await db.Swaps.FindAsync(id).ConfigureAwait(false);
+        }
+        catch (Exception e)
+        {
+            this.log.Error($"Getting swap with ID {id} from the database failed with exception: {e}");
+            this.log.Debug("$<DB_EXCEPTION>");
+            throw new DatabaseException($"Getting swap with ID {id} from the database failed.", e);
+        }
+
+        this.log.Debug($"$='{result}'");
+        return result;
+    }
+
+    /// <summary>
+    /// Update information about the swap's funding Bitcoin transaction in the database.
+    /// </summary>
+    /// <param name="swapId">ID of the swap.</param>
+    /// <param name="isConfirmed"><c>true</c> if the transaction was confirmed sufficiently, <c>false</c> if it has been only seen in a mempool.</param>
+    /// <param name="transactionId">Transaction ID of the funding transaction in hex format.</param>
+    /// <param name="outputIndex">Output index of the funding transaction output that holds the swapped funds.</param>
+    /// <param name="transactionData">Raw transaction data in hex format, or <c>null</c> if not available.</param>
+    /// <returns>Update swap database record, or <c>null</c> if the swap ID was not found in the database.</returns>
+    /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
+    public async Task<DbSwap?> FundingTransactionSetAsync(long swapId, bool isConfirmed, string transactionId, int outputIndex, string? transactionData)
+    {
+        this.log.Debug($"* {nameof(swapId)}={swapId},{nameof(isConfirmed)}={isConfirmed},{nameof(transactionId)}='{transactionId}',{nameof(outputIndex)}={outputIndex},{
+            nameof(transactionData)}='{transactionData.ToBoundedString()}'");
+
+        DbSwap? result = null;
+        try
+        {
+            using ApplicationDbContext db = this.dbContextFactory.CreateDbContext();
+            using IDisposable dbLocked = await this.dbLock.EnterAsync().ConfigureAwait(false);
+            using IDbContextTransaction transaction = db.BeginTransaction();
+
+            DbSwap? dbRecord = await db.Swaps.FindAsync(swapId).ConfigureAwait(false);
+            if (dbRecord is not null)
+            {
+                if (!isConfirmed && (dbRecord.Status != SwapStatus.Accepted))
+                {
+                    throw new SanityCheckException($"Changing status of swap ID {swapId} to {SwapStatus.FundingTxCreated} requires the swap status to be in {
+                        SwapStatus.Accepted} status, but its status is {dbRecord.Status}.");
+                }
+
+                if (isConfirmed && (dbRecord.Status != SwapStatus.Accepted) && (dbRecord.Status != SwapStatus.FundingTxCreated))
+                {
+                    throw new SanityCheckException($"Changing status of swap ID {swapId} to {SwapStatus.FundingTxConfirmed} requires the swap status to be either in {
+                        SwapStatus.Accepted} or {SwapStatus.FundingTxCreated} status, but its status is {dbRecord.Status}.");
+                }
+
+                dbRecord.FundingTxId = transactionId;
+                dbRecord.LockupOutputIndex = outputIndex;
+                dbRecord.FundingTxData = transactionData;
+
+                if (dbRecord.FundingTime is null)
+                    dbRecord.FundingTime = DateTime.UtcNow;
+
+                dbRecord.Status = isConfirmed ? SwapStatus.FundingTxConfirmed : SwapStatus.FundingTxCreated;
+
+                _ = db.Swaps.Update(dbRecord);
+
+                _ = db.SaveChanges();
+                transaction.Commit();
+
+                this.log.Debug($"Swap ID {swapId} status changed to {dbRecord.Status}. Funding time set to {dbRecord.FundingTime}.");
+                result = dbRecord;
+            }
+            else this.log.Error($"Swap ID {swapId} has not been found in the database.");
+        }
+        catch (Exception e)
+        {
+            this.log.Error($"Updating swap ID {swapId} in the database failed with exception: {e}");
+            this.log.Debug("$<DB_EXCEPTION>");
+            throw new DatabaseException($"Updating swap ID {swapId} in the database failed.", e);
+        }
+
+        this.log.Debug($"$='{result}'");
+        return result;
+    }
+
+    /// <summary>
+    /// Mark the swap's funding Bitcoin transaction as expired in the database.
+    /// </summary>
+    /// <param name="swapId">ID of the swap.</param>
+    /// <param name="isFundingTransaction"><c>true</c> if the timeout is for a funding transaction, <c>false</c> if it's for a claim transaction.</param>
+    /// <returns>Update swap database record, or <c>null</c> if the swap ID was not found in the database.</returns>
+    /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
+    public async Task<DbSwap?> FundingOrClaimTransactionTimeoutAsync(long swapId, bool isFundingTransaction)
+    {
+        this.log.Debug($"* {nameof(swapId)}={swapId},{nameof(isFundingTransaction)}={isFundingTransaction}");
+
+        DbSwap? result = null;
+        try
+        {
+            using ApplicationDbContext db = this.dbContextFactory.CreateDbContext();
+            using IDisposable dbLocked = await this.dbLock.EnterAsync().ConfigureAwait(false);
+            using IDbContextTransaction transaction = db.BeginTransaction();
+
+            DbSwap? dbRecord = await db.Swaps.FindAsync(swapId).ConfigureAwait(false);
+            if (dbRecord is not null)
+            {
+                SwapStatus newStatus = isFundingTransaction ? SwapStatus.ErrorFundingTxNotCreated : SwapStatus.ClientErrorFundingTxNotSpent;
+                if (isFundingTransaction && (dbRecord.Status != SwapStatus.Accepted))
+                {
+                    throw new SanityCheckException($"Changing status of swap ID {swapId} to {newStatus} requires the swap status to be in {
+                        SwapStatus.Accepted} status, but its status is {dbRecord.Status}.");
+                }
+                else if (!isFundingTransaction && (dbRecord.Status != SwapStatus.FundingTxCreated) && (dbRecord.Status != SwapStatus.FundingTxConfirmed))
+                {
+                    throw new SanityCheckException($"Changing status of swap ID {swapId} to {newStatus} requires the swap status to be either in {
+                        SwapStatus.FundingTxCreated} or {SwapStatus.FundingTxConfirmed} status, but its status is {dbRecord.Status}.");
+                }
+
+                dbRecord.FailTime = DateTime.UtcNow;
+                dbRecord.Status = newStatus;
+
+                _ = db.Swaps.Update(dbRecord);
+
+                _ = db.SaveChanges();
+                transaction.Commit();
+
+                this.log.Debug($"Swap ID status changed to {dbRecord.Status}. Fail time set to {dbRecord.FailTime}.");
+                result = dbRecord;
+            }
+            else this.log.Error($"Swap ID {swapId} has not been found in the database.");
+        }
+        catch (Exception e)
+        {
+            this.log.Error($"Updating swap ID {swapId} in the database failed with exception: {e}");
+            this.log.Debug("$<DB_EXCEPTION>");
+            throw new DatabaseException($"Updating swap ID {swapId} in the database failed.", e);
+        }
+
+        this.log.Debug($"$='{result}'");
+        return result;
+    }
+
+    /// <summary>
+    /// Update information about the swap that was claimed in the database.
+    /// </summary>
+    /// <param name="swapId">ID of the swap.</param>
+    /// <param name="transactionId">Transaction ID of the claim transaction in hex format.</param>
+    /// <param name="transactionData">Raw transaction data in hex format, or <c>null</c> if not available.</param>
+    /// <returns>Update swap database record, or <c>null</c> if the swap ID was not found in the database.</returns>
+    /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
+    public async Task<DbSwap?> ReverseSwapClaimedAsync(long swapId, string transactionId, string transactionData)
+    {
+        this.log.Debug($"* {nameof(swapId)}={swapId},{nameof(transactionId)}='{transactionId}',{nameof(transactionData)}='{transactionData.ToBoundedString()}'");
+
+        DbSwap? result = null;
+        try
+        {
+            using ApplicationDbContext db = this.dbContextFactory.CreateDbContext();
+            using IDisposable dbLocked = await this.dbLock.EnterAsync().ConfigureAwait(false);
+            using IDbContextTransaction transaction = db.BeginTransaction();
+
+            DbSwap? dbRecord = await db.Swaps.FindAsync(swapId).ConfigureAwait(false);
+            if (dbRecord is not null)
+            {
+                if (dbRecord.Status != SwapStatus.FundingTxConfirmed)
+                {
+                    throw new SanityCheckException($"Changing status of swap ID {swapId} to {SwapStatus.FundingTxSpent} requires the swap status to be in {
+                        SwapStatus.FundingTxConfirmed} status, but its status is {dbRecord.Status}.");
+                }
+
+                dbRecord.ClientTxId = transactionId;
+                dbRecord.ClientTxData = transactionData;
+
+                dbRecord.SpentTime = DateTime.UtcNow;
+                dbRecord.Status = SwapStatus.FundingTxSpent;
+
+                _ = db.Swaps.Update(dbRecord);
+
+                _ = db.SaveChanges();
+                transaction.Commit();
+
+                this.log.Debug($"Swap ID {swapId} status changed to {dbRecord.Status}. Spent time set to {dbRecord.SpentTime}.");
+                result = dbRecord;
+            }
+            else this.log.Error($"Swap ID {swapId} has not been found in the database.");
+        }
+        catch (Exception e)
+        {
+            this.log.Error($"Updating swap ID {swapId} in the database failed with exception: {e}");
+            this.log.Debug("$<DB_EXCEPTION>");
+            throw new DatabaseException($"Updating swap ID {swapId} in the database failed.", e);
+        }
+
+        this.log.Debug($"$='{result}'");
         return result;
     }
 }

@@ -25,10 +25,13 @@ internal class MonitoredAddress
     public int RequiredConfirmations { get; }
 
     /// <summary>Blockchain height at which the monitoring should timeout.</summary>
-    public int TimeoutHeight { get; }
+    public long TimeoutHeight { get; }
 
     /// <summary>Blockchain height at which the monitoring started.</summary>
     public int MonitoringStartedAtHeight { get; }
+
+    /// <summary><c>true</c> if the monitored address is the lockup address in the funding transaction, <c>false</c> if it is the client address.</summary>
+    public bool IsLockupAddress { get; }
 
     /// <summary><c>true</c> if the mempool action was already reported, <c>false</c> otherwise.</summary>
     public bool MempoolActionReported
@@ -59,7 +62,8 @@ internal class MonitoredAddress
     /// <param name="amountSats">Amount expected to be received to this address in satoshis.</param>
     /// <param name="timeoutHeight">Blockchain height at which the monitoring should timeout.</param>
     /// <param name="monitoringStartedAtHeight">Blockchain height at which the monitoring started.</param>
-    public MonitoredAddress(long swapId, string address, long amountSats, int requiredConfirmations, int timeoutHeight, int monitoringStartedAtHeight)
+    /// <param name="isLockupAddress"><c>true</c> if the monitored address is the lockup address in the funding transaction, <c>false</c> if it is the client address.</param>
+    public MonitoredAddress(long swapId, string address, long amountSats, int requiredConfirmations, long timeoutHeight, int monitoringStartedAtHeight, bool isLockupAddress)
     {
         this.statusLock = new();
         this.SwapId = swapId;
@@ -68,6 +72,7 @@ internal class MonitoredAddress
         this.RequiredConfirmations = requiredConfirmations;
         this.TimeoutHeight = timeoutHeight;
         this.MonitoringStartedAtHeight = monitoringStartedAtHeight;
+        this.IsLockupAddress = isLockupAddress;
     }
 
     /// <inheritdoc/>
@@ -76,13 +81,14 @@ internal class MonitoredAddress
         return string.Format
         (
             CultureInfo.InvariantCulture,
-            "[{0}={1},{2}=`{3}`,{4}={5},{6}={7},{8}={9},{10}={11},{12}={13}]",
+            "[{0}={1},{2}=`{3}`,{4}={5},{6}={7},{8}={9},{10}={11},{12}={13},{14}={15}]",
             nameof(this.SwapId), this.SwapId,
             nameof(this.Address), this.Address,
             nameof(this.AmountSats), this.AmountSats,
             nameof(this.RequiredConfirmations), this.RequiredConfirmations,
             nameof(this.TimeoutHeight), this.TimeoutHeight,
             nameof(this.MonitoringStartedAtHeight), this.MonitoringStartedAtHeight,
+            nameof(this.IsLockupAddress), this.IsLockupAddress,
             nameof(this.MempoolActionReported), this.MempoolActionReported
         );
     }

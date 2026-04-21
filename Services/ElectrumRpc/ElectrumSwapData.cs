@@ -7,7 +7,7 @@ namespace WhalesExchangeBackend.Services.ElectrumRpc;
 /// <summary>
 /// Represents the internal swap data stored by Electrum's submarine swap plugin.
 /// </summary>
-[SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by the REST API controller.")]
+[SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by JSON deserializer.")]
 internal class ElectrumSwapData
 {
     /// <summary><c>true</c> if this is a reverse swap (LN → BTC) from the client's point of view, <c>false</c> if it is a forward swap (BTC → LN).</summary>
@@ -18,7 +18,7 @@ internal class ElectrumSwapData
     [JsonPropertyName("locktime")]
     public long Locktime { get; }
 
-    /// <summary>Amount that will be locked on-chain in satoshis.</summary>
+    /// <summary>Amount that will be locked on-chain in satoshis. This includes fees for the on-chain transaction that will claim the funds.</summary>
     [JsonPropertyName("onchain_amount")]
     public long OnChainAmountSats { get; }
 

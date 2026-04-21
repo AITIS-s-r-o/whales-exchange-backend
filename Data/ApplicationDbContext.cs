@@ -178,10 +178,16 @@ internal class ApplicationDbContext : DbContext
             .IsRequired();
 
         _ = entity
+            .Property(q => q.ClientAddress)
+            .IsUnicode()
+            .IsRequired(true)
+            .HasMaxLength(100);
+
+        _ = entity
             .Property(q => q.LockupAddress)
             .IsUnicode()
             .IsRequired(false)
-            .HasMaxLength(64);
+            .HasMaxLength(100);
 
         _ = entity
             .Property(q => q.LockupOutputIndex)
@@ -214,6 +220,16 @@ internal class ApplicationDbContext : DbContext
 
         _ = entity
             .Property(q => q.FundingTxData)
+            .IsRequired(false)
+            .HasMaxLength(2 * 1024 * 1024);
+
+        _ = entity
+            .Property(q => q.ClientTxId)
+            .IsRequired(false)
+            .HasMaxLength(64);
+
+        _ = entity
+            .Property(q => q.ClientTxData)
             .IsRequired(false)
             .HasMaxLength(2 * 1024 * 1024);
 
