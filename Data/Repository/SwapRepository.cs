@@ -240,7 +240,7 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
             using IDisposable dbLocked = await this.dbLock.EnterAsync().ConfigureAwait(false);
             using IDbContextTransaction transaction = db.BeginTransaction();
 
-            int rowsDeleted = await db.Swaps.Where(s => s.FrontendId == frontendId && s.UserIpAddress == userIpAddress).ExecuteDeleteAsync().ConfigureAwait(false);
+            int rowsDeleted = await db.Swaps.Where(s => (s.FrontendId == frontendId) && (s.UserIpAddress == userIpAddress)).ExecuteDeleteAsync().ConfigureAwait(false);
             if (rowsDeleted > 0)
             {
                 _ = db.SaveChanges();
