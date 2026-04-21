@@ -263,7 +263,8 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
     public async Task<DbSwap?> FundingTransactionSetAsync(long swapId, bool isConfirmed, string transactionId, int outputIndex, string? transactionData)
     {
-        this.log.Debug($"* {nameof(swapId)}={swapId},{nameof(isConfirmed)}={isConfirmed},{nameof(transactionId)}='{transactionId}',{nameof(outputIndex)}={outputIndex},{nameof(transactionData)}='{transactionData.ToBoundedString()}'");
+        this.log.Debug($"* {nameof(swapId)}={swapId},{nameof(isConfirmed)}={isConfirmed},{nameof(transactionId)}='{transactionId}',{nameof(outputIndex)}={outputIndex},{
+            nameof(transactionData)}='{transactionData.ToBoundedString()}'");
 
         DbSwap? result = null;
         try
@@ -277,12 +278,14 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
             {
                 if (!isConfirmed && (dbRecord.Status != SwapStatus.Accepted))
                 {
-                    throw new SanityCheckException($"Changing status of swap ID {swapId} to {SwapStatus.FundingTxCreated} requires the swap status to be in {SwapStatus.Accepted} status, but its status is {dbRecord.Status}.");
+                    throw new SanityCheckException($"Changing status of swap ID {swapId} to {SwapStatus.FundingTxCreated} requires the swap status to be in {
+                        SwapStatus.Accepted} status, but its status is {dbRecord.Status}.");
                 }
 
                 if (isConfirmed && (dbRecord.Status != SwapStatus.Accepted) && (dbRecord.Status != SwapStatus.FundingTxCreated))
                 {
-                    throw new SanityCheckException($"Changing status of swap ID {swapId} to {SwapStatus.FundingTxConfirmed} requires the swap status to be either in {SwapStatus.Accepted} or {SwapStatus.FundingTxCreated} status, but its status is {dbRecord.Status}.");
+                    throw new SanityCheckException($"Changing status of swap ID {swapId} to {SwapStatus.FundingTxConfirmed} requires the swap status to be either in {
+                        SwapStatus.Accepted} or {SwapStatus.FundingTxCreated} status, but its status is {dbRecord.Status}.");
                 }
 
                 dbRecord.FundingTxId = transactionId;

@@ -7,9 +7,6 @@ using Microsoft.EntityFrameworkCore.Storage;
 using WhalesExchangeBackend.SharedLib.Data;
 using WhalesExchangeBackend.SharedLib.Exceptions;
 using WhalesExchangeBackend.SharedLib.Helpers;
-using WhalesExchangeBackend.SharedLib.Models;
-using WhalesSecret.TradeScriptLib.Exceptions;
-using WhalesSecret.TradeScriptLib.Logging;
 
 namespace WhalesExchangeBackend.Data.Repository;
 

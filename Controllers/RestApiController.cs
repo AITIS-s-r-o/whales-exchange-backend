@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using WhalesExchangeBackend.Controllers.InternalSupport;
 using WhalesExchangeBackend.Data.Repository;
 using WhalesExchangeBackend.Models;
