@@ -555,6 +555,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
                         if (spendsLockupOutput)
                         {
+                            this.log.Debug($"Swap {swap.Id} was claimed.");
                             result = await this.swapRepository.ReverseSwapClaimedAsync(monitoredAddress.SwapId, transactionId, transactionData).ConfigureAwait(false);
                         }
                     }
