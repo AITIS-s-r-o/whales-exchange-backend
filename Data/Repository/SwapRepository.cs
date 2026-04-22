@@ -192,9 +192,10 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     /// Removes a swap from the database.
     /// </summary>
     /// <param name="frontendId">Frontend ID of the swap.</param>
-    /// <returns><c>true</c> if the swap record was deleted from the database, otherwise <c>false</c> if the swap does not exists.</returns>
+    /// <param name="maximumStatus">Maximum status that the swap can have to be included in the removal.</param>
+    /// <returns><c>true</c> if the swap record was deleted from the database, <c>false</c> otherwise.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
-    public async Task<bool> RemoveAsync(string frontendId)
+    public async Task<bool> RemoveAsync(string frontendId, SwapStatus maximumStatus)
     {
         this.log.Debug($"* {nameof(frontendId)}='{frontendId}'");
 
@@ -205,7 +206,7 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
             using IDisposable dbLocked = await this.dbLock.EnterAsync().ConfigureAwait(false);
             using IDbContextTransaction transaction = db.BeginTransaction();
 
-            int rowsDeleted = await db.Swaps.Where(s => s.FrontendId == frontendId).ExecuteDeleteAsync().ConfigureAwait(false);
+            int rowsDeleted = await db.Swaps.Where(s => (s.FrontendId == frontendId) && (s.Status <= maximumStatus)).ExecuteDeleteAsync().ConfigureAwait(false);
             if (rowsDeleted > 0)
             {
                 _ = db.SaveChanges();
@@ -214,7 +215,7 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
                 this.log.Debug($"Swap with frontend ID '{frontendId}' has been removed from the database.");
                 result = true;
             }
-            else this.log.Debug($"Swap with frontend ID '{frontendId}' cannot be found in the database.");
+            else this.log.Debug($"Swap with frontend ID '{frontendId}' was not found in the database or could not be deleted.");
         }
         catch (Exception e)
         {

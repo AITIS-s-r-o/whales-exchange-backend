@@ -12,6 +12,7 @@ using WhalesExchangeBackend.Services;
 using WhalesExchangeBackend.Services.ElectrumRpc;
 using WhalesExchangeBackend.SharedLib.Data;
 using WhalesExchangeBackend.SharedLib.Exceptions;
+using WhalesExchangeBackend.SharedLib.Models;
 using WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
 using WhalesExchangeBackend.Utils;
 using WhalesSecret.TradeScriptLib.Exceptions;
@@ -283,13 +284,13 @@ internal class RestApiController : InternalControllerBase
         RemoveSwapResponse response;
         try
         {
-            bool removed = await this.swapRepository.RemoveAsync(frontendId: request.Id).ConfigureAwait(false);
+            bool removed = await this.swapRepository.RemoveAsync(request.Id, maximumStatus: SwapStatus.Accepted).ConfigureAwait(false);
             if (removed)
             {
                 _ = this.swapLimitChecker.UnregisterSwap(ipAddress: ipAddress.ToString(), frontendSwapId: request.Id);
                 response = new();
             }
-            else response = new($"Could not find swap with frontend ID '{request.Id}' that belongs to the user IP address.");
+            else response = new($"Could not delete swap with frontend ID '{request.Id}'.");
         }
         catch (Exception e)
         {
