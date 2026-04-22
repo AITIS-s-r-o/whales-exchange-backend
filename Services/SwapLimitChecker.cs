@@ -41,9 +41,9 @@ internal class SwapLimitChecker
     }
 
     /// <summary>
-    /// Tried to increment the number of active swaps created from the given IP address.
+    /// Tried to increment the number of uncommitted swaps created from the given IP address.
     /// </summary>
-    /// <param name="ipAddress">Remote IP address of the user.</param>
+    /// <param name="ipAddress">Remote IP address of the client.</param>
     /// <param name="frontendSwapId">Frontend swap ID.</param>
     /// <returns><c>true</c> if a new swap can be created for the IP address, <c>false</c> otherwise.</returns>
     public bool RegisterSwap(string ipAddress, string frontendSwapId)
@@ -51,7 +51,7 @@ internal class SwapLimitChecker
         this.log.Debug($"* {nameof(ipAddress)}='{ipAddress}',{nameof(frontendSwapId)}='{frontendSwapId}'");
 
         bool result = false;
-        int activeSwapCount;
+        int uncommittedSwapCount;
 
         lock (this.dataLock)
         {
@@ -67,27 +67,27 @@ internal class SwapLimitChecker
                 result = true;
             }
 
-            activeSwapCount = swaps.Count;
+            uncommittedSwapCount = swaps.Count;
             this.swapToIpMap[frontendSwapId] = ipAddress;
         }
 
-        this.log.Debug($"Number of active swaps originated from IP '{ipAddress}' is {activeSwapCount}.");
+        this.log.Debug($"Number of uncommitted swaps originated from IP '{ipAddress}' is {uncommittedSwapCount}.");
 
         this.log.Debug($"$={result}");
         return result;
     }
 
     /// <summary>
-    /// Tries to decrement the number of active swaps created from the given IP address.
+    /// Tries to decrement the number of uncommitted swaps created from the given IP address.
     /// </summary>
     /// <param name="frontendSwapId">Frontend swap ID.</param>
-    /// <returns><c>true</c> if the number of active swaps was decremented for the given IP address, <c>false</c> otherwise.</returns>
+    /// <returns><c>true</c> if the number of uncommitted swaps was decremented for the given IP address, <c>false</c> otherwise.</returns>
     public bool UnregisterSwap(string frontendSwapId)
     {
         this.log.Debug($"* {nameof(frontendSwapId)}='{frontendSwapId}'");
 
         bool result = false;
-        long activeSwapCount = 0;
+        long uncommittedSwapCount = 0;
         string? ipAddress;
 
         lock (this.dataLock)
@@ -97,9 +97,9 @@ internal class SwapLimitChecker
                 if (this.ipToSwapsMap.TryGetValue(ipAddress, out HashSet<string>? swaps))
                 {
                     _ = swaps.Remove(frontendSwapId);
-                    activeSwapCount = swaps.Count;
+                    uncommittedSwapCount = swaps.Count;
 
-                    if (activeSwapCount == 0)
+                    if (uncommittedSwapCount == 0)
                         _ = this.ipToSwapsMap.Remove(ipAddress);
 
                     result = true;
@@ -108,7 +108,7 @@ internal class SwapLimitChecker
         }
 
         if (ipAddress is not null)
-            this.log.Debug($"Number of active swaps originated from IP '{ipAddress}' is now {activeSwapCount}.");
+            this.log.Debug($"Number of uncommitted swaps originated from IP '{ipAddress}' is now {uncommittedSwapCount}.");
 
         this.log.Debug($"$={result}");
         return result;

@@ -227,7 +227,7 @@ internal class RestApiController : InternalControllerBase
                             await this.swapRepository.MarkSwapAcceptedAsync(id: swap.Id, electrumSwapData.LockupAddress, timeoutBlockHeight: electrumSwapData.Locktime)
                                 .ConfigureAwait(false);
                         }
-                        else response = new("Too many active swaps for the given IP address.");
+                        else response = new("Too many uncommitted swaps for the given IP address.");
                     }
                     else response = new($"'{nameof(request.ClaimPublicKey)}' is mandatory for reverse swaps.");
                 }
