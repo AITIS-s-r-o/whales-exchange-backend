@@ -43,7 +43,7 @@ internal class SwapLimitChecker
     }
 
     /// <summary>
-    /// Tried to increment the number of uncommitted swaps created from the given IP address.
+    /// Tries to register a new uncommitted swap created from the given IP address.
     /// </summary>
     /// <param name="ipAddress">Remote IP address of the client.</param>
     /// <param name="frontendSwapId">Frontend swap ID.</param>
@@ -80,7 +80,7 @@ internal class SwapLimitChecker
     }
 
     /// <summary>
-    /// Tries to decrement the number of uncommitted swaps created from the given IP address.
+    /// Tries to unregister uncommitted swap created from the given IP address.
     /// </summary>
     /// <param name="frontendSwapId">Frontend swap ID.</param>
     /// <returns><c>true</c> if the number of uncommitted swaps was decremented for the given IP address, <c>false</c> otherwise.</returns>
