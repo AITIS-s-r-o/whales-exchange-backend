@@ -83,7 +83,7 @@ internal class SwapLimitChecker
     /// Tries to unregister uncommitted swap created from the given IP address.
     /// </summary>
     /// <param name="frontendSwapId">Frontend swap ID.</param>
-    /// <returns><c>true</c> if the number of uncommitted swaps was decremented for the given IP address, <c>false</c> otherwise.</returns>
+    /// <returns><c>true</c> if the uncommitted swap was unregistered for the given IP address, <c>false</c> otherwise.</returns>
     public bool UnregisterSwap(string frontendSwapId)
     {
         this.log.Debug($"* {nameof(frontendSwapId)}='{frontendSwapId}'");
