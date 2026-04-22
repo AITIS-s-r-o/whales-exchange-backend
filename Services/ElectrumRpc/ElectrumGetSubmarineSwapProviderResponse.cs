@@ -25,7 +25,7 @@ internal class ElectrumGetSubmarineSwapProviderResponse : Dictionary<string, Ele
             i++;
         }
 
-        _ = sb.AppendLine("{");
+        _ = sb.AppendLine("}");
         return sb.ToString();
     }
 }

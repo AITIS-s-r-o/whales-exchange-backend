@@ -24,7 +24,7 @@ internal class ElectrumGetAddressUnspentResponse : List<AddressUnspentInfo>
             i++;
         }
 
-        _ = sb.AppendLine("{");
+        _ = sb.AppendLine("}");
         return sb.ToString();
     }
 }
