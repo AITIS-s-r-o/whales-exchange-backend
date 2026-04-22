@@ -18,9 +18,11 @@ internal class SwapLimitChecker
     private readonly WsLogger log = WsLogger.GetCurrentClassLogger();
 
     /// <summary>Mapping of client IP addresses to frontend swap IDs.</summary>
+    /// <remarks>All access has to be protected by <see cref="dataLock"/>.</remarks>
     private readonly Dictionary<string, HashSet<string>> ipToSwapsMap;
 
     /// <summary>Mapping of frontend swap IDs to IP addresses of their clients.</summary>
+    /// <remarks>All access has to be protected by <see cref="dataLock"/>.</remarks>
     private readonly Dictionary<string, string> swapToIpMap;
 
     /// <summary>Lock object to be used when accessing <see cref="ipToSwapsMap"/>, and <see cref="swapToIpMap"/>.</summary>
