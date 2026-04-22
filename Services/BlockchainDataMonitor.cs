@@ -551,7 +551,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                         {
                             if ((input.PrevoutHash == swap.FundingTxId) && (input.PrevoutIndex == swap.LockupOutputIndex.Value))
                             {
-                                this.log.Debug($"Transaction '{transactionId}' spends the lockup output {swap.FundingTxId}:{swap.LockupOutputIndex.Value} of swap {swap.Id}.");
+                                this.log.Debug($"Transaction '{transactionId}' spends the lockup output '{swap.FundingTxId}:{swap.LockupOutputIndex.Value}' of swap {swap.Id}.");
                                 spendsLockupOutput = true;
                                 break;
                             }
