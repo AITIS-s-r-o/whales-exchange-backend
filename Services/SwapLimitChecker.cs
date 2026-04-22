@@ -6,7 +6,7 @@ using WhalesSecret.TradeScriptLib.Logging;
 namespace WhalesExchangeBackend.Services;
 
 /// <summary>
-/// Service that checks user swap limits.
+/// Service that checks client swap limits.
 /// </summary>
 [SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by ASP.NET Core DI as a singleton.")]
 internal class SwapLimitChecker

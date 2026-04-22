@@ -43,7 +43,7 @@ internal class RestApiController : InternalControllerBase
     /// <summary>Provides access to the current <see cref="HttpContext"/>.</summary>
     private readonly IHttpContextAccessor httpContextAccessor;
 
-    /// <summary>Service that checks user swap limits.</summary>
+    /// <summary>Service that checks client swap limits.</summary>
     private readonly SwapLimitChecker swapLimitChecker;
 
     /// <summary>Provider of access to swap providers and their offers in the database.</summary>
@@ -62,7 +62,7 @@ internal class RestApiController : InternalControllerBase
     /// Creates a new instance of the object.
     /// </summary>
     /// <param name="httpContextAccessor">Provides access to the current <see cref="HttpContext"/>.</param>
-    /// <param name="swapLimitChecker">Service that checks user swap limits.</param>
+    /// <param name="swapLimitChecker">Service that checks client swap limits.</param>
     /// <param name="swapProviderRepository">Provider of access to swap providers and their offers in the database.</param>
     /// <param name="swapRepository">Provider of access to swaps in the database.</param>
     /// <param name="electrumRpcClient">Client that communicates with Electrum RPC server.</param>

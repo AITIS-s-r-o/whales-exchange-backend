@@ -44,7 +44,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <summary>Client that communicates with Electrum RPC server.</summary>
     private readonly ElectrumRpcClient electrumRpcClient;
 
-    /// <summary>Service that checks user swap limits.</summary>
+    /// <summary>Service that checks client swap limits.</summary>
     private readonly SwapLimitChecker swapLimitChecker;
 
     /// <summary>Provider of access to swaps in the database.</summary>
@@ -84,7 +84,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// Creates a new instance of the object.
     /// </summary>
     /// <param name="electrumRpcClient">Client that communicates with Electrum RPC server.</param>
-    /// <param name="swapLimitChecker">Service that checks user swap limits.</param>
+    /// <param name="swapLimitChecker">Service that checks client swap limits.</param>
     /// <param name="swapRepository">Provider of access to swaps in the database.</param>
     /// <param name="subscriptionManager">Manager of swap subscriptions.</param>
     /// <param name="joinableTaskFactory">Factory for starting async tasks running in the background.</param>
