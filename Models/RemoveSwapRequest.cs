@@ -10,7 +10,7 @@ namespace WhalesExchangeBackend.Models;
 [SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by JSON deserializer.")]
 internal class RemoveSwapRequest
 {
-    /// <summary>Public key of the selected swap provider.</summary>
+    /// <summary>ID of the swap to be removed.</summary>
     [JsonPropertyName("id")]
     public string Id { get; }
 
