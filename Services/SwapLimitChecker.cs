@@ -17,10 +17,10 @@ internal class SwapLimitChecker
     /// <summary>Instance logger.</summary>
     private readonly WsLogger log = WsLogger.GetCurrentClassLogger();
 
-    /// <summary>Mapping of IP addresses to their respective number of active swaps.</summary>
+    /// <summary>Mapping of client IP addresses to frontend swap IDs.</summary>
     private readonly Dictionary<string, HashSet<string>> ipToSwapsMap;
 
-    /// <summary>Mapping of frontend swap IDs to their respective IP addresses.</summary>
+    /// <summary>Mapping of frontend swap IDs to IP addresses of their clients.</summary>
     private readonly Dictionary<string, string> swapToIpMap;
 
     /// <summary>Lock object to be used when accessing <see cref="ipToSwapsMap"/>, and <see cref="swapToIpMap"/>.</summary>
