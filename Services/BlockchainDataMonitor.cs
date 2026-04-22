@@ -608,6 +608,43 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     }
 
     /// <summary>
+    /// Unregisters a Bitcoin address of a swap from monitoring.
+    /// </summary>
+    /// <param name="frontendId">Frontend ID of the swap that the monitored address is related to.</param>
+    public void UnregisterMonitoredAddressWithFrontendId(string frontendId)
+    {
+        this.log.Debug($"* {nameof(frontendId)}='{frontendId}'");
+
+        lock (this.dataLock)
+        {
+            MonitoredAddress? swapMonitoredAddress = null;
+            foreach (MonitoredAddress monitoredAddress in this.monitoredAddresses)
+            {
+                if (monitoredAddress.FrontendId == frontendId)
+                {
+                    swapMonitoredAddress = monitoredAddress;
+                    break;
+                }
+            }
+
+            if (swapMonitoredAddress is not null)
+            {
+                if (this.monitoredAddresses.Remove(swapMonitoredAddress))
+                {
+                    this.log.Debug($"Monitored address '{swapMonitoredAddress}' has been removed from the set after a matching transaction was found.");
+                }
+                else
+                {
+                    this.log.Debug($"Monitored address '{
+                        swapMonitoredAddress}' should be removed from the set after a matching transaction was found, but it was not found in the set.");
+                }
+            }
+        }
+
+        this.log.Debug("$");
+    }
+
+    /// <summary>
     /// Stops monitoring the given Bitcoin addresses.
     /// </summary>
     /// <param name="monitoredAddressesToRemove">Monitored Bitcoin addresses to stop monitoring.</param>

@@ -281,6 +281,8 @@ internal class RestApiController : InternalControllerBase
             bool removed = await this.swapRepository.RemoveAsync(request.Id, maximumStatus: SwapStatus.Accepted).ConfigureAwait(false);
             if (removed)
             {
+                this.blockchainDataMonitor.UnregisterMonitoredAddressWithFrontendId(request.Id);
+
                 _ = this.swapLimitChecker.UnregisterSwap(frontendSwapId: request.Id);
                 response = new();
             }
