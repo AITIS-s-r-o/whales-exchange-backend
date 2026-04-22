@@ -16,7 +16,7 @@ internal class ElectrumGetSubmarineSwapProviderResponse : Dictionary<string, Ele
     public override string ToString()
     {
         StringBuilder sb = new();
-        _ = sb.Append('{');
+        _ = sb.AppendLine("{");
 
         int i = 1;
         foreach ((string key, ElectrumSwapProvider provider) in this)
@@ -25,7 +25,7 @@ internal class ElectrumGetSubmarineSwapProviderResponse : Dictionary<string, Ele
             i++;
         }
 
-        _ = sb.Append('}');
+        _ = sb.AppendLine("{");
         return sb.ToString();
     }
 }
