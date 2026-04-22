@@ -93,6 +93,7 @@ public static class Program
             _ = builder.Services.AddSingleton<ConfigHelper>();
             _ = builder.Services.AddSingleton<JoinableTaskContext>();
             _ = builder.Services.AddSingleton<JoinableTaskFactory>();
+            _ = builder.Services.AddSingleton<SwapLimitChecker>();
             _ = builder.Services.AddSingleton<DbLocks>();
             _ = builder.Services.AddSingleton((IServiceProvider serviceProvider) =>
             {

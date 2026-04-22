@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore.Storage;
 using WhalesExchangeBackend.SharedLib.Data;
 using WhalesExchangeBackend.SharedLib.Exceptions;
 using WhalesExchangeBackend.SharedLib.Models;
-using WhalesExchangeBackend.Utils;
 using WhalesSecret.TradeScriptLib.Exceptions;
 using WhalesSecret.TradeScriptLib.Logging;
 
@@ -32,16 +31,19 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     /// <summary>
     /// Inserts or a new reverse swap to the database.
     /// </summary>
+    /// <param name="frontendId">Frontend ID of the swap.</param>
     /// <param name="providerPubkey">Public key of the swap provider as a hex string.</param>
+    /// <param name="userIpAddress">Remote IP address of the user.</param>
     /// <param name="amountToPaySats">Amount the client paid or should pay (including all fees) in satoshis.</param>
     /// <param name="amountToReceiveSats">Amount the client received or should receive in satoshis.</param>
     /// <param name="claimAddress">Bitcoin address that will be used to claim the on-chain funds.</param>
     /// <returns>Newly created database record.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
-    public async Task<DbSwap> InsertReverseAsync(string providerPubkey, long amountToPaySats, long amountToReceiveSats, string claimAddress)
+    public async Task<DbSwap> InsertReverseAsync(string frontendId, string providerPubkey, string userIpAddress, long amountToPaySats, long amountToReceiveSats,
+        string claimAddress)
     {
-        this.log.Debug($"* {nameof(providerPubkey)}='{providerPubkey}',{nameof(amountToPaySats)}={amountToPaySats},{nameof(amountToReceiveSats)}={amountToReceiveSats},{
-            nameof(claimAddress)}='{claimAddress}'");
+        this.log.Debug($"* {nameof(frontendId)}='{frontendId}',{nameof(providerPubkey)}='{providerPubkey}',{nameof(userIpAddress)}='{userIpAddress}',{
+            nameof(amountToPaySats)}={amountToPaySats},{nameof(amountToReceiveSats)}={amountToReceiveSats},{nameof(claimAddress)}='{claimAddress}'");
 
         DbSwap result;
         try
@@ -60,7 +62,6 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
             }
 
             DateTime now = DateTime.UtcNow;
-            string frontendId = RandomStringGenerator.Generate(DbSwap.FrontendIdLength);
             DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, isForward: false, SwapStatus.Created, amountToPaySats: amountToPaySats,
                 amountToReceiveSats: amountToReceiveSats, clientAddress: claimAddress, lockupAddress: null, lockupOutputIndex: null, fundingTxId: null, timeoutBlockHeight: null,
                 createdTime: now, acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, fundingTxData: null, clientTxId: null, clientTxData: null,
@@ -185,6 +186,50 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
         }
 
         this.log.Debug("$");
+    }
+
+    /// <summary>
+    /// Removes a swap from the database.
+    /// </summary>
+    /// <param name="frontendId">Frontend ID of the swap.</param>
+    /// <param name="maximumStatus">Maximum status that the swap can have to be included in the removal.</param>
+    /// <returns><c>true</c> if the swap record was deleted from the database, <c>false</c> otherwise.</returns>
+    /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
+    public async Task<bool> RemoveAsync(string frontendId, SwapStatus maximumStatus)
+    {
+        this.log.Debug($"* {nameof(frontendId)}='{frontendId}',{nameof(maximumStatus)}={maximumStatus}");
+
+        bool result = false;
+        try
+        {
+            using ApplicationDbContext db = this.dbContextFactory.CreateDbContext();
+            using IDisposable dbLocked = await this.dbLock.EnterAsync().ConfigureAwait(false);
+            using IDbContextTransaction transaction = db.BeginTransaction();
+
+            int rowsDeleted = await db.Swaps
+                .Where(s => (s.FrontendId == frontendId) && (s.Status <= maximumStatus))
+                .ExecuteDeleteAsync()
+                .ConfigureAwait(false);
+
+            if (rowsDeleted > 0)
+            {
+                _ = db.SaveChanges();
+                transaction.Commit();
+
+                this.log.Debug($"Swap with frontend ID '{frontendId}' has been removed from the database.");
+                result = true;
+            }
+            else this.log.Debug($"Swap with frontend ID '{frontendId}' was not found in the database or could not be deleted.");
+        }
+        catch (Exception e)
+        {
+            this.log.Error($"Deleting swap with the frontend ID '{frontendId}' from the database failed with exception: {e}");
+            this.log.Debug("$<DB_EXCEPTION>");
+            throw new DatabaseException($"Deleting swap with the frontend ID '{frontendId}' from the database failed.", e);
+        }
+
+        this.log.Debug($"$={result}");
+        return result;
     }
 
     /// <inheritdoc/>

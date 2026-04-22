@@ -10,6 +10,7 @@ using WhalesExchangeBackend.Services.DataProvider;
 using WhalesExchangeBackend.Services.ElectrumRpc;
 using WhalesExchangeBackend.SharedLib.Data;
 using WhalesExchangeBackend.SharedLib.Exceptions;
+using WhalesExchangeBackend.SharedLib.Models;
 using WhalesExchangeBackend.SharedLib.Services.WebSocket;
 using WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
 using WhalesSecret.TradeScriptLib.Exceptions;
@@ -42,6 +43,9 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
     /// <summary>Client that communicates with Electrum RPC server.</summary>
     private readonly ElectrumRpcClient electrumRpcClient;
+
+    /// <summary>Service that checks client swap limits.</summary>
+    private readonly SwapLimitChecker swapLimitChecker;
 
     /// <summary>Provider of access to swaps in the database.</summary>
     private readonly SwapRepository swapRepository;
@@ -80,10 +84,11 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// Creates a new instance of the object.
     /// </summary>
     /// <param name="electrumRpcClient">Client that communicates with Electrum RPC server.</param>
+    /// <param name="swapLimitChecker">Service that checks client swap limits.</param>
     /// <param name="swapRepository">Provider of access to swaps in the database.</param>
     /// <param name="subscriptionManager">Manager of swap subscriptions.</param>
     /// <param name="joinableTaskFactory">Factory for starting async tasks running in the background.</param>
-    public BlockchainDataMonitor(ElectrumRpcClient electrumRpcClient, SwapRepository swapRepository, SubscriptionManager subscriptionManager,
+    public BlockchainDataMonitor(ElectrumRpcClient electrumRpcClient, SwapLimitChecker swapLimitChecker, SwapRepository swapRepository, SubscriptionManager subscriptionManager,
         JoinableTaskFactory joinableTaskFactory)
     {
         this.log.Debug("*");
@@ -93,6 +98,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
         this.shutdownTokenSource = new();
 
         this.electrumRpcClient = electrumRpcClient;
+        this.swapLimitChecker = swapLimitChecker;
         this.swapRepository = swapRepository;
         this.subscriptionManager = subscriptionManager;
 
@@ -263,6 +269,11 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                                     }
                                     else
                                     {
+                                        // If the transaction is confirmed already but we have not refreshed our blockchain height since then, we can take the UTXO block height
+                                        // instead of the current blockchain height.
+                                        if (unspentInfo.BlockHeight > currentBlockHeight)
+                                            currentBlockHeight = unspentInfo.BlockHeight;
+
                                         int confirmations = currentBlockHeight - unspentInfo.BlockHeight + 1;
                                         this.log.Debug($"Monitored address '{monitoredAddress.Address}' received a new unspent output with amount {
                                             unspentInfo.AmountSats} satoshis at blockchain height {unspentInfo.BlockHeight}. Current height is {
@@ -392,10 +403,10 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
             nameof(transactionData)}='{transactionData.ToBoundedString()}'");
 
         bool result = false;
+        DbSwap? swap = null;
 
         if (monitoredAddress.IsLockupAddress)
         {
-            DbSwap? swap = null;
             try
             {
                 switch (action)
@@ -435,18 +446,13 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
                     // Before we propagate the update to the frontend, which will cause the frontend to claim the funding transaction output, we need to start monitoring
                     // the client address.
-                    this.RegisterMonitoredAddress(swapId: swap.Id, address: swap.ClientAddress, amountSats: swap.AmountToReceiveSats, requiredConfirmations: 1,
-                        timeoutHeight: swap.TimeoutBlockHeight.Value, isLockupAddress: false);
+                    this.RegisterMonitoredAddress(swapId: swap.Id, frontendId: swap.FrontendId, address: swap.ClientAddress, amountSats: swap.AmountToReceiveSats,
+                        requiredConfirmations: 1, timeoutHeight: swap.TimeoutBlockHeight.Value, isLockupAddress: false);
                 }
-
-                SwapUpdate swapUpdate = SwapUpdate.FromDbSwap(swap);
-                await this.subscriptionManager.PropagateSwapUpdateAsync(swapUpdate, cancellationToken).ConfigureAwait(false);
-                result = true;
             }
         }
         else
         {
-            DbSwap? swap = null;
             switch (action)
             {
                 case MonitoredAddressAction.InMempool:
@@ -473,13 +479,16 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                 default:
                     throw new SanityCheckException($"Invalid action provided {action}.");
             }
+        }
 
-            if (swap is not null)
-            {
-                SwapUpdate swapUpdate = SwapUpdate.FromDbSwap(swap);
-                await this.subscriptionManager.PropagateSwapUpdateAsync(swapUpdate, cancellationToken).ConfigureAwait(false);
-                result = true;
-            }
+        if (swap is not null)
+        {
+            if (swap.Status > SwapStatus.Accepted)
+                _ = this.swapLimitChecker.UnregisterSwap(swap.FrontendId);
+
+            SwapUpdate swapUpdate = SwapUpdate.FromDbSwap(swap);
+            await this.subscriptionManager.PropagateSwapUpdateAsync(swapUpdate, cancellationToken).ConfigureAwait(false);
+            result = true;
         }
 
         this.log.Debug($"$={result}");
@@ -547,7 +556,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                         {
                             if ((input.PrevoutHash == swap.FundingTxId) && (input.PrevoutIndex == swap.LockupOutputIndex.Value))
                             {
-                                this.log.Debug($"Transaction '{transactionId}' spends the lockup output {swap.FundingTxId}:{swap.LockupOutputIndex.Value} of swap {swap.Id}.");
+                                this.log.Debug($"Transaction '{transactionId}' spends the lockup output '{swap.FundingTxId}:{swap.LockupOutputIndex.Value}' of swap {swap.Id}.");
                                 spendsLockupOutput = true;
                                 break;
                             }
@@ -573,26 +582,66 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// Registers a new Bitcoin address to be monitored for incoming transactions relevant to the swap with the specified ID.
     /// </summary>
     /// <param name="swapId">ID of the swap that the monitored address is related to.</param>
+    /// <param name="frontendId">Frontend ID of the swap that the monitored address is related to.</param>
     /// <param name="address">Bitcoin address to monitor.</param>
     /// <param name="amountSats">Amount expected to be received to this address in satoshis.</param>
     /// <param name="requiredConfirmations">Number of confirmations required.</param>
     /// <param name="timeoutHeight">Blockchain height at which the monitoring should timeout.</param>
     /// <param name="isLockupAddress"><c>true</c> if the monitored address is the lockup address in the funding transaction, <c>false</c> if it is the destination address.</param>
-    public void RegisterMonitoredAddress(long swapId, string address, long amountSats, int requiredConfirmations, long timeoutHeight, bool isLockupAddress)
+    public void RegisterMonitoredAddress(long swapId, string frontendId, string address, long amountSats, int requiredConfirmations, long timeoutHeight, bool isLockupAddress)
     {
-        this.log.Debug($"* {nameof(swapId)}={swapId},{nameof(address)}='{address}',{nameof(amountSats)}={amountSats},{nameof(requiredConfirmations)}={requiredConfirmations},{
+        this.log.Debug($"* {nameof(swapId)}={swapId},{nameof(frontendId)}='{frontendId}',{nameof(address)}='{address}',{nameof(amountSats)}={amountSats},{
+            nameof(requiredConfirmations)}={requiredConfirmations},{
             nameof(timeoutHeight)}={timeoutHeight},{nameof(isLockupAddress)}={isLockupAddress}");
 
         lock (this.dataLock)
         {
-            MonitoredAddress monitoredAddress = new(swapId: swapId, address, amountSats: amountSats, requiredConfirmations: requiredConfirmations, timeoutHeight: timeoutHeight,
-                monitoringStartedAtHeight: this.blockchainHeight, isLockupAddress);
+            MonitoredAddress monitoredAddress = new(swapId: swapId, frontendId: frontendId, address: address, amountSats: amountSats, requiredConfirmations: requiredConfirmations,
+                timeoutHeight: timeoutHeight,
+                monitoringStartedAtHeight: this.blockchainHeight, isLockupAddress: isLockupAddress);
 
             if (!this.monitoredAddresses.Add(monitoredAddress))
                 throw new SanityCheckException($"Unable to add monitored address '{monitoredAddress}' to the set.");
 
             this.log.Debug($"Monitored address `{monitoredAddress}` registered at height {this.blockchainHeight}. Currently, {
                 this.monitoredAddresses.Count} addresses are monitored.");
+        }
+
+        this.log.Debug("$");
+    }
+
+    /// <summary>
+    /// Unregisters a Bitcoin address of a swap from monitoring.
+    /// </summary>
+    /// <param name="frontendId">Frontend ID of the swap that the monitored address is related to.</param>
+    public void UnregisterMonitoredAddressWithFrontendId(string frontendId)
+    {
+        this.log.Debug($"* {nameof(frontendId)}='{frontendId}'");
+
+        lock (this.dataLock)
+        {
+            MonitoredAddress? swapMonitoredAddress = null;
+            foreach (MonitoredAddress monitoredAddress in this.monitoredAddresses)
+            {
+                if (monitoredAddress.FrontendId == frontendId)
+                {
+                    swapMonitoredAddress = monitoredAddress;
+                    break;
+                }
+            }
+
+            if (swapMonitoredAddress is not null)
+            {
+                if (this.monitoredAddresses.Remove(swapMonitoredAddress))
+                {
+                    this.log.Debug($"Monitored address '{swapMonitoredAddress}' has been removed from the set after a matching transaction was found.");
+                }
+                else
+                {
+                    this.log.Debug($"Monitored address '{
+                        swapMonitoredAddress}' should be removed from the set after a matching transaction was found, but it was not found in the set.");
+                }
+            }
         }
 
         this.log.Debug("$");

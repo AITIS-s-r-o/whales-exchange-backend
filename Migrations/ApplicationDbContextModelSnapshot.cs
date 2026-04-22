@@ -39,7 +39,7 @@ namespace WhalesExchangeBackend.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ClientTxData")
-                        .HasMaxLength(2097152)
+                        .HasMaxLength(8388608)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ClientTxId")
@@ -61,7 +61,7 @@ namespace WhalesExchangeBackend.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FundingTxData")
-                        .HasMaxLength(2097152)
+                        .HasMaxLength(8388608)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("FundingTxId")

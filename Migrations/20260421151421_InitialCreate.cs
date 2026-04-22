@@ -57,9 +57,9 @@ namespace WhalesExchangeBackend.Migrations
                     FundingTime = table.Column<DateTime>(type: "TEXT", nullable: true),
                     SpentTime = table.Column<DateTime>(type: "TEXT", nullable: true),
                     FailTime = table.Column<DateTime>(type: "TEXT", nullable: true),
-                    FundingTxData = table.Column<string>(type: "TEXT", maxLength: 2097152, nullable: true),
+                    FundingTxData = table.Column<string>(type: "TEXT", maxLength: 8388608, nullable: true),
                     ClientTxId = table.Column<string>(type: "TEXT", maxLength: 64, nullable: true),
-                    ClientTxData = table.Column<string>(type: "TEXT", maxLength: 2097152, nullable: true)
+                    ClientTxData = table.Column<string>(type: "TEXT", maxLength: 8388608, nullable: true)
                 },
                 constraints: table =>
                 {

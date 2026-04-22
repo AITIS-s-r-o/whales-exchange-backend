@@ -14,6 +14,9 @@ internal class MonitoredAddress
     /// <summary>ID of the swap that the monitored address is related to.</summary>
     public long SwapId { get; }
 
+    /// <summary>Frontend ID of the swap that the monitored address is related to.</summary>
+    public string FrontendId { get; }
+
     /// <summary>Bitcoin address to monitor.</summary>
     public string Address { get; }
 
@@ -57,16 +60,18 @@ internal class MonitoredAddress
     /// Creates a new instance of the object.
     /// </summary>
     /// <param name="swapId">ID of the swap that the monitored address is related to.</param>
+    /// <param name="frontendId">Frontend ID of the swap that the monitored address is related to.</param>
     /// <param name="address">Bitcoin address to monitor.</param>
     /// <param name="requiredConfirmations">Number of confirmations required.</param>
     /// <param name="amountSats">Amount expected to be received to this address in satoshis.</param>
     /// <param name="timeoutHeight">Blockchain height at which the monitoring should timeout.</param>
     /// <param name="monitoringStartedAtHeight">Blockchain height at which the monitoring started.</param>
     /// <param name="isLockupAddress"><c>true</c> if the monitored address is the lockup address in the funding transaction, <c>false</c> if it is the client address.</param>
-    public MonitoredAddress(long swapId, string address, long amountSats, int requiredConfirmations, long timeoutHeight, int monitoringStartedAtHeight, bool isLockupAddress)
+    public MonitoredAddress(long swapId, string frontendId, string address, long amountSats, int requiredConfirmations, long timeoutHeight, int monitoringStartedAtHeight, bool isLockupAddress)
     {
         this.statusLock = new();
         this.SwapId = swapId;
+        this.FrontendId = frontendId;
         this.Address = address;
         this.AmountSats = amountSats;
         this.RequiredConfirmations = requiredConfirmations;
@@ -81,8 +86,9 @@ internal class MonitoredAddress
         return string.Format
         (
             CultureInfo.InvariantCulture,
-            "[{0}={1},{2}=`{3}`,{4}={5},{6}={7},{8}={9},{10}={11},{12}={13},{14}={15}]",
+            "[{0}={1},{2}=`{3}`,{4}=`{5}`,{6}={7},{8}={9},{10}={11},{12}={13},{14}={15},{16}={17}]",
             nameof(this.SwapId), this.SwapId,
+            nameof(this.FrontendId), this.FrontendId,
             nameof(this.Address), this.Address,
             nameof(this.AmountSats), this.AmountSats,
             nameof(this.RequiredConfirmations), this.RequiredConfirmations,
