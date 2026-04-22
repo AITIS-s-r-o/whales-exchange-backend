@@ -398,10 +398,10 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
             nameof(transactionData)}='{transactionData.ToBoundedString()}'");
 
         bool result = false;
+        DbSwap? swap = null;
 
         if (monitoredAddress.IsLockupAddress)
         {
-            DbSwap? swap = null;
             try
             {
                 switch (action)
@@ -434,9 +434,6 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
             if (swap is not null)
             {
-                if (swap.Status > SwapStatus.Accepted)
-                    _ = this.swapLimitChecker.UnregisterSwap(swap.FrontendId);
-
                 if (action == MonitoredAddressAction.Confirmed)
                 {
                     if (swap.TimeoutBlockHeight is null)
@@ -447,15 +444,10 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                     this.RegisterMonitoredAddress(swapId: swap.Id, address: swap.ClientAddress, amountSats: swap.AmountToReceiveSats, requiredConfirmations: 1,
                         timeoutHeight: swap.TimeoutBlockHeight.Value, isLockupAddress: false);
                 }
-
-                SwapUpdate swapUpdate = SwapUpdate.FromDbSwap(swap);
-                await this.subscriptionManager.PropagateSwapUpdateAsync(swapUpdate, cancellationToken).ConfigureAwait(false);
-                result = true;
             }
         }
         else
         {
-            DbSwap? swap = null;
             switch (action)
             {
                 case MonitoredAddressAction.InMempool:
@@ -482,13 +474,16 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                 default:
                     throw new SanityCheckException($"Invalid action provided {action}.");
             }
+        }
 
-            if (swap is not null)
-            {
-                SwapUpdate swapUpdate = SwapUpdate.FromDbSwap(swap);
-                await this.subscriptionManager.PropagateSwapUpdateAsync(swapUpdate, cancellationToken).ConfigureAwait(false);
-                result = true;
-            }
+        if (swap is not null)
+        {
+            if (swap.Status > SwapStatus.Accepted)
+                _ = this.swapLimitChecker.UnregisterSwap(swap.FrontendId);
+
+            SwapUpdate swapUpdate = SwapUpdate.FromDbSwap(swap);
+            await this.subscriptionManager.PropagateSwapUpdateAsync(swapUpdate, cancellationToken).ConfigureAwait(false);
+            result = true;
         }
 
         this.log.Debug($"$={result}");
