@@ -269,6 +269,11 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                                     }
                                     else
                                     {
+                                        // If the transaction is confirmed already but we have not refreshed our blockchain height since then, we can take the UTXO block height
+                                        // instead of the current blockchain height.
+                                        if (unspentInfo.BlockHeight > currentBlockHeight)
+                                            currentBlockHeight = unspentInfo.BlockHeight;
+
                                         int confirmations = currentBlockHeight - unspentInfo.BlockHeight + 1;
                                         this.log.Debug($"Monitored address '{monitoredAddress.Address}' received a new unspent output with amount {
                                             unspentInfo.AmountSats} satoshis at blockchain height {unspentInfo.BlockHeight}. Current height is {
