@@ -221,8 +221,8 @@ internal class RestApiController : InternalControllerBase
 
                             // Register the lockup address to be monitored by the blockchain data monitor. This will allow the client to be notified when the funding transaction is
                             // seen and when it gets confirmed. Note that the required amount here needs to include the fees for the on-chain transaction that will claim the funds.
-                            this.blockchainDataMonitor.RegisterMonitoredAddress(swapId: swap.Id, electrumSwapData.LockupAddress, amountSats: electrumSwapData.OnChainAmountSats,
-                                requiredConfirmations: requiredConfirmations, timeoutHeight: timeoutHeight, isLockupAddress: true);
+                            this.blockchainDataMonitor.RegisterMonitoredAddress(swapId: swap.Id, frontendId: swap.FrontendId, electrumSwapData.LockupAddress,
+                                amountSats: electrumSwapData.OnChainAmountSats, requiredConfirmations: requiredConfirmations, timeoutHeight: timeoutHeight, isLockupAddress: true);
 
                             await this.swapRepository.MarkSwapAcceptedAsync(id: swap.Id, electrumSwapData.LockupAddress, timeoutBlockHeight: electrumSwapData.Locktime)
                                 .ConfigureAwait(false);

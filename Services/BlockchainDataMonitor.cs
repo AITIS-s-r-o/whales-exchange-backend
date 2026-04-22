@@ -446,8 +446,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
                     // Before we propagate the update to the frontend, which will cause the frontend to claim the funding transaction output, we need to start monitoring
                     // the client address.
-                    this.RegisterMonitoredAddress(swapId: swap.Id, address: swap.ClientAddress, amountSats: swap.AmountToReceiveSats, requiredConfirmations: 1,
-                        timeoutHeight: swap.TimeoutBlockHeight.Value, isLockupAddress: false);
+                    this.RegisterMonitoredAddress(swapId: swap.Id, frontendId: swap.FrontendId, address: swap.ClientAddress, amountSats: swap.AmountToReceiveSats,
+                        requiredConfirmations: 1, timeoutHeight: swap.TimeoutBlockHeight.Value, isLockupAddress: false);
                 }
             }
         }
@@ -582,20 +582,23 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// Registers a new Bitcoin address to be monitored for incoming transactions relevant to the swap with the specified ID.
     /// </summary>
     /// <param name="swapId">ID of the swap that the monitored address is related to.</param>
+    /// <param name="frontendId">Frontend ID of the swap that the monitored address is related to.</param>
     /// <param name="address">Bitcoin address to monitor.</param>
     /// <param name="amountSats">Amount expected to be received to this address in satoshis.</param>
     /// <param name="requiredConfirmations">Number of confirmations required.</param>
     /// <param name="timeoutHeight">Blockchain height at which the monitoring should timeout.</param>
     /// <param name="isLockupAddress"><c>true</c> if the monitored address is the lockup address in the funding transaction, <c>false</c> if it is the destination address.</param>
-    public void RegisterMonitoredAddress(long swapId, string address, long amountSats, int requiredConfirmations, long timeoutHeight, bool isLockupAddress)
+    public void RegisterMonitoredAddress(long swapId, string frontendId, string address, long amountSats, int requiredConfirmations, long timeoutHeight, bool isLockupAddress)
     {
-        this.log.Debug($"* {nameof(swapId)}={swapId},{nameof(address)}='{address}',{nameof(amountSats)}={amountSats},{nameof(requiredConfirmations)}={requiredConfirmations},{
+        this.log.Debug($"* {nameof(swapId)}={swapId},{nameof(frontendId)}='{frontendId}',{nameof(address)}='{address}',{nameof(amountSats)}={amountSats},{
+            nameof(requiredConfirmations)}={requiredConfirmations},{
             nameof(timeoutHeight)}={timeoutHeight},{nameof(isLockupAddress)}={isLockupAddress}");
 
         lock (this.dataLock)
         {
-            MonitoredAddress monitoredAddress = new(swapId: swapId, address, amountSats: amountSats, requiredConfirmations: requiredConfirmations, timeoutHeight: timeoutHeight,
-                monitoringStartedAtHeight: this.blockchainHeight, isLockupAddress);
+            MonitoredAddress monitoredAddress = new(swapId: swapId, frontendId: frontendId, address: address, amountSats: amountSats, requiredConfirmations: requiredConfirmations,
+                timeoutHeight: timeoutHeight,
+                monitoringStartedAtHeight: this.blockchainHeight, isLockupAddress: isLockupAddress);
 
             if (!this.monitoredAddresses.Add(monitoredAddress))
                 throw new SanityCheckException($"Unable to add monitored address '{monitoredAddress}' to the set.");
