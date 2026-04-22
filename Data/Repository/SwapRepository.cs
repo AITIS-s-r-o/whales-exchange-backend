@@ -197,7 +197,7 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
     public async Task<bool> RemoveAsync(string frontendId, SwapStatus maximumStatus)
     {
-        this.log.Debug($"* {nameof(frontendId)}='{frontendId}'");
+        this.log.Debug($"* {nameof(frontendId)}='{frontendId}',{nameof(maximumStatus)}={maximumStatus}");
 
         bool result = false;
         try
