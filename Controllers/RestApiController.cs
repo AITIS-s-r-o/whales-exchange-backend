@@ -244,6 +244,8 @@ internal class RestApiController : InternalControllerBase
 
         if (failed && (swap is not null))
         {
+            _ = this.swapLimitChecker.UnregisterSwap(swap.FrontendId);
+
             try
             {
                 await this.swapRepository.MarkSwapRejectedAsync(swap.Id).ConfigureAwait(false);
