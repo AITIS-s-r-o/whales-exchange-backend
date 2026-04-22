@@ -271,14 +271,6 @@ internal class RestApiController : InternalControllerBase
     {
         this.log.Debug($"* {nameof(request)}='{request}'");
 
-        HttpContext? context = this.httpContextAccessor.HttpContext;
-        if (context is null)
-            throw new SanityCheckException("HTTP context is null.");
-
-        IPAddress? ipAddress = context.Connection.RemoteIpAddress;
-        if (ipAddress is null)
-            throw new SanityCheckException("Remote IP address is null.");
-
         IActionResult result;
 
         RemoveSwapResponse response;
@@ -287,7 +279,7 @@ internal class RestApiController : InternalControllerBase
             bool removed = await this.swapRepository.RemoveAsync(request.Id, maximumStatus: SwapStatus.Accepted).ConfigureAwait(false);
             if (removed)
             {
-                _ = this.swapLimitChecker.UnregisterSwap(ipAddress: ipAddress.ToString(), frontendSwapId: request.Id);
+                _ = this.swapLimitChecker.UnregisterSwap(frontendSwapId: request.Id);
                 response = new();
             }
             else response = new($"Could not delete swap with frontend ID '{request.Id}'.");

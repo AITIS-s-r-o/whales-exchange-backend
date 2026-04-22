@@ -10,6 +10,7 @@ using WhalesExchangeBackend.Services.DataProvider;
 using WhalesExchangeBackend.Services.ElectrumRpc;
 using WhalesExchangeBackend.SharedLib.Data;
 using WhalesExchangeBackend.SharedLib.Exceptions;
+using WhalesExchangeBackend.SharedLib.Models;
 using WhalesExchangeBackend.SharedLib.Services.WebSocket;
 using WhalesExchangeBackend.SharedLib.Services.WebSocket.Messages;
 using WhalesSecret.TradeScriptLib.Exceptions;
@@ -42,6 +43,9 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
     /// <summary>Client that communicates with Electrum RPC server.</summary>
     private readonly ElectrumRpcClient electrumRpcClient;
+
+    /// <summary>Service that checks user swap limits.</summary>
+    private readonly SwapLimitChecker swapLimitChecker;
 
     /// <summary>Provider of access to swaps in the database.</summary>
     private readonly SwapRepository swapRepository;
@@ -80,10 +84,11 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// Creates a new instance of the object.
     /// </summary>
     /// <param name="electrumRpcClient">Client that communicates with Electrum RPC server.</param>
+    /// <param name="swapLimitChecker">Service that checks user swap limits.</param>
     /// <param name="swapRepository">Provider of access to swaps in the database.</param>
     /// <param name="subscriptionManager">Manager of swap subscriptions.</param>
     /// <param name="joinableTaskFactory">Factory for starting async tasks running in the background.</param>
-    public BlockchainDataMonitor(ElectrumRpcClient electrumRpcClient, SwapRepository swapRepository, SubscriptionManager subscriptionManager,
+    public BlockchainDataMonitor(ElectrumRpcClient electrumRpcClient, SwapLimitChecker swapLimitChecker, SwapRepository swapRepository, SubscriptionManager subscriptionManager,
         JoinableTaskFactory joinableTaskFactory)
     {
         this.log.Debug("*");
@@ -93,6 +98,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
         this.shutdownTokenSource = new();
 
         this.electrumRpcClient = electrumRpcClient;
+        this.swapLimitChecker = swapLimitChecker;
         this.swapRepository = swapRepository;
         this.subscriptionManager = subscriptionManager;
 
@@ -428,6 +434,9 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
             if (swap is not null)
             {
+                if (swap.Status > SwapStatus.Accepted)
+                    _ = this.swapLimitChecker.UnregisterSwap(swap.FrontendId);
+
                 if (action == MonitoredAddressAction.Confirmed)
                 {
                     if (swap.TimeoutBlockHeight is null)
