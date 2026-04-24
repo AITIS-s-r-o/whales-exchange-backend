@@ -83,7 +83,7 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
                 else
                 {
                     this.log.Debug($"Existing swap ID {existingSwap.Id} has not completed yet and is using the claim address '{claimAddress}'.");
-                    message = $"A swap with the same destination already exists. Use a fresh address, or wait for the existing swap to complete.";
+                    message = "A swap with the same destination already exists. Use a fresh address, or wait for the existing swap to complete.";
                 }
 
                 this.log.Debug("$<SWAP_EXISTS>");
