@@ -11,7 +11,7 @@ We welcome contributions to the Whale's Exchange! If you have an idea for a new 
 To run the backend app locally from source, you need to:
 
 
-1. Install .NET SDK 10.0.
+1. Install .NET SDK 10.0 using any [available method](https://dotnet.microsoft.com/en-us/download/dotnet/10.0).
 1. Create `config.secret.json`, `config.secret.Debug.json`, and `config.secret.Release.json` files in the root of the project with the following content:
     ```json
     {
