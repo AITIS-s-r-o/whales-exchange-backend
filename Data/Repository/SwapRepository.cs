@@ -78,7 +78,7 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
                 if (existingSwap.ClaimPublicKey == claimPublicKey)
                 {
                     this.log.Debug($"Existing swap ID {existingSwap.Id} already used claim public key '{claimPublicKey}'.");
-                    message = $"Claim public key must not be reused. Avoid creating multiple new swaps in parallel from the same browser.";
+                    message = "Claim public key must not be reused. Avoid creating multiple new swaps in parallel from the same browser.";
                 }
                 else
                 {
