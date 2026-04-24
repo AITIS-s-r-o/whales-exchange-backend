@@ -1,6 +1,6 @@
 # Whale's Exchange Backend
 
-This repository contains the official Whale's Exchange Backend App used by the [whales.exchange](https://whales.exchange) [frontend application](https://github.com/AITIS-s-r-o/whales-exchange-web-app) to facilitate communication with the Electrum Swap server. The backend is built using .NET and is designed to be a minimalistic bridge between the frontend and the Electrum Swap server.
+This repository contains the official Whale's Exchange Backend App used by the [whales.exchange](https://whales.exchange) [frontend application](https://github.com/AITIS-s-r-o/whales-exchange-web-app) to facilitate communication with the Electrum Swap server. The backend is built using .NET 10 and is designed to be a minimalistic bridge between the frontend and the Electrum Swap server.
 
 The complete Whale's Exchange design overview is shown in the GitHub [repository](https://github.com/AITIS-s-r-o/whales-exchange-web-app) of the frontend application.
 
