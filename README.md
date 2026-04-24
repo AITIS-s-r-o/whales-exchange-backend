@@ -8,7 +8,7 @@ The complete Whale's Exchange design overview is shown in the GitHub [repository
 
 We welcome contributions to the Whale's Exchange! If you have an idea for a new feature, improvement, or bug fix, please submit a pull request. For major changes, please open an issue first to discuss what you would like to change.
 
-To run the backend app locally from source, just run:
+To run the backend app locally from source, you need to have the .NET SDK 10.0 installed. Then just run:
 
 ```bash
 dotnet run
