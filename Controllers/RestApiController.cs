@@ -175,6 +175,7 @@ internal class RestApiController : InternalControllerBase
 
         DbSwap? swap = null;
         bool failed = false;
+        string? frontendId = null;
         try
         {
             if ((request.Type == CreateSwapRequest.ForwardSwapTypeStr) && (request.OrderSide == CreateSwapRequest.ForwardSwapOrderSideStr))
@@ -195,7 +196,7 @@ internal class RestApiController : InternalControllerBase
                 {
                     if (request.ClaimPublicKey is not null)
                     {
-                        string frontendId = RandomStringGenerator.Generate(DbSwap.FrontendIdLength);
+                        frontendId = RandomStringGenerator.Generate(DbSwap.FrontendIdLength);
                         string userIpAddress = ipAddress.ToString();
                         bool isPermitted = this.swapLimitChecker.RegisterSwap(ipAddress: userIpAddress, frontendSwapId: frontendId);
                         if (isPermitted)
@@ -243,17 +244,21 @@ internal class RestApiController : InternalControllerBase
             failed = true;
         }
 
-        if (failed && (swap is not null))
+        if (failed)
         {
-            _ = this.swapLimitChecker.UnregisterSwap(swap.FrontendId);
+            if (frontendId is not null)
+                _ = this.swapLimitChecker.UnregisterSwap(frontendId);
 
-            try
+            if (swap is not null)
             {
-                await this.swapRepository.MarkSwapRejectedAsync(swap.Id).ConfigureAwait(false);
-            }
-            catch (Exception e)
-            {
-                this.log.Error($"Exception occurred while marking swap ID {swap.Id} as rejected: {e}");
+                try
+                {
+                    await this.swapRepository.MarkSwapRejectedAsync(swap.Id).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    this.log.Error($"Exception occurred while marking swap ID {swap.Id} as rejected: {e}");
+                }
             }
         }
 
