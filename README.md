@@ -12,7 +12,7 @@ To run the backend app locally from source, you need to:
 
 
 1. Install .NET SDK 10.0.
-1. Create `config.secret.json` file in the root of the project with the following content:
+1. Create `config.secret.json`, `config.secret.Debug.json`, and `config.secret.Release.json` files in the root of the project with the following content:
     ```json
     {
         "ConnectionString": "Data Source=wex.db",
