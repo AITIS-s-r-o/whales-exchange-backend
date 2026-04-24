@@ -23,6 +23,7 @@ To run the backend app locally from source, you need to:
         }
     }
     ```
+    See also [config.secret.json.template](https://github.com/AITIS-s-r-o/whales-exchange-backend/blob/master/config.secret.json.template).
 1. Start the app:
     ```bash
     dotnet run
