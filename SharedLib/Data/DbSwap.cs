@@ -105,6 +105,10 @@ internal class DbSwap
     /// <remarks>The setter is needed for the serializer.</remarks>
     public string? ClientTxData { get; set; }
 
+    /// <summary>Public key that will be used to claim the on-chain funds in hex format, or <c>null</c> for forward swaps.</summary>
+    /// <remarks>The setter is needed for the serializer.</remarks>
+    public string? ClaimPublicKey { get; set; }
+
     /// <summary>Provider of the swap.</summary>
     /// <remarks>The setter is needed for the serializer.</remarks>
     public DbSwapProvider Provider { get; set; }
@@ -144,10 +148,11 @@ internal class DbSwap
     /// <param name="fundingTxData">Funding transaction data in hex format, or <c>null</c> if not funded yet.</param>
     /// <param name="clientTxId">ID of the claim/refund Bitcoin transaction, or <c>null</c> if not yet claimed/refunded.</param>
     /// <param name="clientTxData">Claim/refund Bitcoin transaction data in hex format, or <c>null</c> if not yet claimed/refunded.</param>
+    /// <param name="claimPublicKey">Public key that will be used to claim the on-chain funds in hex format, or <c>null</c> for forward swaps.</param>
     /// <param name="provider">Provider of the swap.</param>
     public DbSwap(long id, string frontendId, string providerPubkey, bool isForward, SwapStatus status, long amountToPaySats, long amountToReceiveSats, string clientAddress,
         string? lockupAddress, int? lockupOutputIndex, string? fundingTxId, long? timeoutBlockHeight, DateTime createdTime, DateTime? acceptedTime, DateTime? fundingTime,
-        DateTime? spentTime, DateTime? failTime, string? fundingTxData, string? clientTxId, string? clientTxData, DbSwapProvider provider)
+        DateTime? spentTime, DateTime? failTime, string? fundingTxData, string? clientTxId, string? clientTxData, string? claimPublicKey, DbSwapProvider provider)
     {
         this.Id = id;
         this.FrontendId = frontendId;
@@ -169,6 +174,7 @@ internal class DbSwap
         this.FundingTxData = fundingTxData;
         this.ClientTxId = clientTxId;
         this.ClientTxData = clientTxData;
+        this.ClaimPublicKey = claimPublicKey;
         this.Provider = provider;
     }
 
@@ -176,7 +182,7 @@ internal class DbSwap
     public override string ToString()
     {
         string format = "[{0}={1},{2}=`{3}`,{4}=`{5}`,{6}={7},{8}={9},{10}={11},{12}={13},{14}=`{15}`,{16}=`{17}`,{18}={19},{20}=`{21}`,{22}={23},{24}={25},{26}={27},{28}={29},"
-            + "{30}={31},{32}={33},{34}=`{35}`,{36}=`{37}`,{38}=`{39}`]";
+            + "{30}={31},{32}={33},{34}=`{35}`,{36}=`{37}`,{38}=`{39}`,{40}=`{41}`]";
 
         return string.Format
         (
@@ -201,7 +207,8 @@ internal class DbSwap
             nameof(this.FailTime), this.FailTime,
             nameof(this.FundingTxData), this.FundingTxData.ToBoundedString(),
             nameof(this.ClientTxId), this.ClientTxId,
-            nameof(this.ClientTxData), this.ClientTxData.ToBoundedString()
+            nameof(this.ClientTxData), this.ClientTxData.ToBoundedString(),
+            nameof(this.ClaimPublicKey), this.ClaimPublicKey
         );
     }
 }

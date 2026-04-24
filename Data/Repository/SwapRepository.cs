@@ -37,13 +37,16 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     /// <param name="amountToPaySats">Amount the client paid or should pay (including all fees) in satoshis.</param>
     /// <param name="amountToReceiveSats">Amount the client received or should receive in satoshis.</param>
     /// <param name="claimAddress">Bitcoin address that will be used to claim the on-chain funds.</param>
+    /// <param name="claimPublicKey">Public key that will be used to claim the on-chain funds in hex format.</param>
     /// <returns>Newly created database record.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
+    /// <exception cref="OperationFailedException">Thrown when the swap parameters are invalid.</exception>
     public async Task<DbSwap> InsertReverseAsync(string frontendId, string providerPubkey, string userIpAddress, long amountToPaySats, long amountToReceiveSats,
-        string claimAddress)
+        string claimAddress, string claimPublicKey)
     {
         this.log.Debug($"* {nameof(frontendId)}='{frontendId}',{nameof(providerPubkey)}='{providerPubkey}',{nameof(userIpAddress)}='{userIpAddress}',{
-            nameof(amountToPaySats)}={amountToPaySats},{nameof(amountToReceiveSats)}={amountToReceiveSats},{nameof(claimAddress)}='{claimAddress}'");
+            nameof(amountToPaySats)}={amountToPaySats},{nameof(amountToReceiveSats)}={amountToReceiveSats},{nameof(claimAddress)}='{claimAddress}',{
+            nameof(claimPublicKey)}='{claimPublicKey}'");
 
         DbSwap result;
         try
@@ -61,11 +64,37 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
                     providerPubkey}' was not found in the database.");
             }
 
+            // We do not allow:
+            // - more than one incomplete swap with the same claim address, or
+            // - more than one swap with the same claim public key.
+            DbSwap? existingSwap = await db.Swaps
+                .FirstOrDefaultAsync(c => ((c.ClientAddress == claimAddress) && (c.Status < SwapStatus.FundingTxSpent))
+                    || (c.ClaimPublicKey == claimPublicKey))
+                .ConfigureAwait(false);
+            if (existingSwap is not null)
+            {
+                string message;
+
+                if (existingSwap.ClaimPublicKey == claimPublicKey)
+                {
+                    this.log.Debug($"Existing swap ID {existingSwap.Id} already used claim public key '{claimPublicKey}'.");
+                    message = "Claim public key must not be reused. Avoid creating multiple new swaps in parallel from the same browser.";
+                }
+                else
+                {
+                    this.log.Debug($"Existing swap ID {existingSwap.Id} has not completed yet and is using the claim address '{claimAddress}'.");
+                    message = "A swap with the same destination already exists. Use a fresh address, or wait for the existing swap to complete.";
+                }
+
+                this.log.Debug("$<SWAP_EXISTS>");
+                throw new OperationFailedException(message);
+            }
+
             DateTime now = DateTime.UtcNow;
             DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, isForward: false, SwapStatus.Created, amountToPaySats: amountToPaySats,
                 amountToReceiveSats: amountToReceiveSats, clientAddress: claimAddress, lockupAddress: null, lockupOutputIndex: null, fundingTxId: null, timeoutBlockHeight: null,
                 createdTime: now, acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, fundingTxData: null, clientTxId: null, clientTxData: null,
-                dbSwapProvider);
+                claimPublicKey: claimPublicKey, dbSwapProvider);
 
             _ = db.Swaps.Add(dbRecord);
             _ = db.SaveChanges();
@@ -73,6 +102,10 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
 
             result = dbRecord;
             this.log.Debug($"Reverse swap ID {result.Id} through provider '{providerPubkey}' has been added to the database.");
+        }
+        catch (OperationFailedException)
+        {
+            throw;
         }
         catch (Exception e)
         {
