@@ -229,6 +229,11 @@ internal class ApplicationDbContext : DbContext
             .HasMaxLength(8 * 1024 * 1024);
 
         _ = entity
+            .Property(q => q.ClaimPublicKey)
+            .IsRequired(false)
+            .HasMaxLength(66);
+
+        _ = entity
             .HasOne(q => q.Provider)
             .WithMany()
             .HasForeignKey(q => q.ProviderPubkey)
@@ -245,6 +250,12 @@ internal class ApplicationDbContext : DbContext
 
         _ = entity
             .HasIndex(q => q.Status);
+
+        _ = entity
+            .HasIndex(q => q.ClientAddress);
+
+        _ = entity
+            .HasIndex(q => q.ClaimPublicKey);
 
         this.log.Debug("$");
     }

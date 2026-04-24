@@ -201,7 +201,8 @@ internal class RestApiController : InternalControllerBase
                         if (isPermitted)
                         {
                             swap = await this.swapRepository.InsertReverseAsync(frontendId: frontendId, providerPubkey: providerPk, userIpAddress: userIpAddress,
-                                amountToPaySats: request.InvoiceAmount.Value, amountToReceiveSats: request.ExpectedAmount, claimAddress: request.ClientAddress)
+                                amountToPaySats: request.InvoiceAmount.Value, amountToReceiveSats: request.ExpectedAmount, claimAddress: request.ClientAddress,
+                                claimPublicKey: request.ClaimPublicKey)
                                 .ConfigureAwait(false);
 
                             long prepaymentSats = 2 * provider.MiningFeeReverseSat;
