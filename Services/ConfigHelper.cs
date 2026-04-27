@@ -14,9 +14,6 @@ namespace WhalesExchangeBackend.Services;
 [SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by ASP.NET Core DI as a singleton.")]
 internal class ConfigHelper
 {
-    /// <summary>Key identifier of the application domain setting.</summary>
-    private const string SettingsDomainKey = "Domain";
-
     /// <summary>Key identifier of the database connection string.</summary>
     private const string SettingsConnectionStringKey = "ConnectionString";
 
@@ -41,9 +38,6 @@ internal class ConfigHelper
     /// <summary>Full path to the server's resource folder.</summary>
     public string ResourcesPath { get; }
 
-    /// <summary>Web domain of the application.</summary>
-    public string Domain { get; }
-
     /// <summary>Database connection string.</summary>
     public string ConnectionString { get; }
 
@@ -64,13 +58,6 @@ internal class ConfigHelper
 
         this.ResourcesPath = Path.Combine(this.ServerRoot, "Resources");
         this.log.Debug($"Resource path set to '{this.ResourcesPath}'.");
-
-        // Domain.
-        {
-            string domain = this.GetRequiredString(configuration, SettingsDomainKey);
-            this.Domain = domain;
-            this.log.Debug($"Domain set to '{this.Domain}'.");
-        }
 
         // Connection string.
         {
