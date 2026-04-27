@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json.Serialization;
+using WhalesSecret.TradeScriptLib.Logging;
 
 namespace WhalesExchangeBackend.Services.ElectrumRpc;
 
@@ -51,6 +53,13 @@ internal class ElectrumSwapProvider
     [JsonPropertyName("server_npub")]
     public string Npub { get; }
 
+    /// <summary>Provider's capabilities.</summary>
+    /// <remarks>
+    /// This is a list of strings representing the features supported by the provider. Some providers may not support all features, or even may not announce this information.
+    /// </remarks>
+    [JsonPropertyName("capabilities")]
+    public string[] Capabilities { get; }
+
     /// <summary>
     /// Creates a new instance of the object.
     /// </summary>
@@ -64,8 +73,9 @@ internal class ElectrumSwapProvider
     /// <param name="pubkey">Provider's public key in hexadecimal string format.</param>
     /// <param name="poWBits">Number of proof of work bits in the provider's profile.</param>
     /// <param name="npub">Provider's public key in <c>npub*</c> format.</param>
+    /// <param name="capabilities">Provider's capabilities.</param>
     public ElectrumSwapProvider(decimal percentageFee, long maxAmountForwardSat, long maxAmountReverseSat, long minAmountSat, long swapPrepayment, long miningFeeSat,
-        long timestampSec, string pubkey, int poWBits, string npub)
+        long timestampSec, string pubkey, int poWBits, string npub, string[] capabilities)
     {
         this.PercentageFee = percentageFee;
         this.MaxAmountForwardSat = maxAmountForwardSat;
@@ -77,6 +87,7 @@ internal class ElectrumSwapProvider
         this.Pubkey = pubkey;
         this.PoWBits = poWBits;
         this.Npub = npub;
+        this.Capabilities = capabilities;
     }
 
     /// <inheritdoc/>
@@ -85,7 +96,7 @@ internal class ElectrumSwapProvider
         return string.Format
         (
             CultureInfo.InvariantCulture,
-            "[{0}={1},{2}={3},{4}={5},{6}={7},{8}={9},{10}={11},{12}={13},{14}=`{15}`,{16}={17},{18}=`{19}`]",
+            "[{0}={1},{2}={3},{4}={5},{6}={7},{8}={9},{10}={11},{12}={13},{14}=`{15}`,{16}={17},{18}=`{19}`,{20}=`{21}`]",
             nameof(this.PercentageFee), this.PercentageFee,
             nameof(this.MaxAmountForwardSat), this.MaxAmountForwardSat,
             nameof(this.MaxAmountReverseSat), this.MaxAmountReverseSat,
@@ -95,7 +106,8 @@ internal class ElectrumSwapProvider
             nameof(this.TimestampSec), this.TimestampSec,
             nameof(this.Pubkey), this.Pubkey,
             nameof(this.PoWBits), this.PoWBits,
-            nameof(this.Npub), this.Npub
+            nameof(this.Npub), this.Npub,
+            nameof(this.Capabilities), this.Capabilities.LogJoin()
         );
     }
 }
