@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using WhalesExchangeBackend.SharedLib.Data;
 using WhalesExchangeBackend.SharedLib.Exceptions;
 using WhalesExchangeBackend.SharedLib.Helpers;
+using WhalesSecret.TradeScriptLib.Logging;
 
 namespace WhalesExchangeBackend.Data.Repository;
 
@@ -52,7 +53,7 @@ internal class SwapProviderRepository : RepositoryBase
         this.log.Debug($"* {nameof(pubkey)}='{pubkey}',{nameof(lastSeen)}={lastSeen},{nameof(poWBits)}={poWBits},{nameof(percentageFeeForward)}={percentageFeeForward},{
             nameof(percentageFeeReverse)}={percentageFeeReverse},{nameof(minAmountForwardSat)}={minAmountForwardSat},{nameof(minAmountReverseSat)}={minAmountReverseSat},{
             nameof(maxAmountForwardSat)}={maxAmountForwardSat},{nameof(maxAmountReverseSat)}={maxAmountReverseSat},{nameof(miningFeeForwardSat)}={miningFeeForwardSat},{
-            nameof(minAmountReverseSat)}={minAmountReverseSat},{nameof(serverStartTime)}={serverStartTime},{nameof(capabilities)}='{capabilities}'");
+            nameof(minAmountReverseSat)}={minAmountReverseSat},{nameof(serverStartTime)}={serverStartTime},{nameof(capabilities)}={capabilities.LogJoin()}");
 
         bool result;
         string capStr = string.Join(',', capabilities);
