@@ -112,10 +112,11 @@ internal class SwapProviderFetcher : System.IAsyncDisposable
                         long actualMaxForwardAmountSat = provider.MaxAmountReverseSat;
                         long actualMaxReverseAmountSat = provider.MaxAmountForwardSat;
 
-                        bool isNew = await this.swapProviderRepository.UpsertAsync(provider.Pubkey, lastSeen: lastSeen, provider.PoWBits,
+                        bool isNew = await this.swapProviderRepository.UpsertAsync(pubkey: provider.Pubkey, lastSeen: lastSeen, provider.PoWBits,
                             percentageFeeForward: provider.PercentageFee, percentageFeeReverse: provider.PercentageFee, minAmountForwardSat: provider.MinAmountSat,
                             minAmountReverseSat: provider.MinAmountSat, maxAmountForwardSat: actualMaxForwardAmountSat, maxAmountReverseSat: actualMaxReverseAmountSat,
-                            miningFeeForwardSat: provider.MiningFeeSat, miningFeeReverseSat: provider.MiningFeeSat, this.startTime).ConfigureAwait(false);
+                            miningFeeForwardSat: provider.MiningFeeSat, miningFeeReverseSat: provider.MiningFeeSat, this.startTime, capabilities: provider.Capabilities)
+                            .ConfigureAwait(false);
 
                         if (isNew) this.log.Debug($"New provider pubkey '{provider.Pubkey}' has been added to the database.");
                         else this.log.Debug($"Provider pubkey '{provider.Pubkey}' has been updated in the database.");

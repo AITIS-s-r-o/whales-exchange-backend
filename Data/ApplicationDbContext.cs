@@ -125,6 +125,11 @@ internal class ApplicationDbContext : DbContext
             .IsRequired();
 
         _ = entity
+            .Property(q => q.Capabilities)
+            .IsRequired()
+            .HasMaxLength(256);
+
+        _ = entity
             .HasIndex(q => q.Pubkey);
 
         _ = entity
