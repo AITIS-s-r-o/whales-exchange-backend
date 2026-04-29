@@ -146,6 +146,17 @@ internal class RestApiController : InternalControllerBase
         IActionResult result;
         CreateSwapResponse response;
 
+        if (request.PairId != CreateSwapRequest.SupportedPairIdStr)
+        {
+            string msg = $"Unsupported request pair. Only  '{CreateSwapRequest.SupportedPairIdStr}' is currently supported.";
+            this.log.Error(msg);
+            response = new(msg);
+            result = this.Ok(response);
+
+            this.log.Debug("$<UNSUPPORTED_REQUEST_PAIR>");
+            return result;
+        }
+
         string providerPk = request.PairHash;
         DbSwapProvider? provider;
         try

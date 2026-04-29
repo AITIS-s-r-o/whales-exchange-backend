@@ -22,11 +22,14 @@ internal class CreateSwapRequest
     /// <summary>String identifier of the order side for reverse swaps.</summary>
     public const string ReverseSwapOrderSideStr = "buy";
 
+    /// <summary>Pair ID that is supported.</summary>
+    public const string SupportedPairIdStr = "BTC/BTC";
+
     /// <summary>Either <see cref="ForwardSwapTypeStr"/> or <see cref="ReverseSwapTypeStr"/>.</summary>
     [JsonPropertyName("type")]
     public string Type { get; }
 
-    /// <summary>ID of the assets being swapped. This should be set to <c>BTC/BTC</c>.</summary>
+    /// <summary>ID of the assets being swapped. This should be set to <see cref="SupportedPairIdStr"/>.</summary>
     [JsonPropertyName("pairId")]
     public string PairId { get; }
 
