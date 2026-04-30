@@ -355,10 +355,10 @@ internal class RestApiController : InternalControllerBase
 
         CreateSwapResponse response = new(swapResponse);
 
+        /* TODO
         int requiredConfirmations = this.GetRequiredConfirmationsForAmount(electrumSwapData.OnChainAmountSats);
         int timeoutHeight = (int)electrumSwapData.Locktime - requiredConfirmations - LockupAddressTimeoutBuffer;
 
-        /* TODO
         // Register the lockup address to be monitored by the blockchain data monitor. This will allow us to recognize whether the client paid the expected amount on time.
         // Note that the required amount here needs to include the fees for the on-chain transaction that will claim the funds.
         this.blockchainDataMonitor.RegisterMonitoredAddress(swapId: swap.Id, frontendId: swap.FrontendId, address: electrumSwapData.LockupAddress,

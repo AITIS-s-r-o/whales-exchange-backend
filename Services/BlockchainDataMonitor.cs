@@ -446,8 +446,14 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
                     // Before we propagate the update to the frontend, which will cause the frontend to claim the funding transaction output, we need to start monitoring
                     // the client address.
-                    this.RegisterMonitoredAddress(swapId: swap.Id, frontendId: swap.FrontendId, address: swap.ClientAddress, amountSats: swap.AmountToReceiveSats,
-                        requiredConfirmations: 1, timeoutHeight: swap.TimeoutBlockHeight.Value, isLockupAddress: false);
+                    if (!swap.IsForward)
+                    {
+                        if (swap.ClientAddress is null)
+                            throw new SanityCheckException($"Client address is null for swap ID {swap.Id}.");
+
+                        this.RegisterMonitoredAddress(swapId: swap.Id, frontendId: swap.FrontendId, address: swap.ClientAddress, amountSats: swap.AmountToReceiveSats,
+                            requiredConfirmations: 1, timeoutHeight: swap.TimeoutBlockHeight.Value, isLockupAddress: false);
+                    }
                 }
             }
         }

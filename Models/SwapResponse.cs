@@ -92,12 +92,10 @@ public class SwapResponse
     /// <inheritdoc/>
     public override string ToString()
     {
-        string format = "[{0}=`{1}`,{2}={3},{4}=`{5}`,{6}=`{7}`,{8}=`{9}`,{10}={11},{12}={13},{14}={15},{16}={17},{18}={19},{20}=`{21}`,{22}=`{23}`,{24}=`{25}`,{26}=`{27}`,"
-            + "{28}=`{29}`,{30}=`{31}`]";
         return string.Format
         (
             CultureInfo.InvariantCulture,
-            format,
+            "[{0}=`{1}`,{2}={3},{4}=`{5}`,{6}=`{7}`,{8}=`{9}`,{10}={11},{12}={13},{14}={15},{16}={17},{18}={19},{20}=`{21}`,{22}=`{23}`]",
             nameof(this.Id), this.Id,
             nameof(this.Reverse), this.Reverse,
             nameof(this.Asset), this.Asset,
@@ -108,10 +106,6 @@ public class SwapResponse
             nameof(this.ReceiveAmountSats), this.ReceiveAmountSats,
             nameof(this.OnChainAmountSats), this.OnChainAmountSats,
             nameof(this.ExpectedAmountSats), this.ExpectedAmountSats,
-            nameof(this.Bip21), this.Bip21,
-            nameof(this.Address), this.Address,
-            nameof(this.Preimage), this.Preimage,
-            nameof(this.PrivateKey), this.PrivateKey,
             nameof(this.RedeemScript), this.RedeemScript,
             nameof(this.LockupAddress), this.LockupAddress
         );
