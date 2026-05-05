@@ -178,12 +178,13 @@ internal class ElectrumRpcClient
     /// </summary>
     /// <param name="invoice">Lightning invoice in hex format.</param>
     /// <param name="refundPublicKeyHex">Public key that will be used in the onchain refund transaction for the swap in hex format.</param>
+    /// <param name="onchainAmountSat">Amount the client is supposed to send on-chain in satoshis.</param>
     /// <param name="providerPk">Public key of the swap provider.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns>Information about the initiated forward swap.</returns>
     /// <exception cref="ElectrumRpcException">Thrown when the Electrum server responded with an error.</exception>
     /// <exception cref="OperationFailedException">Thrown when the operation failed except for error returned by the Electrum server.</exception>
-    public async Task<ElectrumSwapData> ForwardSwapAsync(string invoice, string refundPublicKeyHex, string providerPk, CancellationToken cancellationToken)
+    public async Task<ElectrumSwapData> ForwardSwapAsync(string invoice, string refundPublicKeyHex, long onchainAmountSat, string providerPk, CancellationToken cancellationToken)
     {
         this.log.Debug($"* {nameof(invoice)}='{invoice.ToBoundedString()}',{nameof(refundPublicKeyHex)}='{refundPublicKeyHex}',{nameof(providerPk)}='{providerPk}'");
 
@@ -192,6 +193,7 @@ internal class ElectrumRpcClient
             { "invoice", invoice },
             { "refundPublicKey", refundPublicKeyHex },
             { "provider_pk", providerPk },
+            { "onchain_amount_sat", onchainAmountSat },
         };
 
         ElectrumSwapData result = await this.CallAsync<ElectrumSwapData>(method: "wex_forward_swap", parameters, cancellationToken).ConfigureAwait(false);

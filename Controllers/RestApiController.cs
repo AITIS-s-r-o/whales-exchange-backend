@@ -328,8 +328,8 @@ internal class RestApiController : InternalControllerBase
 
         try
         {
-            electrumSwapData = await this.electrumRpcClient.ForwardSwapAsync(invoice: request.Invoice, refundPublicKeyHex: request.RefundPublicKey, providerPk: provider.Pubkey,
-                cancellationToken).ConfigureAwait(false);
+            electrumSwapData = await this.electrumRpcClient.ForwardSwapAsync(invoice: request.Invoice, refundPublicKeyHex: request.RefundPublicKey, amountToPaySats,
+                providerPk: provider.Pubkey, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e)
         {
@@ -395,8 +395,8 @@ internal class RestApiController : InternalControllerBase
             throw new SanityCheckException($"'{nameof(request)}.{nameof(request.ClaimPublicKey)}' is null.");
 
         DbSwap swap = await this.swapRepository.InsertReverseAsync(frontendId: frontendId, providerPubkey: provider.Pubkey, userIpAddress: userIpAddress,
-            amountToPaySats: request.InvoiceAmount.Value, amountToReceiveSats: request.ExpectedAmount, claimAddress: request.ClientAddress,
-            claimPublicKey: request.ClaimPublicKey).ConfigureAwait(false);
+            amountToPaySats: request.InvoiceAmount.Value, amountToReceiveSats: request.ExpectedAmount, claimAddress: request.ClientAddress, claimPublicKey: request.ClaimPublicKey)
+            .ConfigureAwait(false);
 
         long prepaymentSats = 2 * provider.MiningFeeReverseSat;
 
