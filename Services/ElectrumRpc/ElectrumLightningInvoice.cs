@@ -1,8 +1,6 @@
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json.Serialization;
-using WhalesSecret.TradeScriptLib.Logging;
 
 namespace WhalesExchangeBackend.Services.ElectrumRpc;
 
