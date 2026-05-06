@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.Mime;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
@@ -97,7 +98,7 @@ internal class ElectrumRpcClient
         try
         {
             string json = JsonSerializer.Serialize(request, this.jsonOptions);
-            using StringContent content = new(json, Encoding.UTF8, "application/json");
+            using StringContent content = new(json, Encoding.UTF8, MediaTypeNames.Application.Json);
 
             using HttpRequestMessage httpRequest = new(HttpMethod.Post, this.configHelper.ElectrumRpcConfig.Uri)
             {
@@ -132,6 +133,12 @@ internal class ElectrumRpcClient
             this.log.Debug($"JSON RPC requested for method '{method}' failed with exception: {e}");
             this.log.Debug("$<EXCEPTION_ELECTRUM>");
             throw;
+        }
+        catch (JsonException e)
+        {
+            this.log.Debug($"JSON RPC request for method '{method}' failed with exception: {e}");
+            this.log.Debug("$<JSON_EXCEPTION>");
+            throw new OperationFailedException($"JSON exception occurred while calling Electrum RPC method '{method}'.", e);
         }
         catch (Exception e)
         {
@@ -177,7 +184,7 @@ internal class ElectrumRpcClient
     /// Calls Electrum's <c>wex_forward_swap</c> RPC method.
     /// </summary>
     /// <param name="invoice">Lightning invoice in hex format.</param>
-    /// <param name="refundPublicKeyHex">Public key that will be used in the onchain refund transaction for the swap in hex format.</param>
+    /// <param name="refundPublicKeyHex">Public key that will be used in the on-chain refund transaction for the swap in hex format.</param>
     /// <param name="onchainAmountSat">Amount the client is supposed to send on-chain in satoshis.</param>
     /// <param name="providerPk">Public key of the swap provider.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
