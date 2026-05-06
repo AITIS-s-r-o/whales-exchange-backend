@@ -134,14 +134,9 @@ internal class ElectrumRpcClient
             this.log.Debug("$<EXCEPTION_ELECTRUM>");
             throw;
         }
-        catch (JsonException e)
-        {
-            this.log.Debug($"JSON RPC request for method '{method}' failed with exception: {e}");
-            this.log.Debug("$<JSON_EXCEPTION>");
-            throw new OperationFailedException($"JSON exception occurred while calling Electrum RPC method '{method}'.", e);
-        }
         catch (Exception e)
         {
+            this.log.Debug($"Generic exception occurred while processing JSON RPC request for method '{method}': {e}");
             this.log.Debug("$<EXCEPTION>");
             throw new OperationFailedException($"Calling Electrum RPC method '{method}' failed.", e);
         }
