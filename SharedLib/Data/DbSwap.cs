@@ -105,7 +105,7 @@ internal class DbSwap
     /// <remarks>The setter is needed for the serializer.</remarks>
     public string? ClientTxData { get; set; }
 
-    /// <summary>Public key that will be used to claim the on-chain funds in hex format.</summary>
+    /// <summary>Public key that will be used to claim the on-chain funds in hex format, or <c>null</c> if not set yet.</summary>
     /// <remarks>
     /// For forward swaps, this value holds the refund public key which is used to claim the on-chain funds if the provider fails to fulfill the swap. For reverse swaps, this value
     /// holds the claim public key which is used by the client to claim the on-chain funds when the swap is successful.
@@ -160,7 +160,7 @@ internal class DbSwap
     /// <param name="fundingTxData">Funding transaction data in hex format, or <c>null</c> if not funded yet.</param>
     /// <param name="clientTxId">ID of the claim/refund Bitcoin transaction, or <c>null</c> if not yet claimed/refunded.</param>
     /// <param name="clientTxData">Claim/refund Bitcoin transaction data in hex format, or <c>null</c> if not yet claimed/refunded.</param>
-    /// <param name="claimPublicKey">Public key that will be used to claim the on-chain funds in hex format.</param>
+    /// <param name="claimPublicKey">Public key that will be used to claim the on-chain funds in hex format, or <c>null</c> if not set yet.</param>
     /// <param name="paymentHashHex">Payment hash of the client's lightning invoice in hex format, or <c>null</c> for reverse swaps.</param>
     /// <param name="redeemScriptHex">Redeem script of the swap in hex format, or <c>null</c> for reverse swaps.</param>
     /// <param name="provider">Provider of the swap.</param>
