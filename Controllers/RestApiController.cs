@@ -328,7 +328,7 @@ internal class RestApiController : InternalControllerBase
 
         try
         {
-            electrumSwapData = await this.electrumRpcClient.ForwardSwapAsync(invoice: request.Invoice, refundPublicKeyHex: request.RefundPublicKey, amountToPaySats,
+            electrumSwapData = await this.electrumRpcClient.ForwardSwapAsync(invoice: request.Invoice, amountToPaySats, refundPublicKeyHex: request.RefundPublicKey,
                 providerPk: provider.Pubkey, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception e)
