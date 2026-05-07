@@ -117,8 +117,8 @@ internal class SwapUpdate
     {
         return status switch
         {
-            SwapStatus.Created => isForward ? Constants.SwapStatusPendingSwapCreated : Constants.SwapStatusPendingInvoiceSet,
-            SwapStatus.Accepted => isForward ? Constants.SwapStatusPendingSwapCreated : Constants.SwapStatusPendingInvoiceSet,
+            SwapStatus.Created => isForward ? Constants.SwapStatusPendingInvoiceSet : Constants.SwapStatusPendingSwapCreated,
+            SwapStatus.Accepted => isForward ? Constants.SwapStatusPendingInvoiceSet : Constants.SwapStatusPendingSwapCreated,
             SwapStatus.FundingTxCreated => Constants.SwapStatusPendingTransactionMempool,
             SwapStatus.FundingTxConfirmed => Constants.SwapStatusPendingTransactionConfirmed,
             SwapStatus.FundingTxSpent => Constants.SwapStatusSuccessTransactionClaimed,
