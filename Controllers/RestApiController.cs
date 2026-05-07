@@ -316,7 +316,7 @@ internal class RestApiController : InternalControllerBase
 
         string paymentHashHex = decodedInvoice.PaymentHashHex;
 
-        long percentageFee = (long)(provider.PercentageFeeForward / 100m * request.ExpectedAmount);
+        long percentageFee = (long)Math.Ceiling(provider.PercentageFeeForward / 100m * request.ExpectedAmount);
         long miningFee = provider.MiningFeeForwardSat;
         long amountToPaySats = request.ExpectedAmount + percentageFee + miningFee;
 
