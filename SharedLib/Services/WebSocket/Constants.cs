@@ -43,10 +43,10 @@ internal static class Constants
     /// <summary>Name of the pending swap status when the swap was created.</summary>
     public const string SwapStatusPendingSwapCreated = "swap.created";
 
-    /// <summary>Name of the pending swap status when the client confirmed the swap.</summary>
+    /// <summary>Name of the pending swap status when the funding Bitcoin transaction of a reverse swap is confirmed.</summary>
     public const string SwapStatusPendingTransactionConfirmed = "transaction.confirmed";
 
-    /// <summary>Name of the pending swap status when the Bitcoin transaction is seen in a mempool by the client.</summary>
+    /// <summary>Name of the pending swap status when the funding Bitcoin transaction of a reverse swap is seen in a mempool.</summary>
     public const string SwapStatusPendingTransactionMempool = "transaction.mempool";
 
     /// <summary>Name of the pending swap status when the zero-confirmation Bitcoin transaction has been rejected.</summary>
@@ -55,10 +55,10 @@ internal static class Constants
     /// <summary>Name of the pending swap status when the claim Bitcoin transaction is pending.</summary>
     public const string SwapStatusPendingTransactionClaimPending = "transaction.claim.pending";
 
-    /// <summary>Name of the pending swap status when the Bitcoin transaction is seen in a mempool by the server.</summary>
+    /// <summary>Name of the pending swap status when the funding Bitcoin transaction of a forward swap is seen in a mempool.</summary>
     public const string SwapStatusPendingTransactionServerMempool = "transaction.server.mempool";
 
-    /// <summary>Name of the pending swap status when the server confirmed the swap.</summary>
+    /// <summary>Name of the pending swap status when the funding Bitcoin transaction of a forward swap is confirmed.</summary>
     public const string SwapStatusPendingTransactionServerConfirmed = "transaction.server.confirmed";
 
     /// <summary>Name of the failed swap status when the swap was rejected by the swap provider.</summary>
