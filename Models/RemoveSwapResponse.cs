@@ -1,3 +1,4 @@
+using System.Globalization;
 using WhalesExchangeBackend.Controllers;
 
 namespace WhalesExchangeBackend.Models;
@@ -22,5 +23,17 @@ internal class RemoveSwapResponse : RestResponseBase
     public RemoveSwapResponse(string error) :
         base(success: false, data: null, error)
     {
+    }
+
+    /// <inheritdoc/>
+    public override string ToString()
+    {
+        return string.Format
+        (
+            CultureInfo.InvariantCulture,
+            "[{0}={1},{2}=`{3}`]",
+            nameof(this.Success), this.Success,
+            nameof(this.Error), this.Error
+        );
     }
 }
