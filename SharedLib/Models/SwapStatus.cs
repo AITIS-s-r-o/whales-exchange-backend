@@ -32,6 +32,9 @@ internal enum SwapStatus
     /// <summary>Error occurred before the request was accepted. This includes unreachable provider, or provider actively rejecting the swap.</summary>
     ProviderErrorNotAccepted = 101,
 
+    /// <summary>The client failed to create the funding transaction before expiration.</summary>
+    ClientErrorFundingTxNotCreated = 203,
+
     /// <summary>Client failed to spend the funding transaction before expiration.</summary>
     ClientErrorFundingTxNotSpent = 206,
 
@@ -40,6 +43,11 @@ internal enum SwapStatus
 
     /// <summary>Either the user did not pay both invoices, or the provider failed to create the funding transaction before expiration.</summary>
     ErrorFundingTxNotCreated = 303,
+
+    /// <summary>
+    /// Either the user did not complete the lightning payment, or the provider did not send it, or the provider failed to spend the funding transaction before expiration.
+    /// </summary>
+    ErrorFundingTxNotSpent = 306,
 
     /// <summary>Status of the swap cannot be determined.</summary>
     Unknown = 999,

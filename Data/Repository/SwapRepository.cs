@@ -501,7 +501,18 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
             DbSwap? dbRecord = await db.Swaps.FindAsync(swapId).ConfigureAwait(false);
             if (dbRecord is not null)
             {
-                SwapStatus newStatus = isFundingTransaction ? SwapStatus.ErrorFundingTxNotCreated : SwapStatus.ClientErrorFundingTxNotSpent;
+                // In case of a forward swap, the funding on-chain Bitcoin transaction is created by the client, so if it is not created within the expected time, it is a client
+                // error. In case of a reverse swap, the funding on-chain Bitcoin transaction is created by the swap provider, so if it is not created within the expected time,
+                // it is a provider error.
+                //
+                // In case of a forward swap, claiming the funding transcation output is the responsibility of the swap provider, but the fault cannot be assigned to the provider
+                // because it may also be the case that the client did not reveal the preimage by completing the lightning payment, or it could be the case that the provider did
+                // not even initiate this lightning payment. In case of a reverse swap, claiming the funding transcation output is the responsibility of the client, so if it is
+                // not claimed within the expected time, it is a client error.
+                SwapStatus newStatus = dbRecord.IsForward
+                    ? (isFundingTransaction ? SwapStatus.ClientErrorFundingTxNotCreated : SwapStatus.ErrorFundingTxNotSpent)
+                    : (isFundingTransaction ? SwapStatus.ErrorFundingTxNotCreated : SwapStatus.ClientErrorFundingTxNotSpent);
+
                 if (isFundingTransaction && (dbRecord.Status != SwapStatus.Accepted))
                 {
                     throw new SanityCheckException($"Changing status of swap ID {swapId} to {newStatus} requires the swap status to be in {
