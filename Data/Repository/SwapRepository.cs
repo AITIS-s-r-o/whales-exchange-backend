@@ -92,7 +92,7 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
             }
 
             DateTime now = DateTime.UtcNow;
-            DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, isForward: false, SwapStatus.Created, amountToPaySats: amountToPaySats,
+            DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, isForward: true, SwapStatus.Created, amountToPaySats: amountToPaySats,
                 amountToReceiveSats: amountToReceiveSats, clientAddress: null, lockupAddress: null, lockupOutputIndex: null, fundingTxId: null, timeoutBlockHeight: null,
                 createdTime: now, acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, fundingTxData: null, clientTxId: null, clientTxData: null,
                 claimPublicKey: refundPublicKeyHex, paymentHashHex: paymentHashHex, redeemScriptHex: null, dbSwapProvider);
