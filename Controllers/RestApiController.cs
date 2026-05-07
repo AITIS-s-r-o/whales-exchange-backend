@@ -514,7 +514,7 @@ internal class RestApiController : InternalControllerBase
         }
         else
         {
-            this.log.Debug($"Unable to get swap status of swap frontend ID '{frontendId}'.");
+            this.log.Debug($"Unable to get swap frontend ID '{frontendId}'.");
 
             GetSwapStatusResponse response = new(status: null, failureReason: null, transaction: null, error: $"Could not find swap with ID '{frontendId}'.");
             result = this.NotFound(response);
