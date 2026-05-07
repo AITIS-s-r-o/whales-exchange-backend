@@ -57,15 +57,21 @@ internal class SwapUpdate
         string? failureReason = null;
         SwapStatusTransaction? transaction = null;
 
+        status = FrontendStatusFromSwapStatus(swap.IsForward, swap.Status);
+
         if (swap.IsForward)
         {
-            // TODO
-            status = Constants.SwapStatusUnknown;
+            switch (swap.Status)
+            {
+                case SwapStatus.ProviderErrorNotAccepted:
+                {
+                    failureReason = "Client's swap request has not been accepted by the selected swap provider.";
+                    break;
+                }
+            }
         }
         else
         {
-            status = FrontendStatusFromSwapStatus(swap.Status);
-
             switch (swap.Status)
             {
                 case SwapStatus.FundingTxCreated:
@@ -104,14 +110,15 @@ internal class SwapUpdate
     /// <summary>
     /// Converts <see cref="SwapStatus"/> to frontend swap status constant.
     /// </summary>
+    /// <param name="isForward"><c>true</c> if the swap is forward, <c>false</c> if it is reverse.</param>
     /// <param name="status">Swap status to convert.</param>
     /// <returns>Frontend string constant that corresponds to the swap status.</returns>
-    private static string FrontendStatusFromSwapStatus(SwapStatus status)
+    private static string FrontendStatusFromSwapStatus(bool isForward, SwapStatus status)
     {
         return status switch
         {
-            SwapStatus.Created => Constants.SwapStatusPendingSwapCreated,
-            SwapStatus.Accepted => Constants.SwapStatusPendingSwapCreated,
+            SwapStatus.Created => isForward ? Constants.SwapStatusPendingSwapCreated : Constants.SwapStatusPendingInvoiceSet,
+            SwapStatus.Accepted => isForward ? Constants.SwapStatusPendingSwapCreated : Constants.SwapStatusPendingInvoiceSet,
             SwapStatus.FundingTxCreated => Constants.SwapStatusPendingTransactionMempool,
             SwapStatus.FundingTxConfirmed => Constants.SwapStatusPendingTransactionConfirmed,
             SwapStatus.FundingTxSpent => Constants.SwapStatusSuccessTransactionClaimed,
