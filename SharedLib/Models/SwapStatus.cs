@@ -35,6 +35,9 @@ internal enum SwapStatus
     /// <summary>Client failed to spend the funding transaction before expiration.</summary>
     ClientErrorFundingTxNotSpent = 206,
 
+    /// <summary>Client cancelled the swap.</summary>
+    ClientCancelled = 208,
+
     /// <summary>Either the user did not pay both invoices, or the provider failed to create the funding transaction before expiration.</summary>
     ErrorFundingTxNotCreated = 303,
 

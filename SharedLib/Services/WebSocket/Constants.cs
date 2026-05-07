@@ -65,6 +65,10 @@ internal static class Constants
     /// <remarks>Note that this status is not available in the original Boltz implementation.</remarks>
     public const string SwapStatusFailedSwapRejected = "swap.rejected";
 
+    /// <summary>Name of the failed swap status when the swap was cancelled by the client.</summary>
+    /// <remarks>Note that this status is not available in the original Boltz implementation.</remarks>
+    public const string SwapStatusFailedSwapCancelled = "swap.cancelled";
+
     /// <summary>Name of the failed swap status when the swap expired.</summary>
     public const string SwapStatusFailedSwapExpired = "swap.expired";
 

@@ -124,6 +124,7 @@ internal class SwapUpdate
             SwapStatus.FundingTxSpent => Constants.SwapStatusSuccessTransactionClaimed,
             SwapStatus.ProviderErrorNotAccepted => Constants.SwapStatusFailedSwapRejected,
             SwapStatus.ClientErrorFundingTxNotSpent => Constants.SwapStatusFailedSwapRefunded,
+            SwapStatus.ClientCancelled => Constants.SwapStatusFailedSwapCancelled,
             SwapStatus.ErrorFundingTxNotCreated => Constants.SwapStatusFailedTransactionLockupFailed,
             _ => Constants.SwapStatusUnknown,
         };

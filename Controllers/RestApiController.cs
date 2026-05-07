@@ -454,6 +454,7 @@ internal class RestApiController : InternalControllerBase
     /// </summary>
     /// <param name="request">Request to remove a swap.</param>
     /// <returns>Result of the action method.</returns>
+    /// <remarks>We cannot really delete swap from the database, we just mark it as cancelled by the client.</remarks>
     [HttpPost]
     [Route("delete-swap")]
     public async Task<IActionResult> RemoveSwapAsync([FromBody] RemoveSwapRequest request)
@@ -465,7 +466,7 @@ internal class RestApiController : InternalControllerBase
         RemoveSwapResponse response;
         try
         {
-            bool removed = await this.swapRepository.RemoveAsync(request.Id, maximumStatus: SwapStatus.Accepted).ConfigureAwait(false);
+            bool removed = await this.swapRepository.MarkClientCancelledAsync(request.Id, maximumStatus: SwapStatus.Accepted).ConfigureAwait(false);
             if (removed)
             {
                 this.blockchainDataMonitor.UnregisterMonitoredAddressWithFrontendId(request.Id);

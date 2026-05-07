@@ -301,13 +301,13 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     }
 
     /// <summary>
-    /// Removes a swap from the database.
+    /// Marks the swap as cancelled by the client in the database.
     /// </summary>
     /// <param name="frontendId">Frontend ID of the swap.</param>
-    /// <param name="maximumStatus">Maximum status that the swap can have to be included in the removal.</param>
-    /// <returns><c>true</c> if the swap record was deleted from the database, <c>false</c> otherwise.</returns>
+    /// <param name="maximumStatus">Maximum status that the swap can have to be cancelled.</param>
+    /// <returns><c>true</c> if the swap record was cancelled in the database, <c>false</c> otherwise.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
-    public async Task<bool> RemoveAsync(string frontendId, SwapStatus maximumStatus)
+    public async Task<bool> MarkClientCancelledAsync(string frontendId, SwapStatus maximumStatus)
     {
         this.log.Debug($"* {nameof(frontendId)}='{frontendId}',{nameof(maximumStatus)}={maximumStatus}");
 
@@ -318,26 +318,31 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
             using IDisposable dbLocked = await this.dbLock.EnterAsync().ConfigureAwait(false);
             using IDbContextTransaction transaction = db.BeginTransaction();
 
-            int rowsDeleted = await db.Swaps
-                .Where(s => (s.FrontendId == frontendId) && (s.Status <= maximumStatus))
-                .ExecuteDeleteAsync()
+            DbSwap? dbRecord = await db.Swaps
+                .Where(c => c.FrontendId == frontendId)
+                .SingleOrDefaultAsync()
                 .ConfigureAwait(false);
 
-            if (rowsDeleted > 0)
+            if (dbRecord is not null)
             {
-                _ = db.SaveChanges();
-                transaction.Commit();
+                if (dbRecord.Status <= maximumStatus)
+                {
+                    dbRecord.Status = SwapStatus.ClientCancelled;
+                    _ = db.SaveChanges();
+                    transaction.Commit();
 
-                this.log.Debug($"Swap with frontend ID '{frontendId}' has been removed from the database.");
-                result = true;
+                    this.log.Debug($"Swap with frontend ID '{frontendId}' has been marked as cancelled in the database.");
+                    result = true;
+                }
+                else this.log.Debug($"Swap with frontend ID '{frontendId}' has status {dbRecord.Status} and cannot be cancelled.");
             }
-            else this.log.Debug($"Swap with frontend ID '{frontendId}' was not found in the database or could not be deleted.");
+            else this.log.Debug($"Swap with frontend ID '{frontendId}' was not found in the database.");
         }
         catch (Exception e)
         {
-            this.log.Error($"Deleting swap with the frontend ID '{frontendId}' from the database failed with exception: {e}");
+            this.log.Error($"Marking swap with the frontend ID '{frontendId}' as cancelled in the database failed with exception: {e}");
             this.log.Debug("$<DB_EXCEPTION>");
-            throw new DatabaseException($"Deleting swap with the frontend ID '{frontendId}' from the database failed.", e);
+            throw new DatabaseException($"Marking swap with the frontend ID '{frontendId}' as cancelled in the database failed.", e);
         }
 
         this.log.Debug($"$={result}");
