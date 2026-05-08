@@ -18,6 +18,10 @@ internal class AddressHistoryInfo
     [JsonPropertyName("tx_hash")]
     public string TransactionHash { get; }
 
+    /// <summary>Transaction fee in satoshis.</summary>
+    [JsonPropertyName("fee")]
+    public long FeeSats { get; }
+
     /// <summary><c>true</c> if the transaction is in the mempool, <c>false</c> if it has at least one confirmation.</summary>
     [JsonIgnore]
     public bool InMempool
@@ -26,13 +30,15 @@ internal class AddressHistoryInfo
     /// <summary>
     /// Creates a new instance of the object.
     /// </summary>
-    /// <param name="height">Block height of the transaction.</param>
-    /// <param name="transactionId">Transaction ID in hex format.</param>
+    /// <param name="blockHeight">Block height of the transaction.</param>
+    /// <param name="transactionHash">Transaction ID in hex format.</param>
+    /// <param name="feeSats">Transaction fee in satoshis.</param>
     [JsonConstructor]
-    public AddressHistoryInfo(long height, string transactionId)
+    public AddressHistoryInfo(long blockHeight, string transactionHash, long feeSats)
     {
-        this.BlockHeight = height;
-        this.TransactionHash = transactionId;
+        this.BlockHeight = blockHeight;
+        this.TransactionHash = transactionHash;
+        this.FeeSats = feeSats;
     }
 
     /// <inheritdoc/>
@@ -41,9 +47,10 @@ internal class AddressHistoryInfo
         return string.Format
         (
             CultureInfo.InvariantCulture,
-            "[{0}={1},{2}=`{3}`]",
+            "[{0}={1},{2}=`{3}`,{4}={5}]",
             nameof(this.BlockHeight), this.BlockHeight,
-            nameof(this.TransactionHash), this.TransactionHash
+            nameof(this.TransactionHash), this.TransactionHash,
+            nameof(this.FeeSats), this.FeeSats
         );
     }
 }
