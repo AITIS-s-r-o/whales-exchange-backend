@@ -17,7 +17,7 @@ internal class ElectrumTransactionOutput
 
     /// <summary>Value of the output in satoshis.</summary>
     [JsonPropertyName("value_sats")]
-    public ulong ValueSats { get; }
+    public long ValueSats { get; }
 
     /// <summary>Locking script for this output in hex format.</summary>
     [JsonPropertyName("scriptPubKey")]
@@ -30,7 +30,7 @@ internal class ElectrumTransactionOutput
     /// <param name="valueSats">Value of the output in satoshis.</param>
     /// <param name="scriptPubKey">Locking script for this output in hex format.</param>
     [JsonConstructor]
-    public ElectrumTransactionOutput(string address, ulong valueSats, string scriptPubKey)
+    public ElectrumTransactionOutput(string address, long valueSats, string scriptPubKey)
     {
         this.Address = address;
         this.ValueSats = valueSats;

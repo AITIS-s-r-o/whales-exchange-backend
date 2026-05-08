@@ -359,6 +359,30 @@ internal class ElectrumRpcClient
     }
 
     /// <summary>
+    /// Calls Electrum's <c>getaddresshistory</c> RPC method.
+    /// </summary>
+    /// <param name="address">Bitcoin address to query for transaction history.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>List of transaction history entries for the specified address.</returns>
+    /// <exception cref="ElectrumRpcException">Thrown when the Electrum server responded with an error.</exception>
+    /// <exception cref="OperationFailedException">Thrown when the operation failed except for error returned by the Electrum server.</exception>
+    public async Task<ElectrumGetAddressHistoryResponse> GetAddressHistoryAsync(string address, CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(address)}='{address}'");
+
+        Dictionary<string, object> parameters = new()
+        {
+            { "address", address },
+        };
+
+        ElectrumGetAddressHistoryResponse result = await this.CallAsync<ElectrumGetAddressHistoryResponse>(method: "getaddresshistory", parameters, cancellationToken)
+            .ConfigureAwait(false);
+
+        this.log.Debug($"|$|={result.Count}");
+        return result;
+    }
+
+    /// <summary>
     /// Calls Electrum's <c>wex_decode_invoice</c> RPC method.
     /// </summary>
     /// <param name="invoice">Lightning invoice in hex format.</param>

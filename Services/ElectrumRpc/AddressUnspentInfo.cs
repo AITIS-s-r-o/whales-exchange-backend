@@ -12,7 +12,7 @@ internal class AddressUnspentInfo
 {
     /// <summary>Height of the Bitcoin block in which the transaction is included.</summary>
     [JsonPropertyName("height")]
-    public int BlockHeight { get; }
+    public long BlockHeight { get; }
 
     /// <summary>Hash of the transaction.</summary>
     [JsonPropertyName("tx_hash")]
