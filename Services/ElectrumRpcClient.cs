@@ -141,7 +141,7 @@ internal class ElectrumRpcClient
             throw new OperationFailedException($"Calling Electrum RPC method '{method}' failed.", e);
         }
 
-        this.log.Debug($"$={result}");
+        this.log.Debug($"$='{result}'");
         return result;
     }
 
