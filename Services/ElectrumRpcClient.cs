@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -96,7 +97,7 @@ internal class ElectrumRpcClient
         try
         {
             string json = JsonSerializer.Serialize(request, this.jsonOptions);
-            using StringContent content = new(json, Encoding.UTF8, "application/json");
+            using StringContent content = new(json, Encoding.UTF8, MediaTypeNames.Application.Json);
 
             using HttpRequestMessage httpRequest = new(HttpMethod.Post, this.configHelper.ElectrumRpcConfig.Uri)
             {
@@ -128,12 +129,13 @@ internal class ElectrumRpcClient
         }
         catch (ElectrumRpcException e)
         {
-            this.log.Debug($"JSON RPC requested for method '{method}' failed with exception: {e}");
+            this.log.Debug($"JSON RPC request for method '{method}' failed with exception: {e}");
             this.log.Debug("$<EXCEPTION_ELECTRUM>");
             throw;
         }
         catch (Exception e)
         {
+            this.log.Debug($"Generic exception occurred while processing JSON RPC request for method '{method}': {e}");
             this.log.Debug("$<EXCEPTION>");
             throw new OperationFailedException($"Calling Electrum RPC method '{method}' failed.", e);
         }
@@ -322,6 +324,30 @@ internal class ElectrumRpcClient
         ElectrumTransaction result = await this.CallAsync<ElectrumTransaction>(method: "deserialize", parameters, cancellationToken).ConfigureAwait(false);
 
         this.log.Debug($"$='{result}'");
+        return result;
+    }
+
+    /// <summary>
+    /// Calls Electrum's <c>getaddresshistory</c> RPC method.
+    /// </summary>
+    /// <param name="address">Bitcoin address to query for transaction history.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>List of transaction history entries for the specified address.</returns>
+    /// <exception cref="ElectrumRpcException">Thrown when the Electrum server responded with an error.</exception>
+    /// <exception cref="OperationFailedException">Thrown when the operation failed except for error returned by the Electrum server.</exception>
+    public async Task<ElectrumGetAddressHistoryResponse> GetAddressHistoryAsync(string address, CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(address)}='{address}'");
+
+        Dictionary<string, object> parameters = new()
+        {
+            { "address", address },
+        };
+
+        ElectrumGetAddressHistoryResponse result = await this.CallAsync<ElectrumGetAddressHistoryResponse>(method: "getaddresshistory", parameters, cancellationToken)
+            .ConfigureAwait(false);
+
+        this.log.Debug($"|$|={result.Count}");
         return result;
     }
 }
