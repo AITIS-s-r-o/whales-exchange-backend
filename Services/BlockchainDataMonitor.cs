@@ -788,8 +788,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
         lock (this.dataLock)
         {
             MonitoredAddress monitoredAddress = new(swapId: swapId, frontendId: frontendId, address: address, amountSats: amountSats, requiredConfirmations: requiredConfirmations,
-                timeoutHeight: timeoutHeight,
-                monitoringStartedAtHeight: this.blockchainHeight, isLockupAddress: isLockupAddress);
+                timeoutHeight: timeoutHeight, monitoringStartedAtHeight: this.blockchainHeight, isLockupAddress: isLockupAddress);
 
             if (!this.monitoredAddresses.Add(monitoredAddress))
                 throw new SanityCheckException($"Unable to add monitored address '{monitoredAddress}' to the set.");
