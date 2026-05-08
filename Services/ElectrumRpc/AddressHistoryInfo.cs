@@ -12,11 +12,16 @@ internal class AddressHistoryInfo
 {
     /// <summary>Block height of the transaction.</summary>
     [JsonPropertyName("height")]
-    public long Height { get; }
+    public long BlockHeight { get; }
 
     /// <summary>Transaction ID in hex format.</summary>
     [JsonPropertyName("tx_hash")]
-    public ulong TransactionId { get; }
+    public string TransactionHash { get; }
+
+    /// <summary><c>true</c> if the transaction is in the mempool, <c>false</c> if it has at least one confirmation.</summary>
+    [JsonIgnore]
+    public bool InMempool
+        => this.BlockHeight == 0;
 
     /// <summary>
     /// Creates a new instance of the object.
@@ -24,10 +29,10 @@ internal class AddressHistoryInfo
     /// <param name="height">Block height of the transaction.</param>
     /// <param name="transactionId">Transaction ID in hex format.</param>
     [JsonConstructor]
-    public AddressHistoryInfo(long height, ulong transactionId)
+    public AddressHistoryInfo(long height, string transactionId)
     {
-        this.Height = height;
-        this.TransactionId = transactionId;
+        this.BlockHeight = height;
+        this.TransactionHash = transactionId;
     }
 
     /// <inheritdoc/>
@@ -37,8 +42,8 @@ internal class AddressHistoryInfo
         (
             CultureInfo.InvariantCulture,
             "[{0}={1},{2}=`{3}`]",
-            nameof(this.Height), this.Height,
-            nameof(this.TransactionId), this.TransactionId
+            nameof(this.BlockHeight), this.BlockHeight,
+            nameof(this.TransactionHash), this.TransactionHash
         );
     }
 }
