@@ -30,6 +30,9 @@ internal class RestApiController : InternalControllerBase
     /// <summary>Number of satoshis that are considered high enough to justify waiting for two confirmations instead of one.</summary>
     private const long TwoConfirmationAmountThresholdSats = 1_000_000;
 
+    /// <summary>Maximum number of transactions allowed for a reverse swap client address.</summary>
+    private const int MaxReverseSwapClientAddressHistoryLength = 100;
+
     /// <summary>Number of blocks to serve as a safe buffer before for a lockup address timeout scenario.</summary>
     /// <remarks>
     /// When the swap provider publishes the funding transaction with an output paying to the lockup address, the client must be provided with enough time to spend this output
@@ -390,14 +393,38 @@ internal class RestApiController : InternalControllerBase
         if (request.ClaimPublicKey is null)
             throw new SanityCheckException($"'{nameof(request)}.{nameof(request.ClaimPublicKey)}' is null.");
 
+        CreateSwapResult result;
+        ElectrumSwapData electrumSwapData;
+
+        // Before creating the swap, we check the history of the claim address to make sure that we can safely get its history later when we need to monitor it for incoming
+        // transactions. If the address has too many transactions in its history, we may not be able to get the full history because of Electrum server limitations.
+        try
+        {
+            ElectrumGetAddressHistoryResponse historyResponse = await this.electrumRpcClient.GetAddressHistoryAsync(request.ClientAddress, cancellationToken).ConfigureAwait(false);
+            if (historyResponse.Count > MaxReverseSwapClientAddressHistoryLength)
+            {
+                this.log.Debug($"Client address '{request.ClientAddress}' has {historyResponse.Count} > {MaxReverseSwapClientAddressHistoryLength} entries in its history.");
+                result = new(swap: null, new CreateSwapResponse($"Too many entries in the destination address. Use a fresh address instead."));
+
+                this.log.Debug($"$<ADDRESS_REJECTED_TOO_MANY_ENTRIES>='{result}'");
+                return result;
+            }
+        }
+        catch (Exception e)
+        {
+            this.log.Debug($"Exception occurred while checking the history of the client address '{request.ClientAddress}' with Electrum: {e}");
+            result = new(swap: null, new CreateSwapResponse($"Destination address rejected. Try using a fresh address instead."));
+
+            this.log.Debug($"$<ADDRESS_REJECTED_EXCEPTION>='{result}'");
+            return result;
+        }
+
         DbSwap swap = await this.swapRepository.InsertReverseAsync(frontendId: frontendId, providerPubkey: provider.Pubkey, userIpAddress: userIpAddress,
             amountToPaySats: request.InvoiceAmount.Value, amountToReceiveSats: request.ExpectedAmount, claimAddress: request.ClientAddress, claimPublicKey: request.ClaimPublicKey)
             .ConfigureAwait(false);
 
         long prepaymentSats = 2 * provider.MiningFeeReverseSat;
 
-        CreateSwapResult result;
-        ElectrumSwapData electrumSwapData;
         try
         {
             electrumSwapData = await this.electrumRpcClient.ReverseSwapAsync(lnAmountSats: request.InvoiceAmount.Value, onChainAmountSats: request.ExpectedAmount,
