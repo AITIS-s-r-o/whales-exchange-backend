@@ -423,8 +423,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
             //
             // First, we find the index of the oldest transaction that is relevant.
             int firstIndex = -1;
-            bool isLastUtxoInMempool = response[^1].InMempool;
-            if (isLastUtxoInMempool || (response[^1].BlockHeight > monitoredAddress.MonitoringStartedAtHeight))
+            bool isLastTransactionInMempool = response[^1].InMempool;
+            if (isLastTransactionInMempool || (response[^1].BlockHeight > monitoredAddress.MonitoringStartedAtHeight))
             {
                 for (int i = response.Count - 1; i >= 0; i--)
                 {
@@ -515,8 +515,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                     }
                     else
                     {
-                        // If the transaction is confirmed already but we have not refreshed our blockchain height since then, we can take the UTXO block height
-                        // instead of the current blockchain height.
+                        // If the transaction is confirmed already but we have not refreshed our blockchain height since then, we can take the transaction block height instead of
+                        // the current blockchain height.
                         if (historyInfo.BlockHeight > currentBlockHeight)
                             currentBlockHeight = historyInfo.BlockHeight;
 
