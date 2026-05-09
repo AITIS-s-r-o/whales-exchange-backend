@@ -358,7 +358,8 @@ internal class RestApiController : InternalControllerBase
         // Register the lockup address to be monitored by the blockchain data monitor. This will allow us to recognize whether the client paid the expected amount on time.
         // Note that the required amount here needs to include the fees for the on-chain transaction that will claim the funds.
         this.blockchainDataMonitor.RegisterMonitoredAddress(swapId: swap.Id, frontendId: swap.FrontendId, address: electrumSwapData.LockupAddress,
-            amountSats: electrumSwapData.OnChainAmountSats, requiredConfirmations: 1, timeoutHeight: (int)electrumSwapData.Locktime, isLockupAddress: true);
+            amountSats: electrumSwapData.OnChainAmountSats, requiredConfirmations: 1, timeoutHeight: (int)electrumSwapData.Locktime, isLockupAddress: true, monitorSpending: false,
+            fundingTransactionHash: null, fundingOutputIndex: null);
 
         await this.swapRepository.MarkSwapAcceptedAsync(id: swap.Id, electrumSwapData.LockupAddress, timeoutBlockHeight: electrumSwapData.Locktime,
             redeemScriptHex: electrumSwapData.RedeemScriptHex).ConfigureAwait(false);
@@ -433,7 +434,8 @@ internal class RestApiController : InternalControllerBase
         // Register the lockup address to be monitored by the blockchain data monitor. This will allow the client to be notified when the funding transaction is
         // seen and when it gets confirmed. Note that the required amount here needs to include the fees for the on-chain transaction that will claim the funds.
         this.blockchainDataMonitor.RegisterMonitoredAddress(swapId: swap.Id, frontendId: swap.FrontendId, address: electrumSwapData.LockupAddress,
-            amountSats: electrumSwapData.OnChainAmountSats, requiredConfirmations: requiredConfirmations, timeoutHeight: timeoutHeight, isLockupAddress: true);
+            amountSats: electrumSwapData.OnChainAmountSats, requiredConfirmations: requiredConfirmations, timeoutHeight: timeoutHeight, isLockupAddress: true,
+            monitorSpending: false, fundingTransactionHash: null, fundingOutputIndex: null);
 
         await this.swapRepository.MarkSwapAcceptedAsync(id: swap.Id, electrumSwapData.LockupAddress, timeoutBlockHeight: electrumSwapData.Locktime, redeemScriptHex: null)
             .ConfigureAwait(false);

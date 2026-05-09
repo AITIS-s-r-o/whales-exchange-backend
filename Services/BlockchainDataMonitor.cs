@@ -223,13 +223,21 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                 List<MonitoredAddress> monitoredAddressesToRemove = new();
                 foreach (MonitoredAddress monitoredAddress in monitoredAddressesCopy)
                 {
-                    MonitoredAddressActionInfo? actionInfo = await this.CheckAddressUnspentAsync(currentBlockHeight, monitoredAddress, cancellationToken).ConfigureAwait(false);
-                    if (actionInfo is null)
+                    MonitoredAddressActionInfo? actionInfo;
+                    if (monitoredAddress.MonitorSpending)
                     {
-                        // If there is no unspent output for the monitored address, it may be because no transaction has been created yet, or it may be because a transaction
-                        // spending to the monitored address has been created but the output has been spent already. In the latter case, we need to check the full address history
-                        // not to miss the action.
-                        actionInfo = await this.CheckAddressHistoryAsync(currentBlockHeight, monitoredAddress, cancellationToken).ConfigureAwait(false);
+                        actionInfo = await this.CheckAddressHistoryAsync(currentBlockHeight, monitoredAddress, spending: true, cancellationToken).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        actionInfo = await this.CheckAddressUnspentAsync(currentBlockHeight, monitoredAddress, cancellationToken).ConfigureAwait(false);
+                        if (actionInfo is null)
+                        {
+                            // If there is no unspent output for the monitored address, it may be because no transaction has been created yet, or it may be because a transaction
+                            // spending to the monitored address has been created but the output has been spent already. In the latter case, we need to check the full address history
+                            // not to miss the action.
+                            actionInfo = await this.CheckAddressHistoryAsync(currentBlockHeight, monitoredAddress, spending: false, cancellationToken).ConfigureAwait(false);
+                        }
                     }
 
                     if (actionInfo is not null)
@@ -394,11 +402,13 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// </summary>
     /// <param name="currentBlockHeight">Current block height.</param>
     /// <param name="monitoredAddress">Monitored address.</param>
+    /// <param name="spending"><c>true</c> to check for spending transactions, <c>false</c> to check for receiving transactions.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns>Information about monitoring action or <c>null</c> if no matching output is found.</returns>
-    private async Task<MonitoredAddressActionInfo?> CheckAddressHistoryAsync(long currentBlockHeight, MonitoredAddress monitoredAddress, CancellationToken cancellationToken)
+    private async Task<MonitoredAddressActionInfo?> CheckAddressHistoryAsync(long currentBlockHeight, MonitoredAddress monitoredAddress, bool spending,
+        CancellationToken cancellationToken)
     {
-        this.log.Debug($"* {nameof(currentBlockHeight)}={currentBlockHeight},{nameof(monitoredAddress)}='{monitoredAddress}'");
+        this.log.Debug($"* {nameof(currentBlockHeight)}={currentBlockHeight},{nameof(monitoredAddress)}='{monitoredAddress}',{nameof(spending)}={spending}");
 
         MonitoredAddressActionInfo? result = null;
         ElectrumGetAddressHistoryResponse? response = null;
@@ -479,55 +489,53 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
                     int outputIndex = 0;
                     ElectrumTransactionOutput? relevantOutput = null;
-                    for (; outputIndex < transaction.Outputs.Count; outputIndex++)
+                    if (spending)
                     {
-                        ElectrumTransactionOutput output = transaction.Outputs[outputIndex];
-                        if (output.Address == monitoredAddress.Address)
+                        if (monitoredAddress.FundingTransactionHash is null)
+                            throw new SanityCheckException($"Funding transaction hash is null for monitored address '{monitoredAddress}'.");
+
+                        if (monitoredAddress.FundingOutputIndex is null)
+                            throw new SanityCheckException($"Funding output index is null for monitored address '{monitoredAddress}'.");
+
+                        for (int inputIndex = 0; inputIndex < transaction.Inputs.Count; inputIndex++)
                         {
-                            if (output.ValueSats >= monitoredAddress.AmountSats)
+                            ElectrumTransactionInput input = transaction.Inputs[inputIndex];
+                            if ((input.PrevoutHash == monitoredAddress.FundingTransactionHash) && (input.PrevoutIndex == monitoredAddress.FundingOutputIndex))
                             {
-                                this.log.Debug($"Found output creation for monitored address '{monitoredAddress.Address}' with amount {output.ValueSats} satoshis in '{
-                                    historyInfo.TransactionHash}:{outputIndex}'.");
-                                relevantOutput = output;
+                                this.log.Debug($"Found input '{input.PrevoutHash}:{input.PrevoutIndex}' spending from the monitored address '{
+                                    monitoredAddress.Address}' amount {monitoredAddress.AmountSats} satoshis.");
+                                relevantOutput = new(address: monitoredAddress.Address, valueSats: monitoredAddress.AmountSats, scriptPubKey: string.Empty);
+                                outputIndex = input.PrevoutIndex;
                                 break;
                             }
+                        }
+                    }
+                    else
+                    {
+                        for (; outputIndex < transaction.Outputs.Count; outputIndex++)
+                        {
+                            ElectrumTransactionOutput output = transaction.Outputs[outputIndex];
+                            if (output.Address == monitoredAddress.Address)
+                            {
+                                if (output.ValueSats >= monitoredAddress.AmountSats)
+                                {
+                                    this.log.Debug($"Found output creation for monitored address '{monitoredAddress.Address}' with amount {output.ValueSats} satoshis in '{
+                                        historyInfo.TransactionHash}:{outputIndex}'.");
+                                    relevantOutput = output;
+                                    break;
+                                }
 
-                            this.log.Debug($"Value of output '{historyInfo.TransactionHash}:{outputIndex}' is {output.ValueSats} < {
-                                monitoredAddress.AmountSats}. Ignoring and continuing monitoring.");
+                                this.log.Debug($"Value of output '{historyInfo.TransactionHash}:{outputIndex}' is {output.ValueSats} < {
+                                    monitoredAddress.AmountSats}. Ignoring and continuing monitoring.");
+                            }
                         }
                     }
 
                     if (relevantOutput is null)
                         continue;
 
-                    MonitoredAddressAction? action = null;
-                    if (historyInfo.InMempool)
-                    {
-                        if (!monitoredAddress.MempoolActionReported)
-                        {
-                            this.log.Debug($"Monitored address '{monitoredAddress.Address}' received an output with amount {
-                                relevantOutput.ValueSats} satoshis and it has no confirmation yet.");
-
-                            action = MonitoredAddressAction.InMempool;
-                            monitoredAddress.MempoolActionReported = true;
-                        }
-                        else this.log.Debug($"Transaction in mempool has already been reported for monitored address '{monitoredAddress}'.");
-                    }
-                    else
-                    {
-                        // If the transaction is confirmed already but we have not refreshed our blockchain height since then, we can take the UTXO block height
-                        // instead of the current blockchain height.
-                        if (historyInfo.BlockHeight > currentBlockHeight)
-                            currentBlockHeight = historyInfo.BlockHeight;
-
-                        int confirmations = (int)(currentBlockHeight - historyInfo.BlockHeight + 1);
-                        this.log.Debug($"Monitored address '{monitoredAddress.Address}' received an unspent output with amount {
-                            relevantOutput.ValueSats} satoshis at blockchain height {historyInfo.BlockHeight}. Current height is {currentBlockHeight}, so the output has {
-                            confirmations}/{monitoredAddress.RequiredConfirmations} confirmations.");
-
-                        if (confirmations >= monitoredAddress.RequiredConfirmations)
-                            action = MonitoredAddressAction.Confirmed;
-                    }
+                    MonitoredAddressAction? action = this.GetAddressHistoryAction(historyInfo, currentBlockHeight: currentBlockHeight, monitoredAddress,
+                        amount: relevantOutput.ValueSats);
 
                     if (action is not null)
                     {
@@ -541,6 +549,66 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
         }
 
         this.log.Debug($"$='{result}'");
+        return result;
+    }
+
+    /// <summary>
+    /// For the given address history entry, checks whether the transaction matches the monitoring criteria.
+    /// </summary>
+    /// <param name="historyInfo">Monitored address history entry.</param>
+    /// <param name="currentBlockHeight">Current blockchain height.</param>
+    /// <param name="monitoredAddress">The monitored address.</param>
+    /// <param name="amount">Amount associated with the transaction.</param>
+    /// <returns>Detected action on the monitored address, or <c>null</c> if no action occurred.</returns>
+    private MonitoredAddressAction? GetAddressHistoryAction(AddressHistoryInfo historyInfo, long currentBlockHeight, MonitoredAddress monitoredAddress, long amount)
+    {
+        this.log.Debug($"* {nameof(historyInfo)}='{historyInfo}',{nameof(currentBlockHeight)}={currentBlockHeight},{nameof(monitoredAddress)}='{monitoredAddress}',{
+            nameof(amount)}={amount}");
+
+        MonitoredAddressAction? result = null;
+        if (historyInfo.InMempool)
+        {
+            if (!monitoredAddress.MempoolActionReported)
+            {
+                if (monitoredAddress.MonitorSpending)
+                {
+                    this.log.Debug($"Amount {amount} satoshis has been spent from the monitored address '{monitoredAddress.Address}' and it has no confirmation yet.");
+                }
+                else
+                {
+                    this.log.Debug($"Monitored address '{monitoredAddress.Address}' received an output with amount {amount} satoshis and it has no confirmation yet.");
+                }
+
+                result = MonitoredAddressAction.InMempool;
+                monitoredAddress.MempoolActionReported = true;
+            }
+            else this.log.Debug($"Transaction in mempool has already been reported for monitored address '{monitoredAddress}'.");
+        }
+        else
+        {
+            // If the transaction is confirmed already but we have not refreshed our blockchain height since then, we can take the UTXO block height
+            // instead of the current blockchain height.
+            if (historyInfo.BlockHeight > currentBlockHeight)
+                currentBlockHeight = historyInfo.BlockHeight;
+
+            int confirmations = (int)(currentBlockHeight - historyInfo.BlockHeight + 1);
+            if (monitoredAddress.MonitorSpending)
+            {
+                this.log.Debug($"Amount {amount} satoshis has been spent from the monitored address '{monitoredAddress.Address}' at blockchain height {
+                    historyInfo.BlockHeight}. Current height is {currentBlockHeight}, so the new output has {confirmations}/{
+                    monitoredAddress.RequiredConfirmations} confirmations.");
+            }
+            else
+            {
+                this.log.Debug($"Monitored address '{monitoredAddress.Address}' received an unspent output with amount {amount} satoshis at blockchain height {
+                    historyInfo.BlockHeight}. Current height is {currentBlockHeight}, so the output has {confirmations}/{monitoredAddress.RequiredConfirmations} confirmations.");
+            }
+
+            if (confirmations >= monitoredAddress.RequiredConfirmations)
+                result = MonitoredAddressAction.Confirmed;
+        }
+
+        this.log.Debug($"$={result}");
         return result;
     }
 
@@ -607,12 +675,19 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                         if (transactionId is null)
                             throw new SanityCheckException($"Transaction ID is required for action {action}.");
 
+                        if (transactionData is null)
+                            throw new SanityCheckException($"Transaction data is required for action {action}.");
+
                         if (outputIndex is null)
                             throw new SanityCheckException($"Output index is required for action {action}.");
 
                         bool isConfirmed = action == MonitoredAddressAction.Confirmed;
+                        this.log.Debug($"Funding transaction of swap ID {monitoredAddress.SwapId} was {
+                            (action == MonitoredAddressAction.InMempool ? "broadcasted" : "confirmed")}.");
+
                         swap = await this.swapRepository.FundingTransactionSetAsync(monitoredAddress.SwapId, isConfirmed, transactionId: transactionId,
                             outputIndex: outputIndex.Value, transactionData: transactionData).ConfigureAwait(false);
+
                         break;
 
                     case MonitoredAddressAction.Timeout:
@@ -635,16 +710,19 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                     if (swap.TimeoutBlockHeight is null)
                         throw new SanityCheckException($"Timeout block height is null for swap ID {swap.Id}.");
 
-                    // Before we propagate the update to the frontend, which will cause the frontend to claim the funding transaction output, we need to start monitoring
-                    // the client address.
-                    if (!swap.IsForward)
-                    {
-                        if (swap.ClientAddress is null)
-                            throw new SanityCheckException($"Client address is null for swap ID {swap.Id}.");
+                    if (transactionId is null)
+                        throw new SanityCheckException($"Transaction ID is required for action {action}.");
 
-                        this.RegisterMonitoredAddress(swapId: swap.Id, frontendId: swap.FrontendId, address: swap.ClientAddress, amountSats: swap.AmountToReceiveSats,
-                            requiredConfirmations: 1, timeoutHeight: swap.TimeoutBlockHeight.Value, isLockupAddress: false);
-                    }
+                    if (outputIndex is null)
+                        throw new SanityCheckException($"Output index is required for action {action}.");
+
+                    // For forward swap, the only way for us to detect the end of forward swap is to monitor whether the funding transaction locked output has been spent.
+                    // Before the timeout expiration, only swap provider can spend. In that case, we mark the swap as completed successfully.
+                    //
+                    // For reverse swap, before we also want to start monitoring spending of the funding transcation locked output.
+                    this.RegisterMonitoredAddress(swapId: swap.Id, frontendId: swap.FrontendId, address: monitoredAddress.Address, amountSats: swap.AmountToReceiveSats,
+                        requiredConfirmations: 1, timeoutHeight: swap.TimeoutBlockHeight.Value, isLockupAddress: false, monitorSpending: true,
+                        fundingTransactionHash: transactionId, fundingOutputIndex: outputIndex);
                 }
             }
         }
@@ -761,8 +839,9 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
                         if (spendsLockupOutput)
                         {
-                            this.log.Debug($"Swap {swap.Id} was claimed.");
-                            result = await this.swapRepository.ReverseSwapClaimedAsync(monitoredAddress.SwapId, transactionId, transactionData).ConfigureAwait(false);
+                            this.log.Debug($"Swap ID {swap.Id} was claimed.");
+                            result = await this.swapRepository.SwapClaimedAsync(monitoredAddress.SwapId, transactionId: transactionId, transactionData: transactionData)
+                                .ConfigureAwait(false);
                         }
                     }
                 }
@@ -785,17 +864,21 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <param name="requiredConfirmations">Number of confirmations required.</param>
     /// <param name="timeoutHeight">Blockchain height at which the monitoring should timeout.</param>
     /// <param name="isLockupAddress"><c>true</c> if the monitored address is the lockup address in the funding transaction, <c>false</c> if it is the destination address.</param>
-    public void RegisterMonitoredAddress(long swapId, string frontendId, string address, long amountSats, int requiredConfirmations, long timeoutHeight, bool isLockupAddress)
+    /// <param name="monitorSpending"><c>true</c> to monitor sending from the address, <c>false</c> to monitor sending money to the address.</param>
+    /// <param name="fundingTransactionHash">If <paramref name="monitorSpending"/> is true, this contains the hash of the funding transaction; <c>null</c> otherwise.</param>
+    /// <param name="fundingOutputIndex">If <paramref name="monitorSpending"/> is true, this contains the index of the funding output; <c>null</c> otherwise.</param>
+    public void RegisterMonitoredAddress(long swapId, string frontendId, string address, long amountSats, int requiredConfirmations, long timeoutHeight, bool isLockupAddress,
+        bool monitorSpending, string? fundingTransactionHash, int? fundingOutputIndex)
     {
         this.log.Debug($"* {nameof(swapId)}={swapId},{nameof(frontendId)}='{frontendId}',{nameof(address)}='{address}',{nameof(amountSats)}={amountSats},{
-            nameof(requiredConfirmations)}={requiredConfirmations},{
-            nameof(timeoutHeight)}={timeoutHeight},{nameof(isLockupAddress)}={isLockupAddress}");
+            nameof(requiredConfirmations)}={requiredConfirmations},{nameof(timeoutHeight)}={timeoutHeight},{nameof(isLockupAddress)}={isLockupAddress},{
+            nameof(monitorSpending)}={monitorSpending},{nameof(fundingTransactionHash)}='{fundingTransactionHash}',{nameof(fundingOutputIndex)}={fundingOutputIndex}");
 
         lock (this.dataLock)
         {
             MonitoredAddress monitoredAddress = new(swapId: swapId, frontendId: frontendId, address: address, amountSats: amountSats, requiredConfirmations: requiredConfirmations,
-                timeoutHeight: timeoutHeight,
-                monitoringStartedAtHeight: this.blockchainHeight, isLockupAddress: isLockupAddress);
+                timeoutHeight: timeoutHeight, monitoringStartedAtHeight: this.blockchainHeight, isLockupAddress: isLockupAddress, monitorSpending: monitorSpending,
+                fundingTransactionHash: fundingTransactionHash, fundingOutputIndex: fundingOutputIndex);
 
             if (!this.monitoredAddresses.Add(monitoredAddress))
                 throw new SanityCheckException($"Unable to add monitored address '{monitoredAddress}' to the set.");
