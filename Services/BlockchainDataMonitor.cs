@@ -477,6 +477,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                         continue;
                     }
 
+                    // Attempt to find a transaction output used to pay to the monitored transaction the expected amount.
                     int outputIndex = 0;
                     ElectrumTransactionOutput? relevantOutput = null;
                     for (; outputIndex < transaction.Outputs.Count; outputIndex++)
