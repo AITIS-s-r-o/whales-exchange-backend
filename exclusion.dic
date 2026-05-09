@@ -2,6 +2,9 @@ appsettings
 coinbase
 createswap
 deserializer
+getaddresshistory
+getaddressunspent
+gettransaction
 locktime
 mempool
 Mempool
@@ -13,6 +16,7 @@ reversesubmarine
 satoshis
 Sats
 timelock
+txid
 Upsert
 Upserting
 Utxo
