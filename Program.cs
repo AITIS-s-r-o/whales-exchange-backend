@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -57,6 +58,19 @@ public static class Program
                 _ = options.SetDefaultCulture(supportedCultures[0])
                     .AddSupportedCultures(supportedCultures)
                     .AddSupportedUICultures(supportedCultures);
+            });
+
+            // Support for localhost nginx.
+            _ = builder.Services.Configure<ForwardedHeadersOptions>(options =>
+            {
+                options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+                options.KnownIPNetworks.Clear();
+                options.KnownProxies.Clear();
+                options.KnownProxies.Add(IPAddress.Loopback);
+                options.KnownProxies.Add(IPAddress.IPv6Loopback);
+
+                // Support unlimited number of proxies.
+                options.ForwardLimit = null;
             });
 
             _ = builder.Services.AddCors(options =>
@@ -175,6 +189,9 @@ public static class Program
                 // This configuration files contain sensitive information.
                 _ = builder.Configuration.AddJsonFile("config.secret.Release.json", optional: false, reloadOnChange: false);
             }
+
+            // Support nginx reverse proxy.
+            _ = app.UseForwardedHeaders();
 
             // Handle 404 and other non-exception errors.
             _ = app.UseStatusCodePagesWithReExecute("/error/{0}");
