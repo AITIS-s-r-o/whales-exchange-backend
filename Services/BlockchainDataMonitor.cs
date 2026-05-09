@@ -390,7 +390,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     }
 
     /// <summary>
-    /// Checks the history of a monitored address to see if a new transaction has been received.
+    /// Checks the history of a monitored address to see if it was paid or not based on the transaction history.
     /// </summary>
     /// <param name="currentBlockHeight">Current block height.</param>
     /// <param name="monitoredAddress">Monitored address.</param>
