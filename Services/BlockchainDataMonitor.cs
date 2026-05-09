@@ -286,7 +286,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// Checks whether there is an unspent output for the monitored address that matches the monitoring criteria.
     /// </summary>
     /// <param name="currentBlockHeight">Current block height.</param>
-    /// <param name="monitoredAddress">Monitored address which expects a payment.</param>.</param>
+    /// <param name="monitoredAddress">Monitored address which expects a payment.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns>Information about monitoring action or <c>null</c> if no matching output is found.</returns>
     private async Task<MonitoredAddressActionInfo?> CheckAddressUnspentAsync(long currentBlockHeight, MonitoredAddress monitoredAddress, CancellationToken cancellationToken)
@@ -310,8 +310,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
         if ((response is not null) && (response.Count > 0))
         {
-            // Electrum returns unspent outputs sorted by block height in ascending order, so the last one is the newest. However, if the transaction is still in its
-            // mempool, the block height is returned as 0. We can ignore all records with block height prior to monitoring start.
+            // Electrum returns unspent outputs sorted by block height in ascending order, so the last one is the newest. However, if the transaction is still in its mempool,
+            // the block height is returned as 0. We can ignore all records with block height prior to monitoring start.
             bool isLastUtxoInMempool = response[^1].InMempool;
             if (isLastUtxoInMempool || (response[^1].BlockHeight > monitoredAddress.MonitoringStartedAtHeight))
             {
@@ -398,7 +398,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     }
 
     /// <summary>
-    /// Checks the history of a monitored address to see if a new transaction has been received.
+    /// Checks the history of a monitored address to see if a new transaction has been received that pays to it or spends from it.
     /// </summary>
     /// <param name="currentBlockHeight">Current block height.</param>
     /// <param name="monitoredAddress">Monitored address.</param>
@@ -586,8 +586,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
         }
         else
         {
-            // If the transaction is confirmed already but we have not refreshed our blockchain height since then, we can take the UTXO block height
-            // instead of the current blockchain height.
+            // If the transaction is confirmed already but we have not refreshed our blockchain height since then, we can take the transaction block height instead of the current
+            // blockchain height.
             if (historyInfo.BlockHeight > currentBlockHeight)
                 currentBlockHeight = historyInfo.BlockHeight;
 
