@@ -4,7 +4,7 @@ using WhalesSecret.TradeScriptLib.Logging;
 namespace WhalesExchangeBackend.Services.DataProvider;
 
 /// <summary>
-/// Description of the type of action taken on a <see cref="MonitoredAddress"/> together with the source data required for processing the action.
+/// Description of the type of action that occurred on a <see cref="MonitoredAddress"/> together with the source data required for processing the action.
 /// </summary>
 internal class MonitoredAddressActionInfo
 {
@@ -23,7 +23,7 @@ internal class MonitoredAddressActionInfo
     /// <summary>
     /// Creates a new instance of the object.
     /// </summary>
-    /// <param name="action">The type of action taken.</param>
+    /// <param name="action">Type of action.</param>
     /// <param name="transactionHash">Hash of the transaction.</param>
     /// <param name="outputIndex">Index of the relevant output in the transaction.</param>
     /// <param name="transactionData">Raw transaction data in hex format.</param>

@@ -286,7 +286,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// Checks whether there is an unspent output for the monitored address that matches the monitoring criteria.
     /// </summary>
     /// <param name="currentBlockHeight">Current block height.</param>
-    /// <param name="monitoredAddress">Monitored address.</param>
+    /// <param name="monitoredAddress">Monitored address which expects a payment.</param>.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns>Information about monitoring action or <c>null</c> if no matching output is found.</returns>
     private async Task<MonitoredAddressActionInfo?> CheckAddressUnspentAsync(long currentBlockHeight, MonitoredAddress monitoredAddress, CancellationToken cancellationToken)
@@ -398,7 +398,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     }
 
     /// <summary>
-    /// Checks the history of a monitored address to to see if a new transaction has been received.
+    /// Checks the history of a monitored address to see if a new transaction has been received.
     /// </summary>
     /// <param name="currentBlockHeight">Current block height.</param>
     /// <param name="monitoredAddress">Monitored address.</param>
