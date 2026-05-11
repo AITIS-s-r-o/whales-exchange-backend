@@ -234,8 +234,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                         if (actionInfo is null)
                         {
                             // If there is no unspent output for the monitored address, it may be because no transaction has been created yet, or it may be because a transaction
-                            // spending to the monitored address has been created but the output has been spent already. In the latter case, we need to check the full address history
-                            // not to miss the action.
+                            // spending to the monitored address has been created but the output has been spent already. In the latter case, we need to check the full address
+                            // history not to miss the action.
                             actionInfo = await this.CheckAddressHistoryAsync(currentBlockHeight, monitoredAddress, spending: false, cancellationToken).ConfigureAwait(false);
                         }
                     }
@@ -719,7 +719,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                     // For forward swap, the only way for us to detect the end of forward swap is to monitor whether the funding transaction locked output has been spent.
                     // Before the timeout expiration, only swap provider can spend. In that case, we mark the swap as completed successfully.
                     //
-                    // For reverse swap, before we also want to start monitoring spending of the funding transcation locked output.
+                    // For reverse swap, before we also want to start monitoring spending of the funding transaction locked output.
                     this.RegisterMonitoredAddress(swapId: swap.Id, frontendId: swap.FrontendId, address: monitoredAddress.Address, amountSats: swap.AmountToReceiveSats,
                         requiredConfirmations: 1, timeoutHeight: swap.TimeoutBlockHeight.Value, isLockupAddress: false, monitorSpending: true,
                         fundingTransactionHash: transactionId, fundingOutputIndex: outputIndex);
