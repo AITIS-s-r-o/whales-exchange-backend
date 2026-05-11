@@ -36,6 +36,15 @@ internal class MonitoredAddress
     /// <summary><c>true</c> if the monitored address is the lockup address in the funding transaction, <c>false</c> if it is the client address.</summary>
     public bool IsLockupAddress { get; }
 
+    /// <summary><c>true</c> to monitor sending from the address, <c>false</c> to monitor sending money to the address.</summary>
+    public bool MonitorSpending { get; }
+
+    /// <summary>If <see cref="MonitorSpending"/> is true, this contains the hash of the funding transaction; <c>null</c> otherwise.</summary>
+    public string? FundingTransactionHash { get; }
+
+    /// <summary>If <see cref="MonitorSpending"/> is true, this contains the index of the funding transaction output; <c>null</c> otherwise.</summary>
+    public int? FundingOutputIndex { get; }
+
     /// <summary><c>true</c> if the mempool action was already reported, <c>false</c> otherwise.</summary>
     public bool MempoolActionReported
     {
@@ -67,7 +76,11 @@ internal class MonitoredAddress
     /// <param name="timeoutHeight">Blockchain height at which the monitoring should timeout.</param>
     /// <param name="monitoringStartedAtHeight">Blockchain height at which the monitoring started.</param>
     /// <param name="isLockupAddress"><c>true</c> if the monitored address is the lockup address in the funding transaction, <c>false</c> if it is the client address.</param>
-    public MonitoredAddress(long swapId, string frontendId, string address, long amountSats, int requiredConfirmations, long timeoutHeight, int monitoringStartedAtHeight, bool isLockupAddress)
+    /// <param name="monitorSpending"><c>true</c> to monitor sending from the address, <c>false</c> to monitor sending money to the address.</param>
+    /// <param name="fundingTransactionHash">If <paramref name="monitorSpending"/> is true, this contains the hash of the funding transaction; <c>null</c> otherwise.</param>
+    /// <param name="fundingOutputIndex">If <paramref name="monitorSpending"/> is true, this contains the index of the funding transaction output; <c>null</c> otherwise.</param>
+    public MonitoredAddress(long swapId, string frontendId, string address, long amountSats, int requiredConfirmations, long timeoutHeight, int monitoringStartedAtHeight,
+        bool isLockupAddress, bool monitorSpending, string? fundingTransactionHash, int? fundingOutputIndex)
     {
         this.statusLock = new();
         this.SwapId = swapId;
@@ -78,6 +91,9 @@ internal class MonitoredAddress
         this.TimeoutHeight = timeoutHeight;
         this.MonitoringStartedAtHeight = monitoringStartedAtHeight;
         this.IsLockupAddress = isLockupAddress;
+        this.MonitorSpending = monitorSpending;
+        this.FundingTransactionHash = fundingTransactionHash;
+        this.FundingOutputIndex = fundingOutputIndex;
     }
 
     /// <inheritdoc/>
@@ -86,7 +102,7 @@ internal class MonitoredAddress
         return string.Format
         (
             CultureInfo.InvariantCulture,
-            "[{0}={1},{2}=`{3}`,{4}=`{5}`,{6}={7},{8}={9},{10}={11},{12}={13},{14}={15},{16}={17}]",
+            "[{0}={1},{2}=`{3}`,{4}=`{5}`,{6}={7},{8}={9},{10}={11},{12}={13},{14}={15},{16}={17},{18}={19},{20}=`{21}`,{22}={23}]",
             nameof(this.SwapId), this.SwapId,
             nameof(this.FrontendId), this.FrontendId,
             nameof(this.Address), this.Address,
@@ -95,7 +111,10 @@ internal class MonitoredAddress
             nameof(this.TimeoutHeight), this.TimeoutHeight,
             nameof(this.MonitoringStartedAtHeight), this.MonitoringStartedAtHeight,
             nameof(this.IsLockupAddress), this.IsLockupAddress,
-            nameof(this.MempoolActionReported), this.MempoolActionReported
+            nameof(this.MonitorSpending), this.MonitorSpending,
+            nameof(this.MempoolActionReported), this.MempoolActionReported,
+            nameof(this.FundingTransactionHash), this.FundingTransactionHash,
+            nameof(this.FundingOutputIndex), this.FundingOutputIndex
         );
     }
 }

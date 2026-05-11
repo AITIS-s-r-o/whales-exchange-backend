@@ -26,7 +26,7 @@ internal enum SwapStatus
     /// <summary>Funding transaction has enough confirmations for the client to proceed.</summary>
     FundingTxConfirmed = 5,
 
-    /// <summary>Client spent the funding transaction output.</summary>
+    /// <summary>Client or swap server spent the funding transaction output.</summary>
     FundingTxSpent = 7,
 
     /// <summary>Error occurred before the request was accepted. This includes unreachable provider, or provider actively rejecting the swap.</summary>

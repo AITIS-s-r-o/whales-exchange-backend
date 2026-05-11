@@ -556,7 +556,7 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     /// <param name="transactionData">Raw transaction data in hex format, or <c>null</c> if not available.</param>
     /// <returns>Update swap database record, or <c>null</c> if the swap ID was not found in the database.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
-    public async Task<DbSwap?> ReverseSwapClaimedAsync(long swapId, string transactionId, string transactionData)
+    public async Task<DbSwap?> SwapClaimedAsync(long swapId, string transactionId, string transactionData)
     {
         this.log.Debug($"* {nameof(swapId)}={swapId},{nameof(transactionId)}='{transactionId}',{nameof(transactionData)}='{transactionData.ToBoundedString()}'");
 
