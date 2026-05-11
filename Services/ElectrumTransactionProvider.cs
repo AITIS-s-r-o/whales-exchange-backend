@@ -67,7 +67,7 @@ internal class ElectrumTransactionProvider : IAsyncDisposable
 
         if (this.transactionsCache.TryGetValue(transactionId, out ElectrumTransactionWithData? result))
         {
-            this.log.Debug($"$<CHACHED>='{result}'");
+            this.log.Debug($"$<CACHED>='{result}'");
             return result;
         }
 
