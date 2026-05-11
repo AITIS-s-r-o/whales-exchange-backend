@@ -20,7 +20,7 @@ public class SwapResponse
     [JsonPropertyName("asset")]
     public string Asset { get; }
 
-    /// <summary>Lightning invoice for the swap, or <c>null</c> if not set.</summary>
+    /// <summary>Lightning invoice for the swap, or <c>null</c> for forward swaps.</summary>
     [JsonPropertyName("invoice")]
     public string? Invoice { get; }
 
@@ -62,7 +62,7 @@ public class SwapResponse
     /// <param name="id">Unique identifier for the swap.</param>
     /// <param name="reverse"><c>true</c> if this is a reverse swap (LN → BTC), <c>false</c> if submarine (BTC -> LN).</param>
     /// <param name="asset">Asset being used.</param>
-    /// <param name="invoice">Lightning invoice for the swap, or <c>null</c> if not set.</param>
+    /// <param name="invoice">Lightning invoice for the swap, or <c>null</c> for forward swaps.</param>
     /// <param name="feeInvoice">Lightning invoice for the provider's fees, or <c>null</c> if not set.</param>
     /// <param name="timeoutBlockHeight">Block height after which the swap times out and refund becomes possible.</param>
     /// <param name="sendAmountSats">Amount the user is sending in satoshis.</param>
