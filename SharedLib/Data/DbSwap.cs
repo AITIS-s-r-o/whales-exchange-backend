@@ -42,7 +42,10 @@ internal class DbSwap
     public long AmountToReceiveSats { get; set; }
 
     /// <summary>Claim address for reverse swaps, refund address for forward swaps, or <c>null</c> if not set yet.</summary>
-    /// <remarks>The setter is needed for the serializer.</remarks>
+    /// <remarks>
+    /// In case of forward swaps, the value is <c>null</c> until refund is requested by the client. In case of reverse swaps, the value is the client's Bitcoin address from
+    /// the beginning.
+    /// <para>The setter is needed for the serializer.</para></remarks>
     public string? ClientAddress { get; set; }
 
     /// <summary>Bitcoin address to which the reverse swap funding Bitcoin transaction spends the funds to be claimed by the client, or <c>null</c> for forward swaps.</summary>

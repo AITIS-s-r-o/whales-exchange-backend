@@ -33,7 +33,7 @@ internal class ElectrumLightningInvoice
     /// <param name="amountMsat">Amount in millisatoshis.</param>
     /// <param name="paymentHashHex">Payment hash of the invoice in hex format.</param>
     /// <param name="createTime">UNIX timestamp in seconds when the invoice was created.</param>
-    /// <param name="expirySeconds">Number of seconds until the invoice expires after <see cref="CreateTime"/>.</param>
+    /// <param name="expirySeconds">Number of seconds until the invoice expires after <paramref name="createTime"/>.</param>
     public ElectrumLightningInvoice(long amountMsat, string paymentHashHex, long createTime, long expirySeconds)
     {
         this.AmountMsat = amountMsat;
