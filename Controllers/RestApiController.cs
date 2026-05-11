@@ -255,10 +255,6 @@ internal class RestApiController : InternalControllerBase
         if (frontendId is not null)
             _ = this.swapLimitChecker.UnregisterSwap(frontendId);
 
-        if (failed && (swap is not null))
-        {
-        }
-
         result = this.Ok(response);
 
         this.log.Debug("$");
