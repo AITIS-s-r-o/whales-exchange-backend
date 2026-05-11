@@ -56,11 +56,11 @@ internal class CreateSwapRequest
     [JsonPropertyName("preimageHash")]
     public string PreimageHash { get; }
 
-    /// <summary>Public key that will be used to claim the on-chain funds, or <c>null</c> for forward swaps.</summary>
+    /// <summary>Public key in hex that will be used to claim the on-chain funds, or <c>null</c> for forward swaps.</summary>
     [JsonPropertyName("claimPublicKey")]
     public string? ClaimPublicKey { get; }
 
-    /// <summary>Public key that will be used for the refund of the on-chain funds if a forward swap fails, or <c>null</c> for reverse swaps.</summary>
+    /// <summary>Public key in hex that will be used for the refund of the on-chain funds if a forward swap fails, or <c>null</c> for reverse swaps.</summary>
     [JsonPropertyName("refundPublicKey")]
     public string? RefundPublicKey { get; }
 

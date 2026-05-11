@@ -301,13 +301,18 @@ internal class RestApiController : InternalControllerBase
 
         if (expiryTime <= DateTime.UtcNow)
         {
+            this.log.Debug($"Provided invoice has expired at {expiryTime}.");
+
             result = new(swap: null, new CreateSwapResponse("Provided invoice has expired."));
             this.log.Debug($"$<EXPIRED>='{result}'");
             return result;
         }
 
-        if (request.ExpectedAmount != decodedInvoice.AmountMsat / 1000)
+        long invoiceAmount = decodedInvoice.AmountMsat / 1000;
+        if (request.ExpectedAmount != invoiceAmount)
         {
+            this.log.Debug($"Provided invoice amount {invoiceAmount} does not match expected amount {request.ExpectedAmount}.");
+
             result = new(swap: null, new CreateSwapResponse("Provided invoice amount does not match expected amount."));
             this.log.Debug($"$<INVALID_AMOUNT>='{result}'");
             return result;
