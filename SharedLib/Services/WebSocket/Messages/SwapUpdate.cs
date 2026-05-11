@@ -53,11 +53,10 @@ internal class SwapUpdate
     {
         string frontendId = swap.FrontendId;
 
-        string status;
         string? failureReason = null;
         SwapStatusTransaction? transaction = null;
 
-        status = FrontendStatusFromSwapStatus(swap.IsForward, swap.Status);
+        string status = FrontendStatusFromSwapStatus(swap.IsForward, swap.Status);
 
         if (swap.IsForward)
         {
