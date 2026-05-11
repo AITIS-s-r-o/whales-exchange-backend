@@ -444,10 +444,16 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                     if (swap.TimeoutBlockHeight is null)
                         throw new SanityCheckException($"Timeout block height is null for swap ID {swap.Id}.");
 
-                    // Before we propagate the update to the frontend, which will cause the frontend to claim the funding transaction output, we need to start monitoring
-                    // the client address.
-                    this.RegisterMonitoredAddress(swapId: swap.Id, frontendId: swap.FrontendId, address: swap.ClientAddress, amountSats: swap.AmountToReceiveSats,
-                        requiredConfirmations: 1, timeoutHeight: swap.TimeoutBlockHeight.Value, isLockupAddress: false);
+                    if (!swap.IsForward)
+                    {
+                        if (swap.ClientAddress is null)
+                            throw new SanityCheckException($"Client address is null for swap ID {swap.Id}.");
+
+                        // Before we propagate the update to the frontend, which will cause the frontend to claim the funding transaction output, we need to start monitoring
+                        // the client address.
+                        this.RegisterMonitoredAddress(swapId: swap.Id, frontendId: swap.FrontendId, address: swap.ClientAddress, amountSats: swap.AmountToReceiveSats,
+                            requiredConfirmations: 1, timeoutHeight: swap.TimeoutBlockHeight.Value, isLockupAddress: false);
+                    }
                 }
             }
         }
@@ -597,8 +603,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
         lock (this.dataLock)
         {
             MonitoredAddress monitoredAddress = new(swapId: swapId, frontendId: frontendId, address: address, amountSats: amountSats, requiredConfirmations: requiredConfirmations,
-                timeoutHeight: timeoutHeight,
-                monitoringStartedAtHeight: this.blockchainHeight, isLockupAddress: isLockupAddress);
+                timeoutHeight: timeoutHeight, monitoringStartedAtHeight: this.blockchainHeight, isLockupAddress: isLockupAddress);
 
             if (!this.monitoredAddresses.Add(monitoredAddress))
                 throw new SanityCheckException($"Unable to add monitored address '{monitoredAddress}' to the set.");

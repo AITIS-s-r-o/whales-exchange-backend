@@ -29,13 +29,104 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     }
 
     /// <summary>
+    /// Inserts or a new forward swap to the database.
+    /// </summary>
+    /// <param name="frontendId">Frontend ID of the swap.</param>
+    /// <param name="providerPubkey">Public key of the swap provider as a hex string.</param>
+    /// <param name="userIpAddress">Remote IP address of the user.</param>
+    /// <param name="amountToPaySats">Amount the client should pay (including all fees) in satoshis.</param>
+    /// <param name="amountToReceiveSats">Amount the client should receive in satoshis.</param>
+    /// <param name="refundPublicKeyHex">Public key that will be used for the refund of the on-chain funds if a swap fails in hex format.</param>
+    /// <param name="invoice">Lightning invoice that the swap provider will pay.</param>
+    /// <param name="paymentHashHex">Payment hash of the lightning invoice in hex format.</param>
+    /// <returns>Newly created database record.</returns>
+    /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
+    /// <exception cref="OperationFailedException">Thrown when the swap parameters are invalid.</exception>
+    internal async Task<DbSwap> InsertForwardAsync(string frontendId, string providerPubkey, string userIpAddress, long amountToPaySats, long amountToReceiveSats,
+        string refundPublicKeyHex, string invoice, string paymentHashHex)
+    {
+        this.log.Debug($"* {nameof(frontendId)}='{frontendId}',{nameof(providerPubkey)}='{providerPubkey}',{nameof(userIpAddress)}='{userIpAddress}',{
+            nameof(amountToPaySats)}={amountToPaySats},{nameof(amountToReceiveSats)}={amountToReceiveSats},{nameof(refundPublicKeyHex)}='{refundPublicKeyHex}',{
+            nameof(invoice)}='{invoice}',{nameof(paymentHashHex)}='{paymentHashHex}'");
+
+        DbSwap result;
+        try
+        {
+            using ApplicationDbContext db = this.dbContextFactory.CreateDbContext();
+            using IDisposable dbLocked = await this.dbLock.EnterAsync().ConfigureAwait(false);
+            using IDbContextTransaction transaction = db.BeginTransaction();
+
+            DbSwapProvider? dbSwapProvider = await db.SwapProviders.FindAsync(providerPubkey).ConfigureAwait(false);
+            if (dbSwapProvider is null)
+            {
+                this.log.Error($"Provider with pubkey '{providerPubkey}' was not found in the database.");
+                this.log.Debug("$<PROVIDER_NOT_FOUND>");
+                throw new DatabaseException($"Inserting a new forward swap to the database failed because the swap provider with pubkey '{
+                    providerPubkey}' was not found in the database.");
+            }
+
+            // We do not allow:
+            // - more than one incomplete swap with the same refund key, or
+            // - more than one swap with the same payment hash.
+            DbSwap? existingSwap = await db.Swaps
+                .FirstOrDefaultAsync(c => ((c.ClaimPublicKey == refundPublicKeyHex) && (c.Status < SwapStatus.FundingTxSpent))
+                    || (c.PaymentHashHex == paymentHashHex))
+                .ConfigureAwait(false);
+            if (existingSwap is not null)
+            {
+                string message;
+
+                if (existingSwap.PaymentHashHex == paymentHashHex)
+                {
+                    this.log.Debug($"Existing swap ID {existingSwap.Id} already used payment hash '{paymentHashHex}'.");
+                    message = "Payment hash must not be reused.";
+                }
+                else
+                {
+                    this.log.Debug($"Existing swap ID {existingSwap.Id} has not completed yet and is using the refund public key '{refundPublicKeyHex}'.");
+                    message = "A swap with the same refund public key already exists. Use a fresh refund address, or wait for the existing swap to complete.";
+                }
+
+                this.log.Debug("$<SWAP_EXISTS>");
+                throw new OperationFailedException(message);
+            }
+
+            DateTime now = DateTime.UtcNow;
+            DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, isForward: true, SwapStatus.Created, amountToPaySats: amountToPaySats,
+                amountToReceiveSats: amountToReceiveSats, clientAddress: null, lockupAddress: null, lockupOutputIndex: null, fundingTxId: null, timeoutBlockHeight: null,
+                createdTime: now, acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, fundingTxData: null, clientTxId: null, clientTxData: null,
+                claimPublicKey: refundPublicKeyHex, paymentHashHex: paymentHashHex, redeemScriptHex: null, dbSwapProvider);
+
+            _ = db.Swaps.Add(dbRecord);
+            _ = db.SaveChanges();
+            transaction.Commit();
+
+            result = dbRecord;
+            this.log.Debug($"Reverse swap ID {result.Id} through provider '{providerPubkey}' has been added to the database.");
+        }
+        catch (OperationFailedException)
+        {
+            throw;
+        }
+        catch (Exception e)
+        {
+            this.log.Error($"Inserting a new reverse swap to the database failed with exception: {e}");
+            this.log.Debug("$<DB_EXCEPTION>");
+            throw new DatabaseException("Inserting a new reverse swap to the database failed.", e);
+        }
+
+        this.log.Debug($"$={result}");
+        return result;
+    }
+
+    /// <summary>
     /// Inserts or a new reverse swap to the database.
     /// </summary>
     /// <param name="frontendId">Frontend ID of the swap.</param>
     /// <param name="providerPubkey">Public key of the swap provider as a hex string.</param>
     /// <param name="userIpAddress">Remote IP address of the user.</param>
-    /// <param name="amountToPaySats">Amount the client paid or should pay (including all fees) in satoshis.</param>
-    /// <param name="amountToReceiveSats">Amount the client received or should receive in satoshis.</param>
+    /// <param name="amountToPaySats">Amount the client should pay (including all fees) in satoshis.</param>
+    /// <param name="amountToReceiveSats">Amount the client should receive in satoshis.</param>
     /// <param name="claimAddress">Bitcoin address that will be used to claim the on-chain funds.</param>
     /// <param name="claimPublicKey">Public key that will be used to claim the on-chain funds in hex format.</param>
     /// <returns>Newly created database record.</returns>
@@ -94,7 +185,7 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
             DbSwap dbRecord = new(id: 0, frontendId: frontendId, providerPubkey: providerPubkey, isForward: false, SwapStatus.Created, amountToPaySats: amountToPaySats,
                 amountToReceiveSats: amountToReceiveSats, clientAddress: claimAddress, lockupAddress: null, lockupOutputIndex: null, fundingTxId: null, timeoutBlockHeight: null,
                 createdTime: now, acceptedTime: null, fundingTime: null, spentTime: null, failTime: null, fundingTxData: null, clientTxId: null, clientTxData: null,
-                claimPublicKey: claimPublicKey, dbSwapProvider);
+                claimPublicKey: claimPublicKey, paymentHashHex: null, redeemScriptHex: null, dbSwapProvider);
 
             _ = db.Swaps.Add(dbRecord);
             _ = db.SaveChanges();
@@ -119,16 +210,18 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     }
 
     /// <summary>
-    /// Marks the given swap as accepted in the database and sets the lockup address for the reverse swap.
+    /// Marks the given swap as accepted in the database and sets the lockup address and redeem script, if applicable.
     /// </summary>
     /// <param name="id">ID of the swap.</param>
-    /// <param name="lockupAddress">Lockup address for the reverse swap, or <c>null</c> for forward swap.</param>
+    /// <param name="lockupAddress">Lockup address for the reverse swap.</param>
     /// <param name="timeoutBlockHeight">Block height after which the swap is considered expired.</param>
+    /// <param name="redeemScriptHex">Redeem script of the swap in hex format, or <c>null</c> for reverse swaps.</param>
     /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
-    public async Task MarkSwapAcceptedAsync(long id, string? lockupAddress, long timeoutBlockHeight)
+    public async Task MarkSwapAcceptedAsync(long id, string lockupAddress, long timeoutBlockHeight, string? redeemScriptHex)
     {
-        this.log.Debug($"* {nameof(id)}={id},{nameof(lockupAddress)}='{lockupAddress}',{nameof(timeoutBlockHeight)}={timeoutBlockHeight}");
+        this.log.Debug($"* {nameof(id)}={id},{nameof(lockupAddress)}='{lockupAddress}',{nameof(timeoutBlockHeight)}={timeoutBlockHeight},{
+            nameof(redeemScriptHex)}='{redeemScriptHex}'");
 
         try
         {
@@ -147,22 +240,8 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
             dbRecord.Status = SwapStatus.Accepted;
             dbRecord.AcceptedTime = DateTime.UtcNow;
             dbRecord.TimeoutBlockHeight = timeoutBlockHeight;
-
-            if (!dbRecord.IsForward)
-            {
-                if (lockupAddress is null)
-                {
-                    this.log.Debug("$<LOCKUP_ADDRESS_MISSING>");
-                    throw new DatabaseException("Lockup address is required for reverse swap.");
-                }
-
-                dbRecord.LockupAddress = lockupAddress;
-            }
-            else if (lockupAddress is not null)
-            {
-                this.log.Debug("$<LOCKUP_ADDRESS_NOT_ALLOWED>");
-                throw new DatabaseException("Lockup address is not allowed for forward swap.");
-            }
+            dbRecord.LockupAddress = lockupAddress;
+            dbRecord.RedeemScriptHex = redeemScriptHex;
 
             _ = db.SaveChanges();
             transaction.Commit();
@@ -222,13 +301,13 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     }
 
     /// <summary>
-    /// Removes a swap from the database.
+    /// Marks the swap as cancelled by the client in the database.
     /// </summary>
     /// <param name="frontendId">Frontend ID of the swap.</param>
-    /// <param name="maximumStatus">Maximum status that the swap can have to be included in the removal.</param>
-    /// <returns><c>true</c> if the swap record was deleted from the database, <c>false</c> otherwise.</returns>
+    /// <param name="maximumStatus">Maximum status that the swap can have to be cancelled.</param>
+    /// <returns><c>true</c> if the swap record was cancelled in the database, <c>false</c> otherwise.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
-    public async Task<bool> RemoveAsync(string frontendId, SwapStatus maximumStatus)
+    public async Task<bool> MarkClientCancelledAsync(string frontendId, SwapStatus maximumStatus)
     {
         this.log.Debug($"* {nameof(frontendId)}='{frontendId}',{nameof(maximumStatus)}={maximumStatus}");
 
@@ -239,26 +318,31 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
             using IDisposable dbLocked = await this.dbLock.EnterAsync().ConfigureAwait(false);
             using IDbContextTransaction transaction = db.BeginTransaction();
 
-            int rowsDeleted = await db.Swaps
-                .Where(s => (s.FrontendId == frontendId) && (s.Status <= maximumStatus))
-                .ExecuteDeleteAsync()
+            DbSwap? dbRecord = await db.Swaps
+                .Where(c => c.FrontendId == frontendId)
+                .SingleOrDefaultAsync()
                 .ConfigureAwait(false);
 
-            if (rowsDeleted > 0)
+            if (dbRecord is not null)
             {
-                _ = db.SaveChanges();
-                transaction.Commit();
+                if (dbRecord.Status <= maximumStatus)
+                {
+                    dbRecord.Status = SwapStatus.ClientCancelled;
+                    _ = db.SaveChanges();
+                    transaction.Commit();
 
-                this.log.Debug($"Swap with frontend ID '{frontendId}' has been removed from the database.");
-                result = true;
+                    this.log.Debug($"Swap with frontend ID '{frontendId}' has been marked as cancelled in the database.");
+                    result = true;
+                }
+                else this.log.Debug($"Swap with frontend ID '{frontendId}' has status {dbRecord.Status} and cannot be cancelled.");
             }
-            else this.log.Debug($"Swap with frontend ID '{frontendId}' was not found in the database or could not be deleted.");
+            else this.log.Debug($"Swap with frontend ID '{frontendId}' was not found in the database.");
         }
         catch (Exception e)
         {
-            this.log.Error($"Deleting swap with the frontend ID '{frontendId}' from the database failed with exception: {e}");
+            this.log.Error($"Marking swap with the frontend ID '{frontendId}' as cancelled in the database failed with exception: {e}");
             this.log.Debug("$<DB_EXCEPTION>");
-            throw new DatabaseException($"Deleting swap with the frontend ID '{frontendId}' from the database failed.", e);
+            throw new DatabaseException($"Marking swap with the frontend ID '{frontendId}' as cancelled in the database failed.", e);
         }
 
         this.log.Debug($"$={result}");
@@ -417,7 +501,18 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
             DbSwap? dbRecord = await db.Swaps.FindAsync(swapId).ConfigureAwait(false);
             if (dbRecord is not null)
             {
-                SwapStatus newStatus = isFundingTransaction ? SwapStatus.ErrorFundingTxNotCreated : SwapStatus.ClientErrorFundingTxNotSpent;
+                // In case of a forward swap, the funding on-chain Bitcoin transaction is created by the client, so if it is not created within the expected time, it is a client
+                // error. In case of a reverse swap, the funding on-chain Bitcoin transaction is created by the swap provider, so if it is not created within the expected time,
+                // it is a provider error.
+                //
+                // In case of a forward swap, claiming the funding transaction output is the responsibility of the swap provider, but the fault cannot be assigned to the provider
+                // because it may also be the case that the client did not reveal the preimage by completing the lightning payment, or it could be the case that the provider did
+                // not even initiate this lightning payment. In case of a reverse swap, claiming the funding transaction output is the responsibility of the client, so if it is
+                // not claimed within the expected time, it is a client error.
+                SwapStatus newStatus = dbRecord.IsForward
+                    ? (isFundingTransaction ? SwapStatus.ClientErrorFundingTxNotCreated : SwapStatus.ErrorFundingTxNotSpent)
+                    : (isFundingTransaction ? SwapStatus.ErrorFundingTxNotCreated : SwapStatus.ClientErrorFundingTxNotSpent);
+
                 if (isFundingTransaction && (dbRecord.Status != SwapStatus.Accepted))
                 {
                     throw new SanityCheckException($"Changing status of swap ID {swapId} to {newStatus} requires the swap status to be in {
@@ -437,7 +532,7 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
                 _ = db.SaveChanges();
                 transaction.Commit();
 
-                this.log.Debug($"Swap ID status changed to {dbRecord.Status}. Fail time set to {dbRecord.FailTime}.");
+                this.log.Debug($"Changing status of swap ID {swapId} to {dbRecord.Status}. Fail time set to {dbRecord.FailTime}.");
                 result = dbRecord;
             }
             else this.log.Error($"Swap ID {swapId} has not been found in the database.");

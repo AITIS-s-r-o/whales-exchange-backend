@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -146,6 +147,17 @@ internal class RestApiController : InternalControllerBase
         IActionResult result;
         CreateSwapResponse response;
 
+        if (request.PairId != CreateSwapRequest.SupportedPairIdStr)
+        {
+            string msg = $"Unsupported request pair. Only  '{CreateSwapRequest.SupportedPairIdStr}' is currently supported.";
+            this.log.Error(msg);
+            response = new(msg);
+            result = this.Ok(response);
+
+            this.log.Debug("$<UNSUPPORTED_REQUEST_PAIR>");
+            return result;
+        }
+
         string providerPk = request.PairHash;
         DbSwapProvider? provider;
         try
@@ -175,7 +187,19 @@ internal class RestApiController : InternalControllerBase
 
         DbSwap? swap = null;
         bool failed = false;
-        string? frontendId = null;
+        string? frontendId = RandomStringGenerator.Generate(DbSwap.FrontendIdLength);
+        string userIpAddress = ipAddress.ToString();
+        bool isPermitted = this.swapLimitChecker.RegisterSwap(ipAddress: userIpAddress, frontendSwapId: frontendId);
+        if (!isPermitted)
+        {
+            this.log.Error($"Too many uncommitted swaps for the given IP address '{userIpAddress}'.");
+            response = new("Too many uncommitted swaps for the given IP address.");
+
+            result = this.Ok(response);
+            this.log.Debug("$<IP_LIMIT_EXCEEDED>");
+            return result;
+        }
+
         try
         {
             if ((request.Type == CreateSwapRequest.ForwardSwapTypeStr) && (request.OrderSide == CreateSwapRequest.ForwardSwapOrderSideStr))
@@ -184,7 +208,14 @@ internal class RestApiController : InternalControllerBase
                 {
                     if (request.RefundPublicKey is not null)
                     {
-                        response = new("Forward swaps are not supported at the moment.");
+                        CreateSwapResult swapResult = await this.CreateForwardSwapAsync(request, provider, frontendId: frontendId, userIpAddress: userIpAddress,
+                            context.RequestAborted).ConfigureAwait(false);
+
+                        swap = swapResult.Swap;
+                        response = swapResult.Response;
+
+                        // Do not unregister the swap below.
+                        frontendId = null;
                     }
                     else response = new($"'{nameof(request.RefundPublicKey)}' is mandatory for forward swaps.");
                 }
@@ -196,40 +227,14 @@ internal class RestApiController : InternalControllerBase
                 {
                     if (request.ClaimPublicKey is not null)
                     {
-                        frontendId = RandomStringGenerator.Generate(DbSwap.FrontendIdLength);
-                        string userIpAddress = ipAddress.ToString();
-                        bool isPermitted = this.swapLimitChecker.RegisterSwap(ipAddress: userIpAddress, frontendSwapId: frontendId);
-                        if (isPermitted)
-                        {
-                            swap = await this.swapRepository.InsertReverseAsync(frontendId: frontendId, providerPubkey: providerPk, userIpAddress: userIpAddress,
-                                amountToPaySats: request.InvoiceAmount.Value, amountToReceiveSats: request.ExpectedAmount, claimAddress: request.ClientAddress,
-                                claimPublicKey: request.ClaimPublicKey)
-                                .ConfigureAwait(false);
+                        CreateSwapResult swapResult = await this.CreateReverseSwapAsync(request, provider, frontendId: frontendId, userIpAddress: userIpAddress,
+                            context.RequestAborted).ConfigureAwait(false);
 
-                            long prepaymentSats = 2 * provider.MiningFeeReverseSat;
-                            ElectrumSwapData electrumSwapData = await this.electrumRpcClient.ReverseSwapAsync(lnAmountSats: request.InvoiceAmount.Value,
-                                onChainAmountSats: request.ExpectedAmount, prepaymentSats: prepaymentSats, preimageHash: request.PreimageHash, claimPk: request.ClaimPublicKey,
-                                providerPk: providerPk, context.RequestAborted).ConfigureAwait(false);
+                        swap = swapResult.Swap;
+                        response = swapResult.Response;
 
-                            SwapResponse swapResponse = new(id: swap.FrontendId, reverse: true, asset: "BTC", invoice: electrumSwapData.Invoice,
-                                feeInvoice: electrumSwapData.FeeInvoice, timeoutBlockHeight: electrumSwapData.Locktime, sendAmountSats: electrumSwapData.LightningAmountSats,
-                                receiveAmountSats: request.ExpectedAmount, onChainAmountSats: electrumSwapData.OnChainAmountSats, redeemScript: electrumSwapData.RedeemScriptHex,
-                                lockupAddress: electrumSwapData.LockupAddress);
-
-                            response = new(swapResponse);
-
-                            int requiredConfirmations = this.GetRequiredConfirmationsForAmount(request.ExpectedAmount);
-                            int timeoutHeight = (int)electrumSwapData.Locktime - requiredConfirmations - LockupAddressTimeoutBuffer;
-
-                            // Register the lockup address to be monitored by the blockchain data monitor. This will allow the client to be notified when the funding transaction is
-                            // seen and when it gets confirmed. Note that the required amount here needs to include the fees for the on-chain transaction that will claim the funds.
-                            this.blockchainDataMonitor.RegisterMonitoredAddress(swapId: swap.Id, frontendId: swap.FrontendId, electrumSwapData.LockupAddress,
-                                amountSats: electrumSwapData.OnChainAmountSats, requiredConfirmations: requiredConfirmations, timeoutHeight: timeoutHeight, isLockupAddress: true);
-
-                            await this.swapRepository.MarkSwapAcceptedAsync(id: swap.Id, electrumSwapData.LockupAddress, timeoutBlockHeight: electrumSwapData.Locktime)
-                                .ConfigureAwait(false);
-                        }
-                        else response = new("Too many uncommitted swaps for the given IP address.");
+                        // Do not unregister the swap below.
+                        frontendId = null;
                     }
                     else response = new($"'{nameof(request.ClaimPublicKey)}' is mandatory for reverse swaps.");
                 }
@@ -244,22 +249,11 @@ internal class RestApiController : InternalControllerBase
             failed = true;
         }
 
-        if (failed)
-        {
-            if (frontendId is not null)
-                _ = this.swapLimitChecker.UnregisterSwap(frontendId);
+        if (frontendId is not null)
+            _ = this.swapLimitChecker.UnregisterSwap(frontendId);
 
-            if (swap is not null)
-            {
-                try
-                {
-                    await this.swapRepository.MarkSwapRejectedAsync(swap.Id).ConfigureAwait(false);
-                }
-                catch (Exception e)
-                {
-                    this.log.Error($"Exception occurred while marking swap ID {swap.Id} as rejected: {e}");
-                }
-            }
+        if (failed && (swap is not null))
+        {
         }
 
         result = this.Ok(response);
@@ -269,10 +263,198 @@ internal class RestApiController : InternalControllerBase
     }
 
     /// <summary>
+    /// Creates a new forward swap based on the given request and swap provider.
+    /// </summary>
+    /// <param name="request">Creates swap request that comes from the frontend.</param>
+    /// <param name="provider">Swap provider selected by the user.</param>
+    /// <param name="frontendId">Newly generated frontend ID of the swap.</param>
+    /// <param name="userIpAddress">IP address of the user.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>Swap and API response.</returns>
+    private async Task<CreateSwapResult> CreateForwardSwapAsync(CreateSwapRequest request, DbSwapProvider provider, string frontendId, string userIpAddress,
+        CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(request)}='{request}',{nameof(provider)}='{provider}',{nameof(frontendId)}='{frontendId}',{nameof(userIpAddress)}='{userIpAddress}'");
+
+        if (request.Invoice is null)
+            throw new SanityCheckException($"'{nameof(request)}.{nameof(request.Invoice)}' is null.");
+
+        if (request.RefundPublicKey is null)
+            throw new SanityCheckException($"'{nameof(request)}.{nameof(request.RefundPublicKey)}' is null.");
+
+        CreateSwapResult result;
+        ElectrumLightningInvoice decodedInvoice;
+        try
+        {
+            decodedInvoice = await this.electrumRpcClient.DecodeInvoiceAsync(request.Invoice, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception e)
+        {
+            this.log.Debug($"Exception occurred while trying to decode invoice '{request.Invoice.ToBoundedString()}': {e}");
+            result = new(swap: null, new CreateSwapResponse("Provided invoice is invalid."));
+
+            this.log.Debug($"$<DECODING_FAILED>='{result}'");
+            return result;
+        }
+
+        DateTime createTime = DateTimeOffset.FromUnixTimeSeconds(decodedInvoice.CreateTime).UtcDateTime;
+        DateTime expiryTime = createTime.AddSeconds(decodedInvoice.ExpirySeconds);
+
+        if (expiryTime <= DateTime.UtcNow)
+        {
+            this.log.Debug($"Provided invoice has expired at {expiryTime}.");
+
+            result = new(swap: null, new CreateSwapResponse("Provided invoice has expired."));
+            this.log.Debug($"$<EXPIRED>='{result}'");
+            return result;
+        }
+
+        long invoiceAmount = decodedInvoice.AmountMsat / 1000;
+        if (request.ExpectedAmount != invoiceAmount)
+        {
+            this.log.Debug($"Provided invoice amount {invoiceAmount} does not match expected amount {request.ExpectedAmount}.");
+
+            result = new(swap: null, new CreateSwapResponse("Provided invoice amount does not match expected amount."));
+            this.log.Debug($"$<INVALID_AMOUNT>='{result}'");
+            return result;
+        }
+
+        string paymentHashHex = decodedInvoice.PaymentHashHex;
+
+        long percentageFee = (long)Math.Ceiling(provider.PercentageFeeForward / 100m * request.ExpectedAmount);
+        long miningFee = provider.MiningFeeForwardSat;
+        long amountToPaySats = request.ExpectedAmount + percentageFee + miningFee;
+
+        DbSwap swap = await this.swapRepository.InsertForwardAsync(frontendId: frontendId, providerPubkey: provider.Pubkey, userIpAddress: userIpAddress,
+            amountToPaySats: amountToPaySats, amountToReceiveSats: request.ExpectedAmount, refundPublicKeyHex: request.RefundPublicKey, invoice: request.Invoice,
+            paymentHashHex: paymentHashHex).ConfigureAwait(false);
+
+        ElectrumSwapData electrumSwapData;
+
+        try
+        {
+            electrumSwapData = await this.electrumRpcClient.ForwardSwapAsync(invoice: request.Invoice, amountToPaySats, refundPublicKeyHex: request.RefundPublicKey,
+                providerPk: provider.Pubkey, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception e)
+        {
+            this.log.Error($"Exception occurred while creating a new forward swap: {e}");
+
+            try
+            {
+                await this.swapRepository.MarkSwapRejectedAsync(swap.Id).ConfigureAwait(false);
+            }
+            catch (Exception ei)
+            {
+                this.log.Error($"Exception occurred while marking swap ID {swap.Id} as rejected: {ei}");
+            }
+
+            result = new(swap: null, new CreateSwapResponse($"Creating new forward swap failed. {e.Message}"));
+            this.log.Debug($"$<SWAP_REJECTED>='{result}'");
+            return result;
+        }
+
+        SwapResponse swapResponse = new(id: swap.FrontendId, reverse: false, asset: "BTC", invoice: null, feeInvoice: null, timeoutBlockHeight: electrumSwapData.Locktime,
+            sendAmountSats: electrumSwapData.OnChainAmountSats, receiveAmountSats: request.ExpectedAmount, onChainAmountSats: electrumSwapData.OnChainAmountSats,
+            redeemScript: electrumSwapData.RedeemScriptHex, lockupAddress: electrumSwapData.LockupAddress);
+
+        CreateSwapResponse response = new(swapResponse);
+
+        // Register the lockup address to be monitored by the blockchain data monitor. This will allow us to recognize whether the client paid the expected amount on time.
+        // Note that the required amount here needs to include the fees for the on-chain transaction that will claim the funds.
+        this.blockchainDataMonitor.RegisterMonitoredAddress(swapId: swap.Id, frontendId: swap.FrontendId, address: electrumSwapData.LockupAddress,
+            amountSats: electrumSwapData.OnChainAmountSats, requiredConfirmations: 1, timeoutHeight: (int)electrumSwapData.Locktime, isLockupAddress: true);
+
+        await this.swapRepository.MarkSwapAcceptedAsync(id: swap.Id, electrumSwapData.LockupAddress, timeoutBlockHeight: electrumSwapData.Locktime,
+            redeemScriptHex: electrumSwapData.RedeemScriptHex).ConfigureAwait(false);
+
+        result = new(swap, response);
+
+        this.log.Debug($"$='{result}'");
+        return result;
+    }
+
+    /// <summary>
+    /// Creates a new reverse swap based on the given request and swap provider.
+    /// </summary>
+    /// <param name="request">Creates swap request that comes from the frontend.</param>
+    /// <param name="provider">Swap provider selected by the user.</param>
+    /// <param name="frontendId">Newly generated frontend ID of the swap.</param>
+    /// <param name="userIpAddress">IP address of the user.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>Swap and API response.</returns>
+    private async Task<CreateSwapResult> CreateReverseSwapAsync(CreateSwapRequest request, DbSwapProvider provider, string frontendId, string userIpAddress,
+        CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(request)}='{request}',{nameof(provider)}='{provider}',{nameof(frontendId)}='{frontendId}',{nameof(userIpAddress)}='{userIpAddress}'");
+
+        if (request.InvoiceAmount is null)
+            throw new SanityCheckException($"'{nameof(request)}.{nameof(request.InvoiceAmount)}' is null.");
+
+        if (request.ClaimPublicKey is null)
+            throw new SanityCheckException($"'{nameof(request)}.{nameof(request.ClaimPublicKey)}' is null.");
+
+        DbSwap swap = await this.swapRepository.InsertReverseAsync(frontendId: frontendId, providerPubkey: provider.Pubkey, userIpAddress: userIpAddress,
+            amountToPaySats: request.InvoiceAmount.Value, amountToReceiveSats: request.ExpectedAmount, claimAddress: request.ClientAddress, claimPublicKey: request.ClaimPublicKey)
+            .ConfigureAwait(false);
+
+        long prepaymentSats = 2 * provider.MiningFeeReverseSat;
+
+        CreateSwapResult result;
+        ElectrumSwapData electrumSwapData;
+        try
+        {
+            electrumSwapData = await this.electrumRpcClient.ReverseSwapAsync(lnAmountSats: request.InvoiceAmount.Value, onChainAmountSats: request.ExpectedAmount,
+                prepaymentSats: prepaymentSats, preimageHash: request.PreimageHash, claimPk: request.ClaimPublicKey, providerPk: provider.Pubkey, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (Exception e)
+        {
+            this.log.Error($"Exception occurred while creating a new reverse swap: {e}");
+
+            try
+            {
+                await this.swapRepository.MarkSwapRejectedAsync(swap.Id).ConfigureAwait(false);
+            }
+            catch (Exception ei)
+            {
+                this.log.Error($"Exception occurred while marking swap ID {swap.Id} as rejected: {ei}");
+            }
+
+            result = new(swap: null, new CreateSwapResponse($"Creating new reverse swap failed. {e.Message}"));
+            this.log.Debug($"$<SWAP_REJECTED>='{result}'");
+            return result;
+        }
+
+        SwapResponse swapResponse = new(id: swap.FrontendId, reverse: true, asset: "BTC", invoice: electrumSwapData.Invoice, feeInvoice: electrumSwapData.FeeInvoice,
+            timeoutBlockHeight: electrumSwapData.Locktime, sendAmountSats: electrumSwapData.LightningAmountSats, receiveAmountSats: request.ExpectedAmount,
+            onChainAmountSats: electrumSwapData.OnChainAmountSats, redeemScript: electrumSwapData.RedeemScriptHex, lockupAddress: electrumSwapData.LockupAddress);
+
+        CreateSwapResponse response = new(swapResponse);
+
+        int requiredConfirmations = this.GetRequiredConfirmationsForAmount(request.ExpectedAmount);
+        int timeoutHeight = (int)electrumSwapData.Locktime - requiredConfirmations - LockupAddressTimeoutBuffer;
+
+        // Register the lockup address to be monitored by the blockchain data monitor. This will allow the client to be notified when the funding transaction is
+        // seen and when it gets confirmed. Note that the required amount here needs to include the fees for the on-chain transaction that will claim the funds.
+        this.blockchainDataMonitor.RegisterMonitoredAddress(swapId: swap.Id, frontendId: swap.FrontendId, address: electrumSwapData.LockupAddress,
+            amountSats: electrumSwapData.OnChainAmountSats, requiredConfirmations: requiredConfirmations, timeoutHeight: timeoutHeight, isLockupAddress: true);
+
+        await this.swapRepository.MarkSwapAcceptedAsync(id: swap.Id, electrumSwapData.LockupAddress, timeoutBlockHeight: electrumSwapData.Locktime, redeemScriptHex: null)
+            .ConfigureAwait(false);
+
+        result = new(swap, response);
+
+        this.log.Debug($"$='{result}'");
+        return result;
+    }
+
+    /// <summary>
     /// Action that is executed when a swap is requested to be deleted.
     /// </summary>
     /// <param name="request">Request to remove a swap.</param>
     /// <returns>Result of the action method.</returns>
+    /// <remarks>We cannot really delete swap from the database, we just mark it as cancelled by the client.</remarks>
     [HttpPost]
     [Route("delete-swap")]
     public async Task<IActionResult> RemoveSwapAsync([FromBody] RemoveSwapRequest request)
@@ -284,7 +466,7 @@ internal class RestApiController : InternalControllerBase
         RemoveSwapResponse response;
         try
         {
-            bool removed = await this.swapRepository.RemoveAsync(request.Id, maximumStatus: SwapStatus.Accepted).ConfigureAwait(false);
+            bool removed = await this.swapRepository.MarkClientCancelledAsync(request.Id, maximumStatus: SwapStatus.Accepted).ConfigureAwait(false);
             if (removed)
             {
                 this.blockchainDataMonitor.UnregisterMonitoredAddressWithFrontendId(request.Id);
@@ -337,7 +519,7 @@ internal class RestApiController : InternalControllerBase
         }
         else
         {
-            this.log.Debug($"Unable to get swap status of swap frontend ID '{frontendId}'.");
+            this.log.Debug($"Unable to get swap frontend ID '{frontendId}'.");
 
             GetSwapStatusResponse response = new(status: null, failureReason: null, transaction: null, error: $"Could not find swap with ID '{frontendId}'.");
             result = this.NotFound(response);

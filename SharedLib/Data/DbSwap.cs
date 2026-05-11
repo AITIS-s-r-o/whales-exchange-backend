@@ -41,9 +41,12 @@ internal class DbSwap
     /// <remarks>The setter is needed for the serializer.</remarks>
     public long AmountToReceiveSats { get; set; }
 
-    /// <summary>Claim address for reverse swaps, refund address for forward swaps.</summary>
-    /// <remarks>The setter is needed for the serializer.</remarks>
-    public string ClientAddress { get; set; }
+    /// <summary>Claim address for reverse swaps, refund address for forward swaps, or <c>null</c> if not set yet.</summary>
+    /// <remarks>
+    /// In case of forward swaps, the value is <c>null</c> until refund is requested by the client. In case of reverse swaps, the value is the client's Bitcoin address from
+    /// the beginning.
+    /// <para>The setter is needed for the serializer.</para></remarks>
+    public string? ClientAddress { get; set; }
 
     /// <summary>Bitcoin address to which the reverse swap funding Bitcoin transaction spends the funds to be claimed by the client, or <c>null</c> for forward swaps.</summary>
     /// <remarks>The setter is needed for the serializer.</remarks>
@@ -105,9 +108,21 @@ internal class DbSwap
     /// <remarks>The setter is needed for the serializer.</remarks>
     public string? ClientTxData { get; set; }
 
-    /// <summary>Public key that will be used to claim the on-chain funds in hex format, or <c>null</c> for forward swaps.</summary>
-    /// <remarks>The setter is needed for the serializer.</remarks>
+    /// <summary>Public key that will be used to claim the on-chain funds in hex format, or <c>null</c> if not set yet.</summary>
+    /// <remarks>
+    /// For forward swaps, this value holds the refund public key which is used to claim the on-chain funds if the provider fails to fulfill the swap. For reverse swaps, this value
+    /// holds the claim public key which is used by the client to claim the on-chain funds when the swap is successful.
+    /// <para>The setter is needed for the serializer.</para>
+    /// </remarks>
     public string? ClaimPublicKey { get; set; }
+
+    /// <summary>Payment hash of the client's lightning invoice in hex format, or <c>null</c> for reverse swaps.</summary>
+    /// <remarks>The setter is needed for the serializer.</remarks>
+    public string? PaymentHashHex { get; set; }
+
+    /// <summary>Redeem script of the swap in hex format, or <c>null</c> for reverse swaps.</summary>
+    /// <remarks>The setter is needed for the serializer.</remarks>
+    public string? RedeemScriptHex { get; set; }
 
     /// <summary>Provider of the swap.</summary>
     /// <remarks>The setter is needed for the serializer.</remarks>
@@ -134,7 +149,7 @@ internal class DbSwap
     /// <param name="status">Status of the swap.</param>
     /// <param name="amountToPaySats">Amount the client paid or should pay (including all fees) in satoshis.</param>
     /// <param name="amountToReceiveSats">Amount the client received or should receive in satoshis.</param>
-    /// <param name="clientAddress">Claim address for reverse swaps, refund address for forward swaps.</param>
+    /// <param name="clientAddress">Claim address for reverse swaps, refund address for forward swaps, or <c>null</c> if not set yet.</param>
     /// <param name="lockupAddress">Bitcoin address to which the reverse swap funding Bitcoin transaction spends the funds to be claimed by the client, or <c>null</c> for forward
     /// swaps.</param>
     /// <param name="lockupOutputIndex">Index of the output in the funding Bitcoin transaction that holds the swapped funds, or <c>null</c> for forward swaps.</param>
@@ -148,11 +163,14 @@ internal class DbSwap
     /// <param name="fundingTxData">Funding transaction data in hex format, or <c>null</c> if not funded yet.</param>
     /// <param name="clientTxId">ID of the claim/refund Bitcoin transaction, or <c>null</c> if not yet claimed/refunded.</param>
     /// <param name="clientTxData">Claim/refund Bitcoin transaction data in hex format, or <c>null</c> if not yet claimed/refunded.</param>
-    /// <param name="claimPublicKey">Public key that will be used to claim the on-chain funds in hex format, or <c>null</c> for forward swaps.</param>
+    /// <param name="claimPublicKey">Public key that will be used to claim the on-chain funds in hex format, or <c>null</c> if not set yet.</param>
+    /// <param name="paymentHashHex">Payment hash of the client's lightning invoice in hex format, or <c>null</c> for reverse swaps.</param>
+    /// <param name="redeemScriptHex">Redeem script of the swap in hex format, or <c>null</c> for reverse swaps.</param>
     /// <param name="provider">Provider of the swap.</param>
-    public DbSwap(long id, string frontendId, string providerPubkey, bool isForward, SwapStatus status, long amountToPaySats, long amountToReceiveSats, string clientAddress,
+    public DbSwap(long id, string frontendId, string providerPubkey, bool isForward, SwapStatus status, long amountToPaySats, long amountToReceiveSats, string? clientAddress,
         string? lockupAddress, int? lockupOutputIndex, string? fundingTxId, long? timeoutBlockHeight, DateTime createdTime, DateTime? acceptedTime, DateTime? fundingTime,
-        DateTime? spentTime, DateTime? failTime, string? fundingTxData, string? clientTxId, string? clientTxData, string? claimPublicKey, DbSwapProvider provider)
+        DateTime? spentTime, DateTime? failTime, string? fundingTxData, string? clientTxId, string? clientTxData, string? claimPublicKey, string? paymentHashHex,
+        string? redeemScriptHex, DbSwapProvider provider)
     {
         this.Id = id;
         this.FrontendId = frontendId;
@@ -175,6 +193,8 @@ internal class DbSwap
         this.ClientTxId = clientTxId;
         this.ClientTxData = clientTxData;
         this.ClaimPublicKey = claimPublicKey;
+        this.PaymentHashHex = paymentHashHex;
+        this.RedeemScriptHex = redeemScriptHex;
         this.Provider = provider;
     }
 
@@ -182,7 +202,7 @@ internal class DbSwap
     public override string ToString()
     {
         string format = "[{0}={1},{2}=`{3}`,{4}=`{5}`,{6}={7},{8}={9},{10}={11},{12}={13},{14}=`{15}`,{16}=`{17}`,{18}={19},{20}=`{21}`,{22}={23},{24}={25},{26}={27},{28}={29},"
-            + "{30}={31},{32}={33},{34}=`{35}`,{36}=`{37}`,{38}=`{39}`,{40}=`{41}`]";
+            + "{30}={31},{32}={33},{34}=`{35}`,{36}=`{37}`,{38}=`{39}`,{40}=`{41}`,{42}=`{43}`,{44}=`{45}`]";
 
         return string.Format
         (
@@ -208,7 +228,9 @@ internal class DbSwap
             nameof(this.FundingTxData), this.FundingTxData.ToBoundedString(),
             nameof(this.ClientTxId), this.ClientTxId,
             nameof(this.ClientTxData), this.ClientTxData.ToBoundedString(),
-            nameof(this.ClaimPublicKey), this.ClaimPublicKey
+            nameof(this.ClaimPublicKey), this.ClaimPublicKey,
+            nameof(this.PaymentHashHex), this.PaymentHashHex,
+            nameof(this.RedeemScriptHex), this.RedeemScriptHex
         );
     }
 }
