@@ -433,8 +433,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
             //
             // First, we find the index of the oldest transaction that is relevant.
             int firstIndex = -1;
-            bool isLastUtxoInMempool = response[^1].InMempool;
-            if (isLastUtxoInMempool || (response[^1].BlockHeight > monitoredAddress.MonitoringStartedAtHeight))
+            bool isLastTransactionInMempool = response[^1].InMempool;
+            if (isLastTransactionInMempool || (response[^1].BlockHeight > monitoredAddress.MonitoringStartedAtHeight))
             {
                 for (int i = response.Count - 1; i >= 0; i--)
                 {
