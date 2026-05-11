@@ -42,7 +42,7 @@ internal class MonitoredAddress
     /// <summary>If <see cref="MonitorSpending"/> is true, this contains the hash of the funding transaction; <c>null</c> otherwise.</summary>
     public string? FundingTransactionHash { get; }
 
-    /// <summary>If <see cref="MonitorSpending"/> is true, this contains the index of the funding output; <c>null</c> otherwise.</summary>
+    /// <summary>If <see cref="MonitorSpending"/> is true, this contains the index of the funding transaction output; <c>null</c> otherwise.</summary>
     public int? FundingOutputIndex { get; }
 
     /// <summary><c>true</c> if the mempool action was already reported, <c>false</c> otherwise.</summary>
@@ -78,7 +78,7 @@ internal class MonitoredAddress
     /// <param name="isLockupAddress"><c>true</c> if the monitored address is the lockup address in the funding transaction, <c>false</c> if it is the client address.</param>
     /// <param name="monitorSpending"><c>true</c> to monitor sending from the address, <c>false</c> to monitor sending money to the address.</param>
     /// <param name="fundingTransactionHash">If <paramref name="monitorSpending"/> is true, this contains the hash of the funding transaction; <c>null</c> otherwise.</param>
-    /// <param name="fundingOutputIndex">If <paramref name="monitorSpending"/> is true, this contains the index of the funding output; <c>null</c> otherwise.</param>
+    /// <param name="fundingOutputIndex">If <paramref name="monitorSpending"/> is true, this contains the index of the funding transaction output; <c>null</c> otherwise.</param>
     public MonitoredAddress(long swapId, string frontendId, string address, long amountSats, int requiredConfirmations, long timeoutHeight, int monitoringStartedAtHeight,
         bool isLockupAddress, bool monitorSpending, string? fundingTransactionHash, int? fundingOutputIndex)
     {
