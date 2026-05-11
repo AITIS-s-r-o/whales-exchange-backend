@@ -127,7 +127,7 @@ internal class ElectrumTransactionProvider : IAsyncDisposable
             this.disposedValue = true;
         }
 
-        this.log.Debug("Disposing cached transcations.");
+        this.log.Debug("Disposing cached transactions.");
         this.transactionsCache.Dispose();
 
         this.log.Debug("$");
