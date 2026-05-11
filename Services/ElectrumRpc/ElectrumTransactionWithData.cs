@@ -10,7 +10,6 @@ namespace WhalesExchangeBackend.Services.ElectrumRpc;
 internal class ElectrumTransactionWithData
 {
     /// <summary>Deserialized transaction.</summary>
-    [JsonPropertyName("version")]
     public ElectrumTransaction Transaction { get; }
 
     /// <summary>Raw transaction data in hex format.</summary>
@@ -21,7 +20,6 @@ internal class ElectrumTransactionWithData
     /// </summary>
     /// <param name="transaction">Deserialized transaction.</param>
     /// <param name="rawHexData">Raw transaction data in hex format.</param>
-    [JsonConstructor]
     public ElectrumTransactionWithData(ElectrumTransaction transaction, string rawHexData)
     {
         this.Transaction = transaction;
