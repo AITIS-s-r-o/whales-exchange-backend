@@ -407,7 +407,7 @@ internal class RestApiController : InternalControllerBase
             if (historyResponse.Count > MaxReverseSwapClientAddressHistoryLength)
             {
                 this.log.Debug($"Client address '{request.ClientAddress}' has {historyResponse.Count} > {MaxReverseSwapClientAddressHistoryLength} entries in its history.");
-                result = new($"Too many entries in the destination address. Use a fresh address instead.");
+                result = new("Too many entries in the destination address. Use a fresh address instead.");
 
                 this.log.Debug($"$<ADDRESS_REJECTED_TOO_MANY_ENTRIES>='{result}'");
                 return result;
@@ -416,7 +416,7 @@ internal class RestApiController : InternalControllerBase
         catch (Exception e)
         {
             this.log.Debug($"Exception occurred while checking the history of the client address '{request.ClientAddress}' with Electrum: {e}");
-            result = new($"Destination address rejected. Try using a fresh address instead.");
+            result = new("Destination address rejected. Try using a fresh address instead.");
 
             this.log.Debug($"$<ADDRESS_REJECTED_EXCEPTION>='{result}'");
             return result;
