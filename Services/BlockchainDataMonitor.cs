@@ -778,7 +778,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <param name="transactionId">Bitcoin transaction ID in hex format, or <c>null</c>.</param>
     /// <param name="transactionData">Bitcoin transaction data in hex format, or <c>null</c> if not available.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
-    /// <returns>The updated swap, or <c>null</c> if no relevant swap was found.</returns>
+    /// <returns>Updated swap, or <c>null</c> if no relevant swap was found.</returns>
     private async Task<DbSwap?> HandleClientAddressTransactionAsync(MonitoredAddress monitoredAddress, string transactionId, string? transactionData,
         CancellationToken cancellationToken)
     {
@@ -840,8 +840,18 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                         if (spendsLockupOutput)
                         {
                             this.log.Debug($"Swap ID {swap.Id} was claimed.");
-                            result = await this.swapRepository.SwapClaimedAsync(monitoredAddress.SwapId, transactionId: transactionId, transactionData: transactionData)
-                                .ConfigureAwait(false);
+
+                            try
+                            {
+                                result = await this.swapRepository.SwapClaimedAsync(monitoredAddress.SwapId, transactionId: transactionId, transactionData: transactionData)
+                                    .ConfigureAwait(false);
+                            }
+                            catch (DatabaseException e)
+                            {
+                                this.log.Error($"Exception occurred while marking swap ID {monitoredAddress.SwapId} as claimed: {e}");
+
+                                // Nothing else to do here, the swap will be marked as claimed in the next monitoring round when we detect the same transaction again.
+                            }
                         }
                     }
                 }
