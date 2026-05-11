@@ -288,7 +288,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <param name="currentBlockHeight">Current block height.</param>
     /// <param name="monitoredAddress">Monitored address which expects a payment.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
-    /// <returns>Information about monitoring action or <c>null</c> if no matching output is found.</returns>
+    /// <returns>Information about monitoring action, or <c>null</c> if no matching output is found.</returns>
     private async Task<MonitoredAddressActionInfo?> CheckAddressUnspentAsync(long currentBlockHeight, MonitoredAddress monitoredAddress, CancellationToken cancellationToken)
     {
         this.log.Debug($"* {nameof(currentBlockHeight)}={currentBlockHeight},{nameof(monitoredAddress)}='{monitoredAddress}'");
@@ -404,7 +404,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <param name="monitoredAddress">Monitored address.</param>
     /// <param name="spending"><c>true</c> to check for spending transactions, <c>false</c> to check for receiving transactions.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
-    /// <returns>Information about monitoring action or <c>null</c> if no matching output is found.</returns>
+    /// <returns>Information about monitoring action, or <c>null</c> if no matching output is found.</returns>
     private async Task<MonitoredAddressActionInfo?> CheckAddressHistoryAsync(long currentBlockHeight, MonitoredAddress monitoredAddress, bool spending,
         CancellationToken cancellationToken)
     {
