@@ -557,7 +557,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// </summary>
     /// <param name="historyInfo">Monitored address history entry.</param>
     /// <param name="currentBlockHeight">Current blockchain height.</param>
-    /// <param name="monitoredAddress">The monitored address.</param>
+    /// <param name="monitoredAddress">Monitored address.</param>
     /// <param name="amount">Amount associated with the transaction.</param>
     /// <returns>Detected action on the monitored address, or <c>null</c> if no action occurred.</returns>
     private MonitoredAddressAction? GetAddressHistoryAction(AddressHistoryInfo historyInfo, long currentBlockHeight, MonitoredAddress monitoredAddress, long amount)
