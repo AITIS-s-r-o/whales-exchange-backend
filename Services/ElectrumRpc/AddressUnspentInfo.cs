@@ -12,7 +12,7 @@ internal class AddressUnspentInfo
 {
     /// <summary>Height of the Bitcoin block in which the transaction is included.</summary>
     [JsonPropertyName("height")]
-    public int BlockHeight { get; }
+    public long BlockHeight { get; }
 
     /// <summary>Hash of the transaction.</summary>
     [JsonPropertyName("tx_hash")]
@@ -38,7 +38,8 @@ internal class AddressUnspentInfo
     /// <param name="transactionHash">Hash of the transaction.</param>
     /// <param name="outputIndex">Index of the relevant output in the transaction.</param>
     /// <param name="amountSats">Value of the output in satoshis.</param>
-    public AddressUnspentInfo(int blockHeight, string transactionHash, int outputIndex, long amountSats)
+    [JsonConstructor]
+    public AddressUnspentInfo(long blockHeight, string transactionHash, int outputIndex, long amountSats)
     {
         this.BlockHeight = blockHeight;
         this.TransactionHash = transactionHash;

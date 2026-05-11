@@ -223,114 +223,35 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                 List<MonitoredAddress> monitoredAddressesToRemove = new();
                 foreach (MonitoredAddress monitoredAddress in monitoredAddressesCopy)
                 {
-                    ElectrumGetAddressUnspentResponse? response = null;
-                    try
+                    MonitoredAddressActionInfo? actionInfo = await this.CheckAddressUnspentAsync(currentBlockHeight, monitoredAddress, cancellationToken).ConfigureAwait(false);
+                    if (actionInfo is null)
                     {
-                        response = await this.electrumRpcClient.GetAddressUnspentAsync(monitoredAddress.Address, cancellationToken).ConfigureAwait(false);
-                    }
-                    catch (OperationFailedException e)
-                    {
-                        this.log.Error($"Getting information about monitored address '{monitoredAddress.Address}' failed with exception: {e}");
-                    }
-                    catch (ElectrumRpcException e)
-                    {
-                        this.log.Error($"Electrum server reported error when querying information for monitored address '{monitoredAddress.Address}': {e}");
+                        // If there is no unspent output for the monitored address, it may be because no transaction has been created yet, or it may be because a transaction
+                        // spending to the monitored address has been created but the output has been spent already. In the latter case, we need to check the full address history
+                        // not to miss the action.
+                        actionInfo = await this.CheckAddressHistoryAsync(currentBlockHeight, monitoredAddress, cancellationToken).ConfigureAwait(false);
                     }
 
-                    if ((response is not null) && (response.Count > 0))
+                    if (actionInfo is not null)
                     {
-                        // Electrum returns unspent outputs sorted by block height in ascending order, so the last one is the newest. However, if the transaction is still in its
-                        // mempool, the block height is returned as 0. We can ignore all records with block height prior to monitoring start.
-                        bool isLastUtxoInMempool = response[^1].BlockHeight == 0;
-                        if (isLastUtxoInMempool || (response[^1].BlockHeight > monitoredAddress.MonitoringStartedAtHeight))
+                        string txHash = actionInfo.TransactionHash;
+
+                        bool success = await this.OnMonitoredAddressActionAsync(actionInfo.Action, monitoredAddress, transactionId: txHash, actionInfo.OutputIndex,
+                            transactionData: actionInfo.TransactionData, cancellationToken).ConfigureAwait(false);
+
+                        if (success)
                         {
-                            // Iterate in reverse to process records with higher block heights first.
-                            for (int i = response.Count - 1; i >= 0; i--)
-                            {
-                                AddressUnspentInfo unspentInfo = response[i];
+                            // If the monitoring address is a lockup address, we need to wait for confirmation, so we only stop monitoring after the transaction is
+                            // confirmed. In case of claim/refund transactions, we can stop monitoring as soon as we see the transaction in mempool, because the
+                            // timelock is what protect us there and the secret is gone at that point as well, so there is nothing we can do about it later anyway.
+                            MonitoredAddressAction act = actionInfo.Action;
+                            bool stopMonitoring = (monitoredAddress.IsLockupAddress && (act == MonitoredAddressAction.Confirmed))
+                                || (!monitoredAddress.IsLockupAddress && ((act == MonitoredAddressAction.InMempool) || (act == MonitoredAddressAction.Confirmed)));
 
-                                if (!unspentInfo.InMempool && (unspentInfo.BlockHeight < monitoredAddress.MonitoringStartedAtHeight))
-                                    break;
-
-                                MonitoredAddressAction? action = null;
-                                if (unspentInfo.AmountSats >= monitoredAddress.AmountSats)
-                                {
-                                    if (unspentInfo.InMempool)
-                                    {
-                                        if (!monitoredAddress.MempoolActionReported)
-                                        {
-                                            this.log.Debug($"Monitored address '{monitoredAddress.Address}' received a new unspent output with amount {
-                                                unspentInfo.AmountSats} satoshis and it has no confirmation yet.");
-
-                                            action = MonitoredAddressAction.InMempool;
-                                            monitoredAddress.MempoolActionReported = true;
-                                        }
-                                        else this.log.Debug($"Transaction in mempool has already been reported for monitored address '{monitoredAddress}'.");
-                                    }
-                                    else
-                                    {
-                                        // If the transaction is confirmed already but we have not refreshed our blockchain height since then, we can take the UTXO block height
-                                        // instead of the current blockchain height.
-                                        if (unspentInfo.BlockHeight > currentBlockHeight)
-                                            currentBlockHeight = unspentInfo.BlockHeight;
-
-                                        int confirmations = currentBlockHeight - unspentInfo.BlockHeight + 1;
-                                        this.log.Debug($"Monitored address '{monitoredAddress.Address}' received a new unspent output with amount {
-                                            unspentInfo.AmountSats} satoshis at blockchain height {unspentInfo.BlockHeight}. Current height is {
-                                            currentBlockHeight}, so the output has {confirmations}/{monitoredAddress.RequiredConfirmations} confirmations.");
-
-                                        if (confirmations >= monitoredAddress.RequiredConfirmations)
-                                            action = MonitoredAddressAction.Confirmed;
-                                    }
-                                }
-                                else
-                                {
-                                    this.log.Debug($"Value of unspent output '{unspentInfo.TransactionHash}:{unspentInfo.OutputIndex}' is {unspentInfo.AmountSats} < {
-                                        monitoredAddress.AmountSats}. Ignoring and continuing monitoring.");
-                                }
-
-                                if (action is not null)
-                                {
-                                    this.log.Debug($"Action set to {action} for monitored address '{monitoredAddress}'.");
-
-                                    string txHash = unspentInfo.TransactionHash;
-                                    string? transactionData = null;
-
-                                    try
-                                    {
-                                        transactionData = await this.electrumRpcClient.GetTransactionAsync(txHash, cancellationToken).ConfigureAwait(false);
-                                    }
-                                    catch (ElectrumRpcException e)
-                                    {
-                                        this.log.Error($"Electrum server reported error when querying transaction ID '{txHash}': {e}");
-                                    }
-
-                                    bool success = await this.OnMonitoredAddressActionAsync(action.Value, monitoredAddress, transactionId: unspentInfo.TransactionHash,
-                                        unspentInfo.OutputIndex, transactionData: transactionData, cancellationToken).ConfigureAwait(false);
-
-                                    if (success)
-                                    {
-                                        // If the monitoring address is a lockup address, we need to wait for confirmation, so we only stop monitoring after the transaction is
-                                        // confirmed. In case of claim/refund transactions, we can stop monitoring as soon as we see the transaction in mempool, because the
-                                        // timelock is what protect us there and the secret is gone at that point as well, so there is nothing we can do about it later anyway.
-                                        MonitoredAddressAction act = action.Value;
-                                        bool stopMonitoring = (monitoredAddress.IsLockupAddress && (act == MonitoredAddressAction.Confirmed))
-                                            || (!monitoredAddress.IsLockupAddress && ((act == MonitoredAddressAction.InMempool) || (act == MonitoredAddressAction.Confirmed)));
-
-                                        if (stopMonitoring)
-                                            monitoredAddressesToRemove.Add(monitoredAddress);
-                                    }
-                                    else this.log.Warn($"Monitoring of address '{monitoredAddress.Address}' will continue as processing the action {action} failed.");
-
-                                    break;
-                                }
-                            }
+                            if (stopMonitoring)
+                                monitoredAddressesToRemove.Add(monitoredAddress);
                         }
-                        else
-                        {
-                            this.log.Debug($"Last update of unspent outputs for address '{monitoredAddress.Address}' has been registered before monitoring started at height {
-                                monitoredAddress.MonitoringStartedAtHeight}. Skipping.");
-                        }
+                        else this.log.Warn($"Monitoring of address '{monitoredAddress.Address}' will continue as processing the action {actionInfo.Action} failed.");
                     }
                 }
 
@@ -351,6 +272,277 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
         }
 
         this.log.Debug("$");
+    }
+
+    /// <summary>
+    /// Checks whether there is an unspent output for the monitored address that matches the monitoring criteria.
+    /// </summary>
+    /// <param name="currentBlockHeight">Current block height.</param>
+    /// <param name="monitoredAddress">Monitored address which expects a payment.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>Information about monitoring action or <c>null</c> if no matching output is found.</returns>
+    private async Task<MonitoredAddressActionInfo?> CheckAddressUnspentAsync(long currentBlockHeight, MonitoredAddress monitoredAddress, CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(currentBlockHeight)}={currentBlockHeight},{nameof(monitoredAddress)}='{monitoredAddress}'");
+
+        MonitoredAddressActionInfo? result = null;
+        ElectrumGetAddressUnspentResponse? response = null;
+        try
+        {
+            response = await this.electrumRpcClient.GetAddressUnspentAsync(monitoredAddress.Address, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationFailedException e)
+        {
+            this.log.Error($"Getting information about monitored address '{monitoredAddress.Address}' failed with exception: {e}");
+        }
+        catch (ElectrumRpcException e)
+        {
+            this.log.Error($"Electrum server reported error when querying information for monitored address '{monitoredAddress.Address}': {e}");
+        }
+
+        if ((response is not null) && (response.Count > 0))
+        {
+            // Electrum returns unspent outputs sorted by block height in ascending order, so the last one is the newest. However, if the transaction is still in its
+            // mempool, the block height is returned as 0. We can ignore all records with block height prior to monitoring start.
+            bool isLastUtxoInMempool = response[^1].InMempool;
+            if (isLastUtxoInMempool || (response[^1].BlockHeight > monitoredAddress.MonitoringStartedAtHeight))
+            {
+                // Iterate in reverse to process records with higher block heights first.
+                for (int i = response.Count - 1; i >= 0; i--)
+                {
+                    AddressUnspentInfo unspentInfo = response[i];
+
+                    if (!unspentInfo.InMempool && (unspentInfo.BlockHeight < monitoredAddress.MonitoringStartedAtHeight))
+                        break;
+
+                    MonitoredAddressAction? action = null;
+                    if (unspentInfo.AmountSats >= monitoredAddress.AmountSats)
+                    {
+                        if (unspentInfo.InMempool)
+                        {
+                            if (!monitoredAddress.MempoolActionReported)
+                            {
+                                this.log.Debug($"Monitored address '{monitoredAddress.Address}' received a new unspent output with amount {
+                                    unspentInfo.AmountSats} satoshis and it has no confirmation yet.");
+
+                                action = MonitoredAddressAction.InMempool;
+                                monitoredAddress.MempoolActionReported = true;
+                            }
+                            else this.log.Debug($"Transaction in mempool has already been reported for monitored address '{monitoredAddress}'.");
+                        }
+                        else
+                        {
+                            // If the transaction is confirmed already but we have not refreshed our blockchain height since then, we can take the UTXO block height
+                            // instead of the current blockchain height.
+                            if (unspentInfo.BlockHeight > currentBlockHeight)
+                                currentBlockHeight = unspentInfo.BlockHeight;
+
+                            int confirmations = (int)(currentBlockHeight - unspentInfo.BlockHeight + 1);
+                            this.log.Debug($"Monitored address '{monitoredAddress.Address}' received a new unspent output with amount {
+                                unspentInfo.AmountSats} satoshis at blockchain height {unspentInfo.BlockHeight}. Current height is {currentBlockHeight}, so the output has {
+                                confirmations}/{monitoredAddress.RequiredConfirmations} confirmations.");
+
+                            if (confirmations >= monitoredAddress.RequiredConfirmations)
+                                action = MonitoredAddressAction.Confirmed;
+                        }
+                    }
+                    else
+                    {
+                        this.log.Debug($"Value of unspent output '{unspentInfo.TransactionHash}:{unspentInfo.OutputIndex}' is {unspentInfo.AmountSats} < {
+                            monitoredAddress.AmountSats}. Ignoring and continuing monitoring.");
+                    }
+
+                    if (action is not null)
+                    {
+                        this.log.Debug($"Action set to {action} for monitored address '{monitoredAddress}'.");
+
+                        string? transactionData = null;
+
+                        try
+                        {
+                            transactionData = await this.electrumRpcClient.GetTransactionAsync(unspentInfo.TransactionHash, cancellationToken).ConfigureAwait(false);
+                        }
+                        catch (ElectrumRpcException e)
+                        {
+                            this.log.Error($"Electrum server reported error when querying transaction ID '{unspentInfo.TransactionHash}': {e}");
+                        }
+
+                        if (transactionData is null)
+                        {
+                            this.log.Debug($"Transaction data is not available for transaction ID '{unspentInfo.TransactionHash}'.");
+                            continue;
+                        }
+
+                        result = new(action.Value, transactionHash: unspentInfo.TransactionHash, unspentInfo.OutputIndex, transactionData: transactionData);
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                this.log.Debug($"Last update of unspent outputs for address '{monitoredAddress.Address}' has been registered before monitoring started at height {
+                    monitoredAddress.MonitoringStartedAtHeight}. Skipping.");
+            }
+        }
+
+        this.log.Debug($"$='{result}'");
+        return result;
+    }
+
+    /// <summary>
+    /// Checks the history of a monitored address to see if it was paid or not based on the transaction history.
+    /// </summary>
+    /// <param name="currentBlockHeight">Current block height.</param>
+    /// <param name="monitoredAddress">Monitored address.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>Information about monitoring action, or <c>null</c> if no matching output is found.</returns>
+    private async Task<MonitoredAddressActionInfo?> CheckAddressHistoryAsync(long currentBlockHeight, MonitoredAddress monitoredAddress, CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(currentBlockHeight)}={currentBlockHeight},{nameof(monitoredAddress)}='{monitoredAddress}'");
+
+        MonitoredAddressActionInfo? result = null;
+        ElectrumGetAddressHistoryResponse? response = null;
+        try
+        {
+            response = await this.electrumRpcClient.GetAddressHistoryAsync(monitoredAddress.Address, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationFailedException e)
+        {
+            this.log.Error($"Getting information about monitored address '{monitoredAddress.Address}' failed with exception: {e}");
+        }
+        catch (ElectrumRpcException e)
+        {
+            this.log.Error($"Electrum server reported error when querying information for monitored address '{monitoredAddress.Address}': {e}");
+        }
+
+        if ((response is not null) && (response.Count > 0))
+        {
+            // Electrum returns history entries in chronological order. If we process the list in the reverse order, once we reach an entry with block height prior to monitoring
+            // start, we can stop processing the history. However, if the transaction is still in its mempool, the block height is returned as 0. We can ignore all records with
+            // block height prior to monitoring start.
+            //
+            // First, we find the index of the oldest transaction that is relevant.
+            int firstIndex = -1;
+            bool isLastTransactionInMempool = response[^1].InMempool;
+            if (isLastTransactionInMempool || (response[^1].BlockHeight > monitoredAddress.MonitoringStartedAtHeight))
+            {
+                for (int i = response.Count - 1; i >= 0; i--)
+                {
+                    AddressHistoryInfo historyInfo = response[i];
+                    if (!historyInfo.InMempool && (historyInfo.BlockHeight < monitoredAddress.MonitoringStartedAtHeight))
+                        break;
+
+                    firstIndex = i;
+                }
+            }
+
+            if (firstIndex != -1)
+            {
+                // In the list of relevant transactions, we are looking for an output that matches the monitored criteria. We process transactions from the first relevant to
+                // the last.
+                for (int i = firstIndex; i < response.Count; i++)
+                {
+                    AddressHistoryInfo historyInfo = response[i];
+
+                    string? transactionData = null;
+
+                    try
+                    {
+                        transactionData = await this.electrumRpcClient.GetTransactionAsync(historyInfo.TransactionHash, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (ElectrumRpcException e)
+                    {
+                        this.log.Error($"Electrum server reported error when querying transaction ID '{historyInfo.TransactionHash}': {e}");
+                    }
+
+                    if (transactionData is null)
+                    {
+                        this.log.Debug($"Transaction data is not available for transaction ID '{historyInfo.TransactionHash}'.");
+                        continue;
+                    }
+
+                    ElectrumTransaction? transaction = null;
+                    try
+                    {
+                        transaction = await this.electrumRpcClient.DeserializeAsync(transactionData, cancellationToken).ConfigureAwait(false);
+                    }
+                    catch (Exception e)
+                    {
+                        this.log.Error($"Electrum server reported error when deserializing transaction data for transaction ID '{historyInfo.TransactionHash}': {e}");
+                    }
+
+                    if (transaction is null)
+                    {
+                        this.log.Debug($"Transaction ID '{historyInfo.TransactionHash}' cannot be deserialized.");
+                        continue;
+                    }
+
+                    // Attempt to find a transaction output used to pay to the monitored transaction the expected amount.
+                    int outputIndex = 0;
+                    ElectrumTransactionOutput? relevantOutput = null;
+                    for (; outputIndex < transaction.Outputs.Count; outputIndex++)
+                    {
+                        ElectrumTransactionOutput output = transaction.Outputs[outputIndex];
+                        if (output.Address == monitoredAddress.Address)
+                        {
+                            if (output.ValueSats >= monitoredAddress.AmountSats)
+                            {
+                                this.log.Debug($"Found output creation for monitored address '{monitoredAddress.Address}' with amount {output.ValueSats} satoshis in '{
+                                    historyInfo.TransactionHash}:{outputIndex}'.");
+                                relevantOutput = output;
+                                break;
+                            }
+
+                            this.log.Debug($"Value of output '{historyInfo.TransactionHash}:{outputIndex}' is {output.ValueSats} < {
+                                monitoredAddress.AmountSats}. Ignoring and continuing monitoring.");
+                        }
+                    }
+
+                    if (relevantOutput is null)
+                        continue;
+
+                    MonitoredAddressAction? action = null;
+                    if (historyInfo.InMempool)
+                    {
+                        if (!monitoredAddress.MempoolActionReported)
+                        {
+                            this.log.Debug($"Monitored address '{monitoredAddress.Address}' received an output with amount {
+                                relevantOutput.ValueSats} satoshis and it has no confirmation yet.");
+
+                            action = MonitoredAddressAction.InMempool;
+                            monitoredAddress.MempoolActionReported = true;
+                        }
+                        else this.log.Debug($"Transaction in mempool has already been reported for monitored address '{monitoredAddress}'.");
+                    }
+                    else
+                    {
+                        // If the transaction is confirmed already but we have not refreshed our blockchain height since then, we can take the transaction block height instead of
+                        // the current blockchain height.
+                        if (historyInfo.BlockHeight > currentBlockHeight)
+                            currentBlockHeight = historyInfo.BlockHeight;
+
+                        int confirmations = (int)(currentBlockHeight - historyInfo.BlockHeight + 1);
+                        this.log.Debug($"Monitored address '{monitoredAddress.Address}' received an unspent output with amount {
+                            relevantOutput.ValueSats} satoshis at blockchain height {historyInfo.BlockHeight}. Current height is {currentBlockHeight}, so the output has {
+                            confirmations}/{monitoredAddress.RequiredConfirmations} confirmations.");
+
+                        if (confirmations >= monitoredAddress.RequiredConfirmations)
+                            action = MonitoredAddressAction.Confirmed;
+                    }
+
+                    if (action is not null)
+                    {
+                        this.log.Debug($"Action set to {action} for monitored address '{monitoredAddress}'.");
+
+                        result = new(action.Value, transactionHash: historyInfo.TransactionHash, outputIndex, transactionData: transactionData);
+                        break;
+                    }
+                }
+            }
+        }
+
+        this.log.Debug($"$='{result}'");
+        return result;
     }
 
     /// <summary>
