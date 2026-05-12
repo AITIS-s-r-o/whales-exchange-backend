@@ -53,6 +53,9 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <summary>Manager of swap subscriptions.</summary>
     private readonly SubscriptionManager subscriptionManager;
 
+    /// <summary>Provider of Bitcoin transaction data retrieved from the Electrum client.</summary>
+    private readonly ElectrumTransactionProvider electrumTransactionProvider;
+
     /// <summary>Cancellation source announcing termination of the instance, i.e. disconnection.</summary>
     private readonly CancellationTokenSource shutdownTokenSource;
 
@@ -87,9 +90,10 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <param name="swapLimitChecker">Service that checks client swap limits.</param>
     /// <param name="swapRepository">Provider of access to swaps in the database.</param>
     /// <param name="subscriptionManager">Manager of swap subscriptions.</param>
+    /// <param name="electrumTransactionProvider">Provider of Bitcoin transaction data retrieved from the Electrum client.</param>
     /// <param name="joinableTaskFactory">Factory for starting async tasks running in the background.</param>
     public BlockchainDataMonitor(ElectrumRpcClient electrumRpcClient, SwapLimitChecker swapLimitChecker, SwapRepository swapRepository, SubscriptionManager subscriptionManager,
-        JoinableTaskFactory joinableTaskFactory)
+        ElectrumTransactionProvider electrumTransactionProvider, JoinableTaskFactory joinableTaskFactory)
     {
         this.log.Debug("*");
 
@@ -101,6 +105,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
         this.swapLimitChecker = swapLimitChecker;
         this.swapRepository = swapRepository;
         this.subscriptionManager = subscriptionManager;
+        this.electrumTransactionProvider = electrumTransactionProvider;
 
         this.monitoredAddresses = new();
 
@@ -364,24 +369,16 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                     {
                         this.log.Debug($"Action set to {action} for monitored address '{monitoredAddress}'.");
 
-                        string? transactionData = null;
+                        ElectrumTransactionWithData? transactionWithData = await this.electrumTransactionProvider.GetTransactionAsync(unspentInfo.TransactionHash,
+                            cancellationToken).ConfigureAwait(false);
 
-                        try
-                        {
-                            transactionData = await this.electrumRpcClient.GetTransactionAsync(unspentInfo.TransactionHash, cancellationToken).ConfigureAwait(false);
-                        }
-                        catch (ElectrumRpcException e)
-                        {
-                            this.log.Error($"Electrum server reported error when querying transaction ID '{unspentInfo.TransactionHash}': {e}");
-                        }
-
-                        if (transactionData is null)
+                        if (transactionWithData is null)
                         {
                             this.log.Debug($"Transaction data is not available for transaction ID '{unspentInfo.TransactionHash}'.");
                             continue;
                         }
 
-                        result = new(action.Value, transactionHash: unspentInfo.TransactionHash, unspentInfo.OutputIndex, transactionData: transactionData);
+                        result = new(action.Value, transactionHash: unspentInfo.TransactionHash, unspentInfo.OutputIndex, transactionData: transactionWithData.RawDataHex);
                         break;
                     }
                 }
@@ -454,40 +451,17 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                 {
                     AddressHistoryInfo historyInfo = response[i];
 
-                    string? transactionData = null;
+                    ElectrumTransactionWithData? transactionWithData = await this.electrumTransactionProvider.GetTransactionAsync(historyInfo.TransactionHash, cancellationToken)
+                        .ConfigureAwait(false);
 
-                    try
-                    {
-                        transactionData = await this.electrumRpcClient.GetTransactionAsync(historyInfo.TransactionHash, cancellationToken).ConfigureAwait(false);
-                    }
-                    catch (ElectrumRpcException e)
-                    {
-                        this.log.Error($"Electrum server reported error when querying transaction ID '{historyInfo.TransactionHash}': {e}");
-                    }
-
-                    if (transactionData is null)
+                    if (transactionWithData is null)
                     {
                         this.log.Debug($"Transaction data is not available for transaction ID '{historyInfo.TransactionHash}'.");
                         continue;
                     }
 
-                    ElectrumTransaction? transaction = null;
-                    try
-                    {
-                        transaction = await this.electrumRpcClient.DeserializeAsync(transactionData, cancellationToken).ConfigureAwait(false);
-                    }
-                    catch (Exception e)
-                    {
-                        this.log.Error($"Electrum server reported error when deserializing transaction data for transaction ID '{historyInfo.TransactionHash}': {e}");
-                    }
-
-                    if (transaction is null)
-                    {
-                        this.log.Debug($"Transaction ID '{historyInfo.TransactionHash}' cannot be deserialized.");
-                        continue;
-                    }
-
                     int outputIndex = 0;
+                    ElectrumTransaction transaction = transactionWithData.Transaction;
                     ElectrumTransactionOutput? relevantOutput = null;
                     if (spending)
                     {
@@ -541,7 +515,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                     {
                         this.log.Debug($"Action set to {action} for monitored address '{monitoredAddress}'.");
 
-                        result = new(action.Value, transactionHash: historyInfo.TransactionHash, outputIndex, transactionData: transactionData);
+                        result = new(action.Value, transactionHash: historyInfo.TransactionHash, outputIndex, transactionData: transactionWithData.RawDataHex);
                         break;
                     }
                 }
@@ -735,6 +709,9 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                     if (transactionId is null)
                         throw new SanityCheckException($"Transaction ID is required for action {action}.");
 
+                    if (transactionData is null)
+                        throw new SanityCheckException($"Transaction data is required for action {action}.");
+
                     swap = await this.HandleClientAddressTransactionAsync(monitoredAddress, transactionId: transactionId, transactionData: transactionData, cancellationToken)
                         .ConfigureAwait(false);
                     break;
@@ -776,26 +753,14 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// </summary>
     /// <param name="monitoredAddress">Monitored address that triggered the action.</param>
     /// <param name="transactionId">Bitcoin transaction ID in hex format, or <c>null</c>.</param>
-    /// <param name="transactionData">Bitcoin transaction data in hex format, or <c>null</c> if not available.</param>
+    /// <param name="transactionData">Bitcoin transaction data in hex format.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns>Updated swap, or <c>null</c> if no relevant swap was found.</returns>
-    private async Task<DbSwap?> HandleClientAddressTransactionAsync(MonitoredAddress monitoredAddress, string transactionId, string? transactionData,
+    private async Task<DbSwap?> HandleClientAddressTransactionAsync(MonitoredAddress monitoredAddress, string transactionId, string transactionData,
         CancellationToken cancellationToken)
     {
         this.log.Debug($"* {nameof(monitoredAddress)}='{monitoredAddress}',{nameof(transactionId)}='{transactionId}',{
             nameof(transactionData)}='{transactionData.ToBoundedString()}'");
-
-        if (transactionData is null)
-        {
-            try
-            {
-                transactionData = await this.electrumRpcClient.GetTransactionAsync(transactionId, cancellationToken).ConfigureAwait(false);
-            }
-            catch (ElectrumRpcException e)
-            {
-                this.log.Error($"Electrum server reported error when querying transaction ID '{transactionId}': {e}");
-            }
-        }
 
         DbSwap? result = null;
         if (transactionData is not null)
@@ -814,14 +779,20 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
             {
                 if ((swap.FundingTxId is not null) && (swap.LockupOutputIndex is not null))
                 {
-                    ElectrumTransaction? transaction = null;
-                    try
+                    ElectrumTransactionWithData? transactionWithData = await this.electrumTransactionProvider.GetTransactionAsync(transactionId, cancellationToken)
+                        .ConfigureAwait(false);
+
+                    ElectrumTransaction? transaction = transactionWithData?.Transaction;
+                    if (transaction is null)
                     {
-                        transaction = await this.electrumRpcClient.DeserializeAsync(transactionData, cancellationToken).ConfigureAwait(false);
-                    }
-                    catch (Exception e)
-                    {
-                        this.log.Error($"Electrum server reported error when deserializing transaction data for transaction ID '{transactionId}': {e}");
+                        try
+                        {
+                            transaction = await this.electrumRpcClient.DeserializeAsync(transactionData, cancellationToken).ConfigureAwait(false);
+                        }
+                        catch (Exception e)
+                        {
+                            this.log.Error($"Electrum server reported error when deserializing transaction data for transaction ID '{transactionId}': {e}");
+                        }
                     }
 
                     if (transaction is not null)
