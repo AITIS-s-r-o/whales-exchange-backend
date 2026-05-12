@@ -664,4 +664,36 @@ internal class RestApiController : InternalControllerBase
         this.log.Debug("$");
         return result;
     }
+
+    /// <summary>
+    /// Action that is executed when chain fees are requested.
+    /// </summary>
+    /// <returns>Result of the action method.</returns>
+    [HttpGet]
+    [Route("v2/chain/fees")]
+    public async Task<IActionResult> GetChainFeesAsync()
+    {
+        this.log.Debug("*");
+
+        IActionResult result;
+
+        HttpContext? context = this.httpContextAccessor.HttpContext;
+        if (context is null)
+            throw new SanityCheckException("HTTP context is null.");
+
+        try
+        {
+            ElectrumFeeRate rate = await this.electrumRpcClient.GetFeeRateAsync(context.RequestAborted).ConfigureAwait(false);
+            GetChainFeesResponse response = new(rate.FeeRateKvB / 1000);
+            result = this.Ok(response);
+        }
+        catch (Exception e)
+        {
+            this.log.Error($"Exception occurred while getting fee rates: {e}");
+            result = this.BadRequest($"Getting fee rates failed. {e.Message}");
+        }
+
+        this.log.Debug("$");
+        return result;
+    }
 }
