@@ -5,7 +5,7 @@ using System.Text.Json.Serialization;
 namespace WhalesExchangeBackend.Services.ElectrumRpc;
 
 /// <summary>
-/// Information about current fee rates returned by the Electrum wallet's <c>getfeerate</c> RPC command.
+/// Information about current fee rate returned by the Electrum wallet's <c>getfeerate</c> RPC command.
 /// </summary>
 [SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by JSON deserializer.")]
 internal class ElectrumFeeRate
