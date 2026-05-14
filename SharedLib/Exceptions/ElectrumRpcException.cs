@@ -10,6 +10,9 @@ public class ElectrumRpcException : Exception
     /// <summary>Error code.</summary>
     public long Code { get; }
 
+    /// <summary>Error message reported by Electrum RPC, or <c>null</c> if no error message is provided.</summary>
+    public string? ErrorMessage { get; }
+
     /// <summary>Error details, or <c>null</c> if no details are provided.</summary>
     public object? Details { get; }
 
@@ -40,6 +43,7 @@ public class ElectrumRpcException : Exception
         base($"Electrum RPC Error [{code}]: {message}")
     {
         this.Code = code;
+        this.ErrorMessage = message;
         this.Details = details;
     }
 
