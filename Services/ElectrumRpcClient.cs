@@ -114,11 +114,11 @@ internal class ElectrumRpcClient
 
             ElectrumRpcResponse<TResult>? rpcResponse = JsonSerializer.Deserialize<ElectrumRpcResponse<TResult>>(responseJson, this.jsonOptions);
 
+            if ((rpcResponse is not null) && (rpcResponse.Error is not null))
+                throw new ElectrumRpcException(rpcResponse.Error.Code, rpcResponse.Error.Message, rpcResponse.Error.Data);
+
             if ((rpcResponse is null) || (rpcResponse.Result is null))
                 throw new OperationFailedException($"Calling Electrum RPC method '{method}' produced null response.");
-
-            if (rpcResponse.Error is not null)
-                throw new ElectrumRpcException(rpcResponse.Error.Code, rpcResponse.Error.Message, rpcResponse.Error.Data);
 
             result = rpcResponse.Result;
         }
