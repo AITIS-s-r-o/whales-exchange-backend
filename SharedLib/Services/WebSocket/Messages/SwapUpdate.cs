@@ -86,6 +86,11 @@ internal class SwapUpdate
 
                 case SwapStatus.ErrorFundingTxNotSpent:
                 {
+                    if (swap.FundingTxId is null)
+                        throw new SanityCheckException($"Swap ID {swap.Id} is in {swap.Status} status but its funding TXID is not set.");
+
+                    transaction = new(hex: swap.FundingTxData, id: swap.FundingTxId);
+
                     failureReason = "Either the user did not accept the lightning payment, or the provider did not send it, or the provider failed to spend the funding transaction"
                         + " before expiration.";
                     break;
@@ -114,6 +119,11 @@ internal class SwapUpdate
 
                 case SwapStatus.ClientErrorFundingTxNotSpent:
                 {
+                    if (swap.FundingTxId is null)
+                        throw new SanityCheckException($"Swap ID {swap.Id} is in {swap.Status} status but its funding TXID is not set.");
+
+                    transaction = new(hex: swap.FundingTxData, id: swap.FundingTxId);
+
                     failureReason = "Client failed to claim the funding transaction output.";
                     break;
                 }
