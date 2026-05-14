@@ -188,7 +188,7 @@ internal class RestApiController : InternalControllerBase
             return result;
         }
 
-        string? frontendId = RandomStringGenerator.Generate(DbSwap.FrontendIdLength);
+        string frontendId = RandomStringGenerator.Generate(DbSwap.FrontendIdLength);
         string userIpAddress = ipAddress.ToString();
         bool isPermitted = this.swapLimitChecker.RegisterSwap(ipAddress: userIpAddress, frontendSwapId: frontendId);
         if (!isPermitted)
@@ -209,9 +209,6 @@ internal class RestApiController : InternalControllerBase
                 {
                     response = await this.CreateForwardSwapAsync(request, provider, frontendId: frontendId, userIpAddress: userIpAddress, context.RequestAborted)
                         .ConfigureAwait(false);
-
-                    // Do not unregister the swap below.
-                    frontendId = null;
                 }
                 else response = new($"'{nameof(request.RefundPublicKey)}' is mandatory for forward swaps.");
             }
@@ -225,9 +222,6 @@ internal class RestApiController : InternalControllerBase
                 {
                     response = await this.CreateReverseSwapAsync(request, provider, frontendId: frontendId, userIpAddress: userIpAddress, context.RequestAborted)
                         .ConfigureAwait(false);
-
-                    // Do not unregister the swap below.
-                    frontendId = null;
                 }
                 else response = new($"'{nameof(request.ClaimPublicKey)}' is mandatory for reverse swaps.");
             }
@@ -235,7 +229,7 @@ internal class RestApiController : InternalControllerBase
         }
         else response = new($"Unknown swap type '{request.Type}' and order side '{request.OrderSide}' combination.");
 
-        if (frontendId is not null)
+        if (!response.Success)
             _ = this.swapLimitChecker.UnregisterSwap(frontendId);
 
         result = this.Ok(response);
@@ -660,6 +654,38 @@ internal class RestApiController : InternalControllerBase
             }
         }
         else result = this.BadRequest("Only BTC transactions are supported.");
+
+        this.log.Debug("$");
+        return result;
+    }
+
+    /// <summary>
+    /// Action that is executed when chain fee rates are requested.
+    /// </summary>
+    /// <returns>Result of the action method.</returns>
+    [HttpGet]
+    [Route("v2/chain/fees")]
+    public async Task<IActionResult> GetChainFeesAsync()
+    {
+        this.log.Debug("*");
+
+        IActionResult result;
+
+        HttpContext? context = this.httpContextAccessor.HttpContext;
+        if (context is null)
+            throw new SanityCheckException("HTTP context is null.");
+
+        try
+        {
+            ElectrumFeeRate rate = await this.electrumRpcClient.GetFeeRateAsync(context.RequestAborted).ConfigureAwait(false);
+            GetChainFeesResponse response = new(rate.FeeRateKvB / 1000);
+            result = this.Ok(response);
+        }
+        catch (Exception e)
+        {
+            this.log.Error($"Exception occurred while getting fee rate: {e}");
+            result = this.BadRequest($"Getting fee rate failed. {e.Message}");
+        }
 
         this.log.Debug("$");
         return result;
