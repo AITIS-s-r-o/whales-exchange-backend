@@ -33,6 +33,9 @@ internal class RestApiController : InternalControllerBase
     /// <summary>Maximum number of transactions allowed for a reverse swap client address.</summary>
     private const int MaxReverseSwapClientAddressHistoryLength = 100;
 
+    /// <summary>Number of blocks the swap provider wants to have on its side to claim the funding transaction output in forward swaps.</summary>
+    private const int ForwardSwapServerTimeoutBlockBuffer = 60;
+
     /// <summary>Number of blocks to serve as a safe buffer before for a lockup address timeout scenario.</summary>
     /// <remarks>
     /// When the swap provider publishes the funding transaction with an output paying to the lockup address, the client must be provided with enough time to spend this output
@@ -357,8 +360,9 @@ internal class RestApiController : InternalControllerBase
 
         // Register the lockup address to be monitored by the blockchain data monitor. This will allow us to recognize whether the client paid the expected amount on time.
         // Note that the required amount here needs to include the fees for the on-chain transaction that will claim the funds.
+        int timeoutHeight = (int)electrumSwapData.Locktime - ForwardSwapServerTimeoutBlockBuffer;
         this.blockchainDataMonitor.RegisterMonitoredAddress(swapId: swap.Id, frontendId: swap.FrontendId, address: electrumSwapData.LockupAddress,
-            amountSats: electrumSwapData.OnChainAmountSats, requiredConfirmations: 1, timeoutHeight: (int)electrumSwapData.Locktime, isLockupAddress: true, monitorSpending: false,
+            amountSats: electrumSwapData.OnChainAmountSats, requiredConfirmations: 1, timeoutHeight: timeoutHeight, isLockupAddress: true, monitorSpending: false,
             fundingTransactionHash: null, fundingOutputIndex: null);
 
         try
