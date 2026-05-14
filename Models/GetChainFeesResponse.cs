@@ -11,7 +11,7 @@ namespace WhalesExchangeBackend.Models;
 [SuppressMessage("Microsoft.Performance", "CA1812:AvoidUninstantiatedInternalClasses", Justification = "Instantiated by JSON deserializer.")]
 internal class GetChainFeesResponse
 {
-    /// <summary>Bitcoin fee rate in satoshis per kilo-virtual-byte, or <c>null</c> if not available</summary>
+    /// <summary>Bitcoin fee rate in satoshis per kilo-virtual-byte, or <c>null</c> if not available.</summary>
     [JsonPropertyName("BTC")]
     public long? BtcFeeRate { get; }
 
