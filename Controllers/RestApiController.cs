@@ -665,7 +665,7 @@ internal class RestApiController : InternalControllerBase
     }
 
     /// <summary>
-    /// Action that is executed when chain fees are requested.
+    /// Action that is executed when chain fee rates are requested.
     /// </summary>
     /// <returns>Result of the action method.</returns>
     [HttpGet]
@@ -688,8 +688,8 @@ internal class RestApiController : InternalControllerBase
         }
         catch (Exception e)
         {
-            this.log.Error($"Exception occurred while getting fee rates: {e}");
-            result = this.BadRequest($"Getting fee rates failed. {e.Message}");
+            this.log.Error($"Exception occurred while getting fee rate: {e}");
+            result = this.BadRequest($"Getting fee rate failed. {e.Message}");
         }
 
         this.log.Debug("$");
