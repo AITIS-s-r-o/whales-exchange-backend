@@ -19,7 +19,7 @@ internal class ElectrumFeeRate
     [JsonPropertyName("policy")]
     public string Policy { get; }
 
-    /// <summary>Fee rate in satoshis per kilo-virtual-byte.</summary>
+    /// <summary>Fee rate in satoshis per kilo-virtual-byte, or <c>null</c> if the information is not available.</summary>
     [JsonPropertyName("sat/kvB")]
     public long? FeeRateKvB { get; }
 
@@ -32,7 +32,7 @@ internal class ElectrumFeeRate
     /// </summary>
     /// <param name="description">Human readable fee rate description.</param>
     /// <param name="policy">Identifier of the policy used for fee estimation.</param>
-    /// <param name="feeRateKvB">Fee rate as satoshis per kilo-virtual-byte.</param>
+    /// <param name="feeRateKvB">Fee rate as satoshis per kilo-virtual-byte, or <c>null</c> if the information is not available.</param>
     /// <param name="tooltip">Additional description of the fee rate condition.</param>
     public ElectrumFeeRate(string description, string policy, long? feeRateKvB, string tooltip)
     {
