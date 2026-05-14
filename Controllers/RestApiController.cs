@@ -338,7 +338,13 @@ internal class RestApiController : InternalControllerBase
                 this.log.Error($"Exception occurred while marking swap ID {swap.Id} as rejected: {ei}");
             }
 
-            result = new($"Creating new forward swap failed. {e.Message}");
+            string errorMessage = e.Message switch
+            {
+                "Swap server error: no LN path for the payment could be found" => "Creating new forward swap failed. Swap server found no lightning route for the swap payment.",
+                _ => $"Creating new forward swap failed. {e.Message}",
+            };
+
+            result = new(errorMessage);
             this.log.Debug($"$<SWAP_REJECTED>='{result}'");
             return result;
         }
