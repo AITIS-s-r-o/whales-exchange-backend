@@ -660,7 +660,7 @@ internal class RestApiController : InternalControllerBase
     }
 
     /// <summary>
-    /// Action that is executed when chain fees are requested.
+    /// Action that is executed when chain fee rates are requested.
     /// </summary>
     /// <returns>Result of the action method.</returns>
     [HttpGet]
