@@ -9,7 +9,6 @@ using WhalesExchangeBackend.Data.Repository;
 using WhalesExchangeBackend.Models;
 using WhalesExchangeBackend.Services.DataProvider;
 using WhalesExchangeBackend.Services.ElectrumRpc;
-using WhalesExchangeBackend.SharedLib.Bitcoin;
 using WhalesExchangeBackend.SharedLib.Data;
 using WhalesExchangeBackend.SharedLib.Exceptions;
 using WhalesExchangeBackend.SharedLib.Models;
@@ -951,24 +950,6 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
         this.log.Debug($"* {nameof(address)}='{address}',{nameof(transactionId)}='{transactionId}',{nameof(outputIndex)}={outputIndex},{nameof(startHeight)}={startHeight}");
 
         RefundInfo? result = null;
-
-        ElectrumTransactionWithData? transactionWithData = await this.electrumTransactionProvider.GetTransactionAsync(transactionId, cancellationToken).ConfigureAwait(false);
-        if (transactionWithData is null)
-        {
-            this.log.Debug($"Unable to get transaction data for transaction ID '{transactionId}'.");
-            this.log.Debug($"<TRANSACTION_DATA_NOT_AVAILABLE>='{result}'");
-            return result;
-        }
-
-        if (transactionWithData.Transaction.Outputs.Count < outputIndex + 1)
-        {
-            this.log.Debug($"Transaction ID '{transactionId}' does not have output index {outputIndex}.");
-            this.log.Debug($"<TRANSACTION_DATA_NOT_AVAILABLE>='{result}'");
-            return result;
-        }
-
-        ElectrumTransactionOutput output = transactionWithData.Transaction.Outputs[outputIndex];
-
         ElectrumGetAddressHistoryResponse? response = null;
         try
         {
@@ -1022,7 +1003,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
         {
             AddressHistoryInfo historyInfo = response[i];
 
-            transactionWithData = await this.electrumTransactionProvider.GetTransactionAsync(historyInfo.TransactionHash, cancellationToken).ConfigureAwait(false);
+            ElectrumTransactionWithData? transactionWithData = await this.electrumTransactionProvider.GetTransactionAsync(historyInfo.TransactionHash, cancellationToken)
+                .ConfigureAwait(false);
 
             if (transactionWithData is null)
             {
@@ -1038,7 +1020,35 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                 {
                     this.log.Debug($"Found input '{input.PrevoutHash}:{input.PrevoutIndex}' spending from the address '{address}'. Checking witness...");
 
-                    bool isRefund = ScriptHelper.CheckRefundWitness(output.ScriptPubKey, input.Witness);
+                    // The funding transaction output is of type P2WSH and the script template used is as follows:
+                    //
+                    // WITNESS_TEMPLATE_SWAP_V1 = [
+                    //     opcodes.OP_HASH160,
+                    //     OPPushDataGeneric(lambda x: x == 20),  # idx 1. payment_hash
+                    //     opcodes.OP_EQUAL,
+                    //     opcodes.OP_IF,
+                    //     OPPushDataPubkey,                      # idx 4. server_pubkey
+                    //     opcodes.OP_ELSE,
+                    //     OPPushDataGeneric(None),               # idx 6. locktime
+                    //     opcodes.OP_CHECKLOCKTIMEVERIFY,
+                    //     opcodes.OP_DROP,
+                    //     OPPushDataPubkey,                      # idx 9. client_pubkey
+                    //     opcodes.OP_ENDIF,
+                    //     opcodes.OP_CHECKSIG
+                    // ]
+                    //
+                    // This script needs two arguments:
+                    //   1. the preimage that is going to be hashed and the hash needs to match the hardcoded value;
+                    //   2. the signature.
+                    //
+                    // Therefore, the witness for the input has to have 3 parts (parameters come in reverse order):
+                    //   1. Signature;
+                    //   2. Preimage;
+                    //   3. Script.
+                    //
+                    // When the swap provider is spending this output, it needs to provide the preimage. This enters the IF branch. When the client spends, it does not provide
+                    // the preimage and thus goes to the ELSE branch. Therefore, in order to recognize if this is a refund, we simply check that the second argument is empty.
+                    bool isRefund = (input.Witness.Length == 3) && (input.Witness[1].Length == 0);
                     if (isRefund)
                     {
                         this.log.Debug($"Refund confirmed for output '{input.PrevoutHash}:{input.PrevoutIndex}'.");
