@@ -62,9 +62,37 @@ internal class SwapUpdate
         {
             switch (swap.Status)
             {
+                case SwapStatus.FundingTxCreated:
+                case SwapStatus.FundingTxConfirmed:
+                {
+                    if (swap.FundingTxId is null)
+                        throw new SanityCheckException($"Swap ID {swap.Id} is in {swap.Status} status but its funding TXID is not set.");
+
+                    transaction = new(hex: swap.FundingTxData, id: swap.FundingTxId);
+                    break;
+                }
+
                 case SwapStatus.ProviderErrorNotAccepted:
                 {
                     failureReason = "Client's swap request has not been accepted by the selected swap provider.";
+                    break;
+                }
+
+                case SwapStatus.ClientErrorFundingTxNotCreated:
+                {
+                    failureReason = "Client failed to send the funding on-chain transaction.";
+                    break;
+                }
+
+                case SwapStatus.ErrorFundingTxNotSpent:
+                {
+                    if (swap.FundingTxId is null)
+                        throw new SanityCheckException($"Swap ID {swap.Id} is in {swap.Status} status but its funding TXID is not set.");
+
+                    transaction = new(hex: swap.FundingTxData, id: swap.FundingTxId);
+
+                    failureReason = "Either the user did not accept the lightning payment, or the provider did not send it, or the provider failed to spend the funding transaction"
+                        + " before expiration.";
                     break;
                 }
             }
@@ -91,6 +119,11 @@ internal class SwapUpdate
 
                 case SwapStatus.ClientErrorFundingTxNotSpent:
                 {
+                    if (swap.FundingTxId is null)
+                        throw new SanityCheckException($"Swap ID {swap.Id} is in {swap.Status} status but its funding TXID is not set.");
+
+                    transaction = new(hex: swap.FundingTxData, id: swap.FundingTxId);
+
                     failureReason = "Client failed to claim the funding transaction output.";
                     break;
                 }
