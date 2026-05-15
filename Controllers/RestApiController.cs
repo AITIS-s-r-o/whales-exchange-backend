@@ -35,7 +35,7 @@ internal class RestApiController : InternalControllerBase
 
     /// <summary>Number of blocks the swap provider wants to have on its side to claim the funding transaction output in forward swaps.</summary>
     /// <remarks>Plus one here over the swap server implementation is because of the logic in <c>_claim_swap</c> method.</remarks>
-    private const int ForwardSwapServerTimeoutBlocksBuffer = 60;
+    private const int ForwardSwapServerTimeoutBlocksBuffer = 60 + 1;
 
     /// <summary>Number of blocks after which the forward swap expires.</summary>
     private const int ForwardSwapTimeoutBlocks = 70;

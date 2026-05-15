@@ -990,7 +990,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
             }
         }
 
-        if (firstIndex != -1)
+        if (firstIndex == -1)
         {
             this.log.Debug($"No history after start height {startHeight} found for Bitcoin address '{address}'.");
             this.log.Debug($"<NO_RELEVANT_HISTORY>='{result}'");
