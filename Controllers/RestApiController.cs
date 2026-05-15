@@ -6,12 +6,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using WhalesExchangeBackend.Controllers.InternalSupport;
 using WhalesExchangeBackend.Data.Repository;
 using WhalesExchangeBackend.Models;
 using WhalesExchangeBackend.Services;
-using WhalesExchangeBackend.Services.DataProvider;
 using WhalesExchangeBackend.Services.ElectrumRpc;
 using WhalesExchangeBackend.SharedLib.Data;
 using WhalesExchangeBackend.SharedLib.Exceptions;
@@ -646,7 +644,7 @@ internal class RestApiController : InternalControllerBase
 
         if (fundingInfo is not null)
         {
-            this.log.Debug($"Swap ID {swap.Id} funding transcation '{fundingInfo.TransactionId}' has been detected. Marking the swap as funded.");
+            this.log.Debug($"Swap ID {swap.Id} funding transaction '{fundingInfo.TransactionId}' has been detected. Marking the swap as funded.");
             try
             {
                 DbSwap? refundedSwap = await this.swapRepository.FundingTransactionSetAsync(swapId: swap.Id, isConfirmed: true, transactionId: fundingInfo.TransactionId,
@@ -690,7 +688,7 @@ internal class RestApiController : InternalControllerBase
 
         if (refundInfo is not null)
         {
-            this.log.Debug($"Swap ID {swap.Id} funding transcation output '{swap.FundingTxId}:{swap.LockupOutputIndex}' has been spent. Marking the swap as refunded.");
+            this.log.Debug($"Swap ID {swap.Id} funding transaction output '{swap.FundingTxId}:{swap.LockupOutputIndex}' has been spent. Marking the swap as refunded.");
             try
             {
                 DbSwap? refundedSwap = await this.swapRepository.SwapClaimedOrRefundedAsync(swap.Id, transactionId: refundInfo.TransactionId,
