@@ -74,10 +74,10 @@ internal class SwapUpdate
 
                 case SwapStatus.FundingTxRefunded:
                 {
-                    if (swap.ClientTxId is null)
+                    if (swap.FundingTxId is null)
                         throw new SanityCheckException($"Swap ID {swap.Id} is in {swap.Status} status but its funding TXID is not set.");
 
-                    transaction = new(hex: swap.ClientTxData, id: swap.ClientTxId);
+                    transaction = new(hex: swap.FundingTxData, id: swap.FundingTxId);
                     break;
                 }
 
