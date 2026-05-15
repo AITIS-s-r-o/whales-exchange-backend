@@ -937,7 +937,43 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     }
 
     /// <summary>
-    /// Checks if the given output has been spent.
+    /// Checks if the given address was funded.
+    /// </summary>
+    /// <param name="swapId">ID of the swap.</param>
+    /// <param name="frontendId">Frontend ID of the swap.</param>
+    /// <param name="address">Address to check.</param>
+    /// <param name="amountSats">Expected amount to be received to the address.</param>
+    /// <param name="startHeight">Block height below which we should not inspect the history.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>Information about the funding transaction, or <c>null</c> if the address was not funded.</returns>
+    public async Task<FundingInfo?> CheckFundedAsync(long swapId, string frontendId, string address, long amountSats, long startHeight, CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(swapId)}={swapId},{nameof(frontendId)}='{frontendId}',{nameof(address)}='{address}',{nameof(amountSats)}='{amountSats}',{
+            nameof(startHeight)}={startHeight}");
+
+        MonitoredAddress monitoredAddress = new(swapId: swapId, frontendId: frontendId, address: address, amountSats: amountSats, requiredConfirmations: 1,
+            timeoutHeight: long.MaxValue, monitoringStartedAtHeight: startHeight, isLockupAddress: true, monitorSpending: false, fundingTransactionHash: null,
+            fundingOutputIndex: null);
+
+        long currentBlockHeight;
+        lock (this.dataLock)
+        {
+            currentBlockHeight = this.blockchainHeight;
+        }
+
+        MonitoredAddressActionInfo? actionInfo = await this.CheckAddressHistoryAsync(currentBlockHeight, monitoredAddress, spending: false, cancellationToken)
+            .ConfigureAwait(false);
+
+        FundingInfo? result = null;
+        if ((actionInfo is not null) && (actionInfo.Action == MonitoredAddressAction.Confirmed))
+            result = new(transactionId: actionInfo.TransactionHash, actionInfo.OutputIndex, transactionData: actionInfo.TransactionData);
+
+        this.log.Debug($"$='{result}'");
+        return result;
+    }
+
+    /// <summary>
+    /// Checks if the given output of a forward swap has been spent using refund.
     /// </summary>
     /// <param name="address">Address of the output.</param>
     /// <param name="transactionId">Transaction ID with the output.</param>
@@ -1058,6 +1094,9 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                     break;
                 }
             }
+
+            if (result is not null)
+                break;
         }
 
         this.log.Debug($"$='{result}'");

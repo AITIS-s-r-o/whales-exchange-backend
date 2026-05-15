@@ -444,7 +444,8 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
                         SwapStatus.Accepted} status, but its status is {dbRecord.Status}.");
                 }
 
-                if (isConfirmed && (dbRecord.Status != SwapStatus.Accepted) && (dbRecord.Status != SwapStatus.FundingTxCreated))
+                if (isConfirmed && (dbRecord.Status != SwapStatus.Accepted) && (dbRecord.Status != SwapStatus.FundingTxCreated) && (dbRecord.Status != SwapStatus.FundingTxCreated)
+                    && (dbRecord.Status != SwapStatus.ClientErrorFundingTxNotCreated))
                 {
                     throw new SanityCheckException($"Changing status of swap ID {swapId} to {SwapStatus.FundingTxConfirmed} requires the swap status to be either in {
                         SwapStatus.Accepted} or {SwapStatus.FundingTxCreated} status, but its status is {dbRecord.Status}.");
@@ -457,7 +458,10 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
                 if (dbRecord.FundingTime is null)
                     dbRecord.FundingTime = DateTime.UtcNow;
 
-                dbRecord.Status = isConfirmed ? SwapStatus.FundingTxConfirmed : SwapStatus.FundingTxCreated;
+                // If the swap expired before the funding transaction was created and then we detected that the funding transaction was created, we leave the swap in its state,
+                // but we fill in the funding transaction data in the database record.
+                if (dbRecord.Status != SwapStatus.ClientErrorFundingTxNotCreated)
+                    dbRecord.Status = isConfirmed ? SwapStatus.FundingTxConfirmed : SwapStatus.FundingTxCreated;
 
                 _ = db.Swaps.Update(dbRecord);
 
@@ -582,10 +586,10 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
                 }
                 else
                 {
-                    if (dbRecord.Status != SwapStatus.ErrorFundingTxNotSpent)
+                    if ((dbRecord.Status != SwapStatus.ErrorFundingTxNotSpent) && (dbRecord.Status != SwapStatus.ClientErrorFundingTxNotCreated))
                     {
                         throw new SanityCheckException($"Changing status of swap ID {swapId} to {SwapStatus.FundingTxRefunded} requires the swap status to be in {
-                            SwapStatus.ErrorFundingTxNotSpent} status, but its status is {dbRecord.Status}.");
+                            SwapStatus.ErrorFundingTxNotSpent} or {SwapStatus.ClientErrorFundingTxNotCreated} status, but its status is {dbRecord.Status}.");
                     }
                 }
 

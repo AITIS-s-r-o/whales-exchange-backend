@@ -6,10 +6,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using WhalesExchangeBackend.Controllers.InternalSupport;
 using WhalesExchangeBackend.Data.Repository;
 using WhalesExchangeBackend.Models;
 using WhalesExchangeBackend.Services;
+using WhalesExchangeBackend.Services.DataProvider;
 using WhalesExchangeBackend.Services.ElectrumRpc;
 using WhalesExchangeBackend.SharedLib.Data;
 using WhalesExchangeBackend.SharedLib.Exceptions;
@@ -583,31 +585,7 @@ internal class RestApiController : InternalControllerBase
         if ((swaps.Length == 1) && (swaps[0] is not null))
         {
             DbSwap swap = swaps[0]!;
-            if (swap.IsForward && (swap.Status == SwapStatus.ErrorFundingTxNotSpent) && (swap.LockupAddress is not null) && (swap.FundingTxId is not null)
-                && (swap.LockupOutputIndex is not null) && (swap.TimeoutBlockHeight is not null))
-            {
-                // Check if refund has been issued.
-                long startHeight = swap.TimeoutBlockHeight.Value - ForwardSwapTimeoutBlocks;
-                RefundInfo? refundInfo = await this.blockchainDataMonitor.CheckRefundedAsync(address: swap.LockupAddress, transactionId: swap.FundingTxId,
-                    outputIndex: swap.LockupOutputIndex.Value, startHeight: startHeight, context.RequestAborted).ConfigureAwait(false);
-
-                if (refundInfo is not null)
-                {
-                    this.log.Debug($"Swap ID {swap.Id} funding transcation output '{swap.FundingTxId}:{swap.LockupOutputIndex}' has been spent. Marking the swap as refunded.");
-                    try
-                    {
-                        DbSwap? refundedSwap = await this.swapRepository.SwapClaimedOrRefundedAsync(swap.Id, transactionId: refundInfo.TransactionId,
-                            transactionData: refundInfo.TransactionData, isClaimed: false).ConfigureAwait(false);
-
-                        if (refundedSwap is not null)
-                            swap = refundedSwap;
-                    }
-                    catch (DatabaseException e)
-                    {
-                        this.log.Error($"Exception occurred while trying to mark swap frontend ID '{frontendId}' as refunded in the database: {e}");
-                    }
-                }
-            }
+            swap = await this.UpdateSwapStatusIfNeededAsync(swap, context.RequestAborted).ConfigureAwait(false);
 
             SwapUpdate swapUpdate = SwapUpdate.FromDbSwap(swap);
 
@@ -624,6 +602,111 @@ internal class RestApiController : InternalControllerBase
 
         this.log.Debug("$");
         return result;
+    }
+
+    /// <summary>
+    /// Updates swap status if it changed in a way the active swap monitoring would not detect.
+    /// </summary>
+    /// <param name="swap">Swap to update.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>Original or updated swap.</returns>
+    private async Task<DbSwap> UpdateSwapStatusIfNeededAsync(DbSwap swap, CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(swap)}='{swap}'");
+
+        swap = await this.UpdateForwardLatePaidSwapAsync(swap, cancellationToken).ConfigureAwait(false);
+        swap = await this.UpdateForwardRefundedSwapAsync(swap, cancellationToken).ConfigureAwait(false);
+
+        this.log.Debug($"$='{swap}'");
+        return swap;
+    }
+
+    /// <summary>
+    /// Updates forward swap in <see cref="SwapStatus.ClientErrorFundingTxNotCreated"/> status to <see cref="SwapStatus.ErrorFundingTxNotSpent"/>, if a funding transaction has
+    /// been detected.
+    /// </summary>
+    /// <param name="swap">Swap to update.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>Original or updated swap.</returns>
+    private async Task<DbSwap> UpdateForwardLatePaidSwapAsync(DbSwap swap, CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(swap)}='{swap}'");
+
+        if (!swap.IsForward || (swap.Status != SwapStatus.ClientErrorFundingTxNotCreated) || (swap.LockupAddress is null) || (swap.FundingTxId is not null)
+            || (swap.LockupOutputIndex is not null) || (swap.TimeoutBlockHeight is null))
+        {
+            this.log.Debug($"$<NO_MATCH>='{swap}'");
+            return swap;
+        }
+
+        // Check if a funding transaction was created.
+        long startHeight = swap.TimeoutBlockHeight.Value - ForwardSwapTimeoutBlocks;
+        FundingInfo? fundingInfo = await this.blockchainDataMonitor.CheckFundedAsync(swapId: swap.Id, frontendId: swap.FrontendId, address: swap.LockupAddress,
+            amountSats: swap.AmountToPaySats, startHeight: startHeight, cancellationToken).ConfigureAwait(false);
+
+        if (fundingInfo is not null)
+        {
+            this.log.Debug($"Swap ID {swap.Id} funding transcation '{fundingInfo.TransactionId}' has been detected. Marking the swap as funded.");
+            try
+            {
+                DbSwap? refundedSwap = await this.swapRepository.FundingTransactionSetAsync(swapId: swap.Id, isConfirmed: true, transactionId: fundingInfo.TransactionId,
+                    fundingInfo.OutputIndex, transactionData: fundingInfo.TransactionData).ConfigureAwait(false);
+
+                if (refundedSwap is not null)
+                    swap = refundedSwap;
+            }
+            catch (DatabaseException e)
+            {
+                this.log.Error($"Exception occurred while trying to mark swap ID '{swap.Id}' as refunded in the database: {e}");
+            }
+        }
+
+        this.log.Debug($"$='{swap}'");
+        return swap;
+    }
+
+    /// <summary>
+    /// Updates forward swap in <see cref="SwapStatus.ErrorFundingTxNotSpent"/> or <see cref="SwapStatus.ClientErrorFundingTxNotCreated"/> status to
+    /// <see cref="SwapStatus.FundingTxRefunded"/>, if a refund transaction has been detected.
+    /// </summary>
+    /// <param name="swap">Swap to update.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>Original or updated swap.</returns>
+    private async Task<DbSwap> UpdateForwardRefundedSwapAsync(DbSwap swap, CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(swap)}='{swap}'");
+
+        if (!swap.IsForward || ((swap.Status != SwapStatus.ErrorFundingTxNotSpent) && (swap.Status != SwapStatus.ClientErrorFundingTxNotCreated)) || (swap.LockupAddress is null)
+            || (swap.FundingTxId is null) || (swap.LockupOutputIndex is null) || (swap.TimeoutBlockHeight is null))
+        {
+            this.log.Debug($"$<NO_MATCH>='{swap}'");
+            return swap;
+        }
+
+        // Check if refund has been issued.
+        long startHeight = swap.TimeoutBlockHeight.Value - ForwardSwapTimeoutBlocks;
+        RefundInfo? refundInfo = await this.blockchainDataMonitor.CheckRefundedAsync(address: swap.LockupAddress, transactionId: swap.FundingTxId,
+            outputIndex: swap.LockupOutputIndex.Value, startHeight: startHeight, cancellationToken).ConfigureAwait(false);
+
+        if (refundInfo is not null)
+        {
+            this.log.Debug($"Swap ID {swap.Id} funding transcation output '{swap.FundingTxId}:{swap.LockupOutputIndex}' has been spent. Marking the swap as refunded.");
+            try
+            {
+                DbSwap? refundedSwap = await this.swapRepository.SwapClaimedOrRefundedAsync(swap.Id, transactionId: refundInfo.TransactionId,
+                    transactionData: refundInfo.TransactionData, isClaimed: false).ConfigureAwait(false);
+
+                if (refundedSwap is not null)
+                    swap = refundedSwap;
+            }
+            catch (DatabaseException e)
+            {
+                this.log.Error($"Exception occurred while trying to mark swap ID '{swap.Id}' as refunded in the database: {e}");
+            }
+        }
+
+        this.log.Debug($"$='{swap}'");
+        return swap;
     }
 
     /// <summary>

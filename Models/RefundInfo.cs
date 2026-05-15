@@ -4,7 +4,7 @@ using WhalesSecret.TradeScriptLib.Logging;
 namespace WhalesExchangeBackend.Models;
 
 /// <summary>
-/// Information about refunded forward swap.
+/// Information about refund transaction of a forward swap.
 /// </summary>
 public class RefundInfo
 {
