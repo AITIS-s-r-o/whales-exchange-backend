@@ -72,6 +72,15 @@ internal class SwapUpdate
                     break;
                 }
 
+                case SwapStatus.FundingTxRefunded:
+                {
+                    if (swap.ClientTxId is null)
+                        throw new SanityCheckException($"Swap ID {swap.Id} is in {swap.Status} status but its funding TXID is not set.");
+
+                    transaction = new(hex: swap.ClientTxData, id: swap.ClientTxId);
+                    break;
+                }
+
                 case SwapStatus.ProviderErrorNotAccepted:
                 {
                     failureReason = "Client's swap request has not been accepted by the selected swap provider.";
