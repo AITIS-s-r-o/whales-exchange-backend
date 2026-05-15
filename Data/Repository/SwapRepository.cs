@@ -554,11 +554,13 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
     /// <param name="swapId">ID of the swap.</param>
     /// <param name="transactionId">Transaction ID of the claim transaction in hex format.</param>
     /// <param name="transactionData">Raw transaction data in hex format, or <c>null</c> if not available.</param>
+    /// <param name="isClaimed"><c>true</c> if the swap was claimed, <c>false</c> if it was refunded.</param>
     /// <returns>Update swap database record, or <c>null</c> if the swap ID was not found in the database.</returns>
     /// <exception cref="DatabaseException">Thrown when the database operation fails.</exception>
-    public async Task<DbSwap?> SwapClaimedAsync(long swapId, string transactionId, string transactionData)
+    public async Task<DbSwap?> SwapClaimedOrRefundedAsync(long swapId, string transactionId, string transactionData, bool isClaimed)
     {
-        this.log.Debug($"* {nameof(swapId)}={swapId},{nameof(transactionId)}='{transactionId}',{nameof(transactionData)}='{transactionData.ToBoundedString()}'");
+        this.log.Debug($"* {nameof(swapId)}={swapId},{nameof(transactionId)}='{transactionId}',{nameof(transactionData)}='{transactionData.ToBoundedString()}',{
+            nameof(isClaimed)}={isClaimed}");
 
         DbSwap? result = null;
         try
@@ -570,17 +572,28 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
             DbSwap? dbRecord = await db.Swaps.FindAsync(swapId).ConfigureAwait(false);
             if (dbRecord is not null)
             {
-                if (dbRecord.Status != SwapStatus.FundingTxConfirmed)
+                if (isClaimed)
                 {
-                    throw new SanityCheckException($"Changing status of swap ID {swapId} to {SwapStatus.FundingTxSpent} requires the swap status to be in {
-                        SwapStatus.FundingTxConfirmed} status, but its status is {dbRecord.Status}.");
+                    if (dbRecord.Status != SwapStatus.FundingTxConfirmed)
+                    {
+                        throw new SanityCheckException($"Changing status of swap ID {swapId} to {SwapStatus.FundingTxSpent} requires the swap status to be in {
+                            SwapStatus.FundingTxConfirmed} status, but its status is {dbRecord.Status}.");
+                    }
+                }
+                else
+                {
+                    if (dbRecord.Status != SwapStatus.ErrorFundingTxNotSpent)
+                    {
+                        throw new SanityCheckException($"Changing status of swap ID {swapId} to {SwapStatus.FundingTxRefunded} requires the swap status to be in {
+                            SwapStatus.ErrorFundingTxNotSpent} status, but its status is {dbRecord.Status}.");
+                    }
                 }
 
                 dbRecord.ClientTxId = transactionId;
                 dbRecord.ClientTxData = transactionData;
 
                 dbRecord.SpentTime = DateTime.UtcNow;
-                dbRecord.Status = SwapStatus.FundingTxSpent;
+                dbRecord.Status = isClaimed ? SwapStatus.FundingTxSpent : SwapStatus.FundingTxRefunded;
 
                 _ = db.Swaps.Update(dbRecord);
 

@@ -154,6 +154,7 @@ internal class SwapUpdate
             SwapStatus.FundingTxCreated => isForward ? Constants.SwapStatusPendingTransactionServerMempool : Constants.SwapStatusPendingTransactionMempool,
             SwapStatus.FundingTxConfirmed => isForward ? Constants.SwapStatusPendingTransactionServerConfirmed : Constants.SwapStatusPendingTransactionConfirmed,
             SwapStatus.FundingTxSpent => Constants.SwapStatusSuccessTransactionClaimed,
+            SwapStatus.FundingTxRefunded => Constants.SwapStatusFailedTransactionRefunded,
             SwapStatus.ProviderErrorNotAccepted => Constants.SwapStatusFailedSwapRejected,
             SwapStatus.ClientErrorFundingTxNotCreated => Constants.SwapStatusFailedSwapExpired,
             SwapStatus.ClientErrorFundingTxNotSpent => Constants.SwapStatusFailedSwapRefunded,

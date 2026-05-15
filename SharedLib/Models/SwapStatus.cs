@@ -29,6 +29,9 @@ internal enum SwapStatus
     /// <summary>Client or swap server spent the funding transaction output.</summary>
     FundingTxSpent = 7,
 
+    /// <summary>Client received refund.</summary>
+    FundingTxRefunded = 9,
+
     /// <summary>Error occurred before the request was accepted. This includes unreachable provider, or provider actively rejecting the swap.</summary>
     ProviderErrorNotAccepted = 101,
 

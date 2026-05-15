@@ -6,8 +6,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.Threading;
 using WhalesExchangeBackend.Data.Repository;
+using WhalesExchangeBackend.Models;
 using WhalesExchangeBackend.Services.DataProvider;
 using WhalesExchangeBackend.Services.ElectrumRpc;
+using WhalesExchangeBackend.SharedLib.Bitcoin;
 using WhalesExchangeBackend.SharedLib.Data;
 using WhalesExchangeBackend.SharedLib.Exceptions;
 using WhalesExchangeBackend.SharedLib.Models;
@@ -318,7 +320,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
             // Electrum returns unspent outputs sorted by block height in ascending order, so the last one is the newest. However, if the transaction is still in its mempool,
             // the block height is returned as 0. We can ignore all records with block height prior to monitoring start.
             bool isLastUtxoInMempool = response[^1].InMempool;
-            if (isLastUtxoInMempool || (response[^1].BlockHeight > monitoredAddress.MonitoringStartedAtHeight))
+            if (isLastUtxoInMempool || (response[^1].BlockHeight >= monitoredAddress.MonitoringStartedAtHeight))
             {
                 // Iterate in reverse to process records with higher block heights first.
                 for (int i = response.Count - 1; i >= 0; i--)
@@ -431,7 +433,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
             // First, we find the index of the oldest transaction that is relevant.
             int firstIndex = -1;
             bool isLastTransactionInMempool = response[^1].InMempool;
-            if (isLastTransactionInMempool || (response[^1].BlockHeight > monitoredAddress.MonitoringStartedAtHeight))
+            if (isLastTransactionInMempool || (response[^1].BlockHeight >= monitoredAddress.MonitoringStartedAtHeight))
             {
                 for (int i = response.Count - 1; i >= 0; i--)
                 {
@@ -814,8 +816,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
 
                             try
                             {
-                                result = await this.swapRepository.SwapClaimedAsync(monitoredAddress.SwapId, transactionId: transactionId, transactionData: transactionData)
-                                    .ConfigureAwait(false);
+                                result = await this.swapRepository.SwapClaimedOrRefundedAsync(monitoredAddress.SwapId, transactionId: transactionId,
+                                    transactionData: transactionData, isClaimed: true).ConfigureAwait(false);
                             }
                             catch (DatabaseException e)
                             {
@@ -933,6 +935,123 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
         }
 
         this.log.Debug("$");
+    }
+
+    /// <summary>
+    /// Checks if the given output has been spent.
+    /// </summary>
+    /// <param name="address">Address of the output.</param>
+    /// <param name="transactionId">Transaction ID with the output.</param>
+    /// <param name="outputIndex">Index of the output in the transaction.</param>
+    /// <param name="startHeight">Block height below which we should not inspect the history.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>Information about the refund, or <c>null</c> if the output was not refunded.</returns>
+    public async Task<RefundInfo?> CheckRefundedAsync(string address, string transactionId, int outputIndex, long startHeight, CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(address)}='{address}',{nameof(transactionId)}='{transactionId}',{nameof(outputIndex)}={outputIndex},{nameof(startHeight)}={startHeight}");
+
+        RefundInfo? result = null;
+
+        ElectrumTransactionWithData? transactionWithData = await this.electrumTransactionProvider.GetTransactionAsync(transactionId, cancellationToken).ConfigureAwait(false);
+        if (transactionWithData is null)
+        {
+            this.log.Debug($"Unable to get transaction data for transaction ID '{transactionId}'.");
+            this.log.Debug($"<TRANSACTION_DATA_NOT_AVAILABLE>='{result}'");
+            return result;
+        }
+
+        if (transactionWithData.Transaction.Outputs.Count < outputIndex + 1)
+        {
+            this.log.Debug($"Transaction ID '{transactionId}' does not have output index {outputIndex}.");
+            this.log.Debug($"<TRANSACTION_DATA_NOT_AVAILABLE>='{result}'");
+            return result;
+        }
+
+        ElectrumTransactionOutput output = transactionWithData.Transaction.Outputs[outputIndex];
+
+        ElectrumGetAddressHistoryResponse? response = null;
+        try
+        {
+            response = await this.electrumRpcClient.GetAddressHistoryAsync(address, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationFailedException e)
+        {
+            this.log.Error($"Getting information about Bitcoin address '{address}' failed with exception: {e}");
+        }
+        catch (ElectrumRpcException e)
+        {
+            this.log.Error($"Electrum server reported error when querying information for Bitcoin address '{address}': {e}");
+        }
+
+        if ((response is null) || (response.Count == 0))
+        {
+            this.log.Debug($"No history found for Bitcoin address '{address}'.");
+            this.log.Debug($"<NO_HISTORY>='{result}'");
+            return result;
+        }
+
+        // Electrum returns history entries in chronological order. If we process the list in the reverse order, once we reach an entry with block height prior to monitoring
+        // start, we can stop processing the history. However, if the transaction is still in its mempool, the block height is returned as 0. We can ignore all records with
+        // block height prior to monitoring start.
+        //
+        // First, we find the index of the oldest transaction that is relevant.
+        int firstIndex = -1;
+        bool isLastTransactionInMempool = response[^1].InMempool;
+        if (isLastTransactionInMempool || (response[^1].BlockHeight >= startHeight))
+        {
+            for (int i = response.Count - 1; i >= 0; i--)
+            {
+                AddressHistoryInfo historyInfo = response[i];
+                if (!historyInfo.InMempool && (historyInfo.BlockHeight < startHeight))
+                    break;
+
+                firstIndex = i;
+            }
+        }
+
+        if (firstIndex != -1)
+        {
+            this.log.Debug($"No history after start height {startHeight} found for Bitcoin address '{address}'.");
+            this.log.Debug($"<NO_RELEVANT_HISTORY>='{result}'");
+            return result;
+        }
+
+        // In the list of relevant transactions, we are looking for an output that matches the monitored criteria. We process transactions from the first relevant to
+        // the last.
+        for (int i = firstIndex; i < response.Count; i++)
+        {
+            AddressHistoryInfo historyInfo = response[i];
+
+            transactionWithData = await this.electrumTransactionProvider.GetTransactionAsync(historyInfo.TransactionHash, cancellationToken).ConfigureAwait(false);
+
+            if (transactionWithData is null)
+            {
+                this.log.Debug($"Transaction data is not available for transaction ID '{historyInfo.TransactionHash}'.");
+                continue;
+            }
+
+            ElectrumTransaction transaction = transactionWithData.Transaction;
+            for (int inputIndex = 0; inputIndex < transaction.Inputs.Count; inputIndex++)
+            {
+                ElectrumTransactionInput input = transaction.Inputs[inputIndex];
+                if ((input.PrevoutHash == transactionId) && (input.PrevoutIndex == outputIndex))
+                {
+                    this.log.Debug($"Found input '{input.PrevoutHash}:{input.PrevoutIndex}' spending from the address '{address}'. Checking witness...");
+
+                    bool isRefund = ScriptHelper.CheckRefundWitness(output.ScriptPubKey, input.Witness);
+                    if (isRefund)
+                    {
+                        this.log.Debug($"Refund confirmed for output '{input.PrevoutHash}:{input.PrevoutIndex}'.");
+                        result = new(transactionId: historyInfo.TransactionHash, transactionData: transactionWithData.RawDataHex);
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        this.log.Debug($"$='{result}'");
+        return result;
     }
 
     /// <summary>

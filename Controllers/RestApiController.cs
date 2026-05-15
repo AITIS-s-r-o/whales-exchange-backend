@@ -34,7 +34,11 @@ internal class RestApiController : InternalControllerBase
     private const int MaxReverseSwapClientAddressHistoryLength = 100;
 
     /// <summary>Number of blocks the swap provider wants to have on its side to claim the funding transaction output in forward swaps.</summary>
-    private const int ForwardSwapServerTimeoutBlockBuffer = 60;
+    /// <remarks>Plus one here over the swap server implementation is because of the logic in <c>_claim_swap</c> method.</remarks>
+    private const int ForwardSwapServerTimeoutBlocksBuffer = 60;
+
+    /// <summary>Number of blocks after which the forward swap expires.</summary>
+    private const int ForwardSwapTimeoutBlocks = 70;
 
     /// <summary>Number of blocks to serve as a safe buffer before for a lockup address timeout scenario.</summary>
     /// <remarks>
@@ -360,7 +364,7 @@ internal class RestApiController : InternalControllerBase
 
         // Register the lockup address to be monitored by the blockchain data monitor. This will allow us to recognize whether the client paid the expected amount on time.
         // Note that the required amount here needs to include the fees for the on-chain transaction that will claim the funds.
-        int timeoutHeight = (int)electrumSwapData.Locktime - ForwardSwapServerTimeoutBlockBuffer;
+        int timeoutHeight = (int)electrumSwapData.Locktime - ForwardSwapServerTimeoutBlocksBuffer;
         this.blockchainDataMonitor.RegisterMonitoredAddress(swapId: swap.Id, frontendId: swap.FrontendId, address: electrumSwapData.LockupAddress,
             amountSats: electrumSwapData.OnChainAmountSats, requiredConfirmations: 1, timeoutHeight: timeoutHeight, isLockupAddress: true, monitorSpending: false,
             fundingTransactionHash: null, fundingOutputIndex: null);
@@ -557,12 +561,55 @@ internal class RestApiController : InternalControllerBase
     {
         this.log.Debug($"* {nameof(frontendId)}='{frontendId}'");
 
+        HttpContext? context = this.httpContextAccessor.HttpContext;
+        if (context is null)
+            throw new SanityCheckException("HTTP context is null.");
+
         IActionResult result;
-        DbSwap?[] swaps = await this.swapRepository.GetSwapsByFrontendIdsAsync(new string[] { frontendId }).ConfigureAwait(false);
+        DbSwap?[] swaps;
+        try
+        {
+            swaps = await this.swapRepository.GetSwapsByFrontendIdsAsync(new string[] { frontendId }).ConfigureAwait(false);
+        }
+        catch (DatabaseException e)
+        {
+            this.log.Error($"Exception occurred while trying to get swap frontend ID '{frontendId}' from the database: {e}");
+
+            result = this.StatusCode((int)HttpStatusCode.InternalServerError, "Getting swap from the database failed.");
+            this.log.Debug("$<GET_SWAP_ERROR>");
+            return result;
+        }
 
         if ((swaps.Length == 1) && (swaps[0] is not null))
         {
-            SwapUpdate swapUpdate = SwapUpdate.FromDbSwap(swaps[0]!);
+            DbSwap swap = swaps[0]!;
+            if (swap.IsForward && (swap.Status == SwapStatus.ErrorFundingTxNotSpent) && (swap.LockupAddress is not null) && (swap.FundingTxId is not null)
+                && (swap.LockupOutputIndex is not null) && (swap.TimeoutBlockHeight is not null))
+            {
+                // Check if refund has been issued.
+                long startHeight = swap.TimeoutBlockHeight.Value - ForwardSwapTimeoutBlocks;
+                RefundInfo? refundInfo = await this.blockchainDataMonitor.CheckRefundedAsync(address: swap.LockupAddress, transactionId: swap.FundingTxId,
+                    outputIndex: swap.LockupOutputIndex.Value, startHeight: startHeight, context.RequestAborted).ConfigureAwait(false);
+
+                if (refundInfo is not null)
+                {
+                    this.log.Debug($"Swap ID {swap.Id} funding transcation output '{swap.FundingTxId}:{swap.LockupOutputIndex}' has been spent. Marking the swap as refunded.");
+                    try
+                    {
+                        DbSwap? refundedSwap = await this.swapRepository.SwapClaimedOrRefundedAsync(swap.Id, transactionId: refundInfo.TransactionId,
+                            transactionData: refundInfo.TransactionData, isClaimed: false).ConfigureAwait(false);
+
+                        if (refundedSwap is not null)
+                            swap = refundedSwap;
+                    }
+                    catch (DatabaseException e)
+                    {
+                        this.log.Error($"Exception occurred while trying to mark swap frontend ID '{frontendId}' as refunded in the database: {e}");
+                    }
+                }
+            }
+
+            SwapUpdate swapUpdate = SwapUpdate.FromDbSwap(swap);
 
             GetSwapStatusResponse response = new(status: swapUpdate.Status, failureReason: swapUpdate.FailureReason, swapUpdate.Transaction, error: null);
             result = this.Ok(response);
