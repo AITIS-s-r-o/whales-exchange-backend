@@ -77,7 +77,7 @@ internal class SwapUpdate
                     if (swap.FundingTxId is null)
                         throw new SanityCheckException($"Swap ID {swap.Id} is in {swap.Status} status but its funding TXID is not set.");
 
-                    transaction = new(hex: swap.FundingTxData, id: swap.FundingTxId);
+                    transaction = new(hex: swap.FundingTxData, id: swap.FundingTxId, refundTxId: swap.ClientTxId);
                     break;
                 }
 
@@ -165,7 +165,7 @@ internal class SwapUpdate
             SwapStatus.FundingTxSpent => Constants.SwapStatusSuccessTransactionClaimed,
             SwapStatus.FundingTxRefunded => Constants.SwapStatusFailedSwapRefunded,
             SwapStatus.ProviderErrorNotAccepted => Constants.SwapStatusFailedSwapRejected,
-            SwapStatus.ClientErrorFundingTxNotCreated => Constants.SwapStatusFailedSwapExpired,
+            SwapStatus.ClientErrorFundingTxNotCreated => Constants.SwapStatusFailedSwapWaitingForRefund,
             SwapStatus.ClientErrorFundingTxNotSpent => Constants.SwapStatusFailedTransactionRefunded,
             SwapStatus.ClientCancelled => Constants.SwapStatusFailedSwapCancelled,
             SwapStatus.ErrorFundingTxNotCreated => Constants.SwapStatusFailedTransactionLockupFailed,
