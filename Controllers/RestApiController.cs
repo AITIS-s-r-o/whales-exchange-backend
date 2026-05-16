@@ -647,11 +647,11 @@ internal class RestApiController : InternalControllerBase
             this.log.Debug($"Swap ID {swap.Id} funding transaction '{fundingInfo.TransactionId}' has been detected. Marking the swap as funded.");
             try
             {
-                DbSwap? refundedSwap = await this.swapRepository.FundingTransactionSetAsync(swapId: swap.Id, isConfirmed: true, transactionId: fundingInfo.TransactionId,
+                DbSwap? fundedSwap = await this.swapRepository.FundingTransactionSetAsync(swapId: swap.Id, isConfirmed: true, transactionId: fundingInfo.TransactionId,
                     fundingInfo.OutputIndex, transactionData: fundingInfo.TransactionData).ConfigureAwait(false);
 
-                if (refundedSwap is not null)
-                    swap = refundedSwap;
+                if (fundedSwap is not null)
+                    swap = fundedSwap;
             }
             catch (DatabaseException e)
             {
