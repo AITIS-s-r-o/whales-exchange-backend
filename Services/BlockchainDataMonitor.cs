@@ -1084,6 +1084,8 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
                     //
                     // When the swap provider is spending this output, it needs to provide the preimage. This enters the IF branch. When the client spends, it does not provide
                     // the preimage and thus goes to the ELSE branch. Therefore, in order to recognize if this is a refund, we simply check that the second argument is empty.
+                    // The client could theoretically deceive us by setting the preimage parameter to any data that is different from the original preimage, but there is no
+                    // incentive for the client to do so. The recognition of the refund is purely for the UX.
                     bool isRefund = (input.Witness.Length == 3) && (input.Witness[1].Length == 0);
                     if (isRefund)
                     {
