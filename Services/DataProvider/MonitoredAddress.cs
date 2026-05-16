@@ -31,7 +31,7 @@ internal class MonitoredAddress
     public long TimeoutHeight { get; }
 
     /// <summary>Blockchain height at which the monitoring started.</summary>
-    public int MonitoringStartedAtHeight { get; }
+    public long MonitoringStartedAtHeight { get; }
 
     /// <summary><c>true</c> if the monitored address is the lockup address in the funding transaction, <c>false</c> if it is the client address.</summary>
     public bool IsLockupAddress { get; }
@@ -79,7 +79,7 @@ internal class MonitoredAddress
     /// <param name="monitorSpending"><c>true</c> to monitor sending from the address, <c>false</c> to monitor sending money to the address.</param>
     /// <param name="fundingTransactionHash">If <paramref name="monitorSpending"/> is true, this contains the hash of the funding transaction; <c>null</c> otherwise.</param>
     /// <param name="fundingOutputIndex">If <paramref name="monitorSpending"/> is true, this contains the index of the funding transaction output; <c>null</c> otherwise.</param>
-    public MonitoredAddress(long swapId, string frontendId, string address, long amountSats, int requiredConfirmations, long timeoutHeight, int monitoringStartedAtHeight,
+    public MonitoredAddress(long swapId, string frontendId, string address, long amountSats, int requiredConfirmations, long timeoutHeight, long monitoringStartedAtHeight,
         bool isLockupAddress, bool monitorSpending, string? fundingTransactionHash, int? fundingOutputIndex)
     {
         this.statusLock = new();
