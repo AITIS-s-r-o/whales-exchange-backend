@@ -641,7 +641,7 @@ internal class RestApiController : InternalControllerBase
 
         // Check if a funding transaction was created.
         long startHeight = swap.TimeoutBlockHeight.Value - ForwardSwapTimeoutBlocks;
-        FundingInfo? fundingInfo = await this.blockchainDataMonitor.CheckFundedAsync(swapId: swap.Id, frontendId: swap.FrontendId, address: swap.LockupAddress,
+        FundingInfo? fundingInfo = await this.blockchainDataMonitor.CheckIsFundedAsync(swapId: swap.Id, frontendId: swap.FrontendId, address: swap.LockupAddress,
             amountSats: swap.AmountToPaySats, startHeight: startHeight, cancellationToken).ConfigureAwait(false);
 
         if (fundingInfo is not null)
@@ -685,7 +685,7 @@ internal class RestApiController : InternalControllerBase
 
         // Check if refund has been issued.
         long startHeight = swap.TimeoutBlockHeight.Value - ForwardSwapTimeoutBlocks;
-        RefundInfo? refundInfo = await this.blockchainDataMonitor.CheckRefundedAsync(address: swap.LockupAddress, transactionId: swap.FundingTxId,
+        RefundInfo? refundInfo = await this.blockchainDataMonitor.CheckIsRefundedAsync(address: swap.LockupAddress, transactionId: swap.FundingTxId,
             outputIndex: swap.LockupOutputIndex.Value, startHeight: startHeight, cancellationToken).ConfigureAwait(false);
 
         if (refundInfo is not null)

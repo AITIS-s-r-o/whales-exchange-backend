@@ -946,7 +946,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <param name="startHeight">Block height below which we should not inspect the history.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns>Information about the funding transaction, or <c>null</c> if the address was not funded.</returns>
-    public async Task<FundingInfo?> CheckFundedAsync(long swapId, string frontendId, string address, long amountSats, long startHeight, CancellationToken cancellationToken)
+    public async Task<FundingInfo?> CheckIsFundedAsync(long swapId, string frontendId, string address, long amountSats, long startHeight, CancellationToken cancellationToken)
     {
         this.log.Debug($"* {nameof(swapId)}={swapId},{nameof(frontendId)}='{frontendId}',{nameof(address)}='{address}',{nameof(amountSats)}='{amountSats}',{
             nameof(startHeight)}={startHeight}");
@@ -981,7 +981,7 @@ internal class BlockchainDataMonitor : System.IAsyncDisposable
     /// <param name="startHeight">Block height below which we should not inspect the history.</param>
     /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
     /// <returns>Information about the refund, or <c>null</c> if the output was not refunded.</returns>
-    public async Task<RefundInfo?> CheckRefundedAsync(string address, string transactionId, int outputIndex, long startHeight, CancellationToken cancellationToken)
+    public async Task<RefundInfo?> CheckIsRefundedAsync(string address, string transactionId, int outputIndex, long startHeight, CancellationToken cancellationToken)
     {
         this.log.Debug($"* {nameof(address)}='{address}',{nameof(transactionId)}='{transactionId}',{nameof(outputIndex)}={outputIndex},{nameof(startHeight)}={startHeight}");
 
