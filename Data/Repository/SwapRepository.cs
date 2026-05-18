@@ -79,7 +79,7 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
                 if (existingSwap.PaymentHashHex == paymentHashHex)
                 {
                     this.log.Debug($"Existing swap ID {existingSwap.Id} already used payment hash '{paymentHashHex}'.");
-                    message = "Payment hash must not be reused.";
+                    message = "Payment hash must not be reused. Please generate a new invoice and try again.";
                 }
                 else
                 {
