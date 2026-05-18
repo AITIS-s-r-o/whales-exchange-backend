@@ -356,6 +356,24 @@ internal class RestApiController : InternalControllerBase
             return result;
         }
 
+        if (electrumSwapData.OnChainAmountSats != amountToPaySats)
+        {
+            this.log.Debug($"Electrum returned on-chain amount {electrumSwapData.OnChainAmountSats} that does not match expected amount {amountToPaySats}. Fees changed.");
+            result = new("Electrum returned on-chain amount that does not match expected amount. Fees changed.");
+
+            try
+            {
+                await this.swapRepository.MarkSwapRejectedAsync(swap.Id).ConfigureAwait(false);
+            }
+            catch (Exception ei)
+            {
+                this.log.Error($"Exception occurred while marking swap ID {swap.Id} as rejected: {ei}");
+            }
+
+            this.log.Debug($"$<INVALID_ONCHAIN_AMOUNT>='{result}'");
+            return result;
+        }
+
         SwapResponse swapResponse = new(id: swap.FrontendId, reverse: false, asset: "BTC", invoice: null, feeInvoice: null, timeoutBlockHeight: electrumSwapData.Locktime,
             sendAmountSats: electrumSwapData.OnChainAmountSats, receiveAmountSats: request.ExpectedAmount, onChainAmountSats: electrumSwapData.OnChainAmountSats,
             redeemScript: electrumSwapData.RedeemScriptHex, lockupAddress: electrumSwapData.LockupAddress);
