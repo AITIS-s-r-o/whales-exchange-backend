@@ -356,6 +356,24 @@ internal class RestApiController : InternalControllerBase
             return result;
         }
 
+        if (electrumSwapData.OnChainAmountSats != amountToPaySats)
+        {
+            this.log.Debug($"Electrum returned on-chain amount {electrumSwapData.OnChainAmountSats} that does not match expected amount {amountToPaySats}. Fees changed.");
+            result = new("Swap provider's fee has changed. Please generate a new invoice and try again.");
+
+            try
+            {
+                await this.swapRepository.MarkSwapRejectedAsync(swap.Id).ConfigureAwait(false);
+            }
+            catch (Exception ei)
+            {
+                this.log.Error($"Exception occurred while marking swap ID {swap.Id} as rejected: {ei}");
+            }
+
+            this.log.Debug($"$<INVALID_ONCHAIN_AMOUNT>='{result}'");
+            return result;
+        }
+
         SwapResponse swapResponse = new(id: swap.FrontendId, reverse: false, asset: "BTC", invoice: null, feeInvoice: null, timeoutBlockHeight: electrumSwapData.Locktime,
             sendAmountSats: electrumSwapData.OnChainAmountSats, receiveAmountSats: request.ExpectedAmount, onChainAmountSats: electrumSwapData.OnChainAmountSats,
             redeemScript: electrumSwapData.RedeemScriptHex, lockupAddress: electrumSwapData.LockupAddress);
@@ -470,6 +488,25 @@ internal class RestApiController : InternalControllerBase
 
             result = new($"Creating new reverse swap failed. {e.Message}");
             this.log.Debug($"$<SWAP_REJECTED>='{result}'");
+            return result;
+        }
+
+        if (electrumSwapData.LightningAmountSats != request.InvoiceAmount.Value)
+        {
+            this.log.Debug($"Electrum returned lightning amount {electrumSwapData.LightningAmountSats} that does not match expected amount {
+                request.InvoiceAmount.Value}. Fees changed.");
+            result = new("Swap provider's fee has changed. Please create a new swap.");
+
+            try
+            {
+                await this.swapRepository.MarkSwapRejectedAsync(swap.Id).ConfigureAwait(false);
+            }
+            catch (Exception ei)
+            {
+                this.log.Error($"Exception occurred while marking swap ID {swap.Id} as rejected: {ei}");
+            }
+
+            this.log.Debug($"$<INVALID_LIGHTNING_AMOUNT>='{result}'");
             return result;
         }
 
