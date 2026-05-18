@@ -359,7 +359,7 @@ internal class RestApiController : InternalControllerBase
         if (electrumSwapData.OnChainAmountSats != amountToPaySats)
         {
             this.log.Debug($"Electrum returned on-chain amount {electrumSwapData.OnChainAmountSats} that does not match expected amount {amountToPaySats}. Fees changed.");
-            result = new("Electrum returned on-chain amount that does not match expected amount. Fees changed.");
+            result = new("Electrum returned on-chain amount that does not match expected amount. Fees changed. Please try a new swap.");
 
             try
             {
