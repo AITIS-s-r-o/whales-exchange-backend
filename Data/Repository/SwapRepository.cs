@@ -102,7 +102,7 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
             transaction.Commit();
 
             result = dbRecord;
-            this.log.Debug($"Reverse swap ID {result.Id} through provider '{providerPubkey}' has been added to the database.");
+            this.log.Debug($"Forward swap ID {result.Id} through provider '{providerPubkey}' has been added to the database.");
         }
         catch (OperationFailedException)
         {
@@ -110,9 +110,9 @@ internal class SwapRepository : RepositoryBase, ISwapRepository
         }
         catch (Exception e)
         {
-            this.log.Error($"Inserting a new reverse swap to the database failed with exception: {e}");
+            this.log.Error($"Inserting a new forward swap to the database failed with exception: {e}");
             this.log.Debug("$<DB_EXCEPTION>");
-            throw new DatabaseException("Inserting a new reverse swap to the database failed.", e);
+            throw new DatabaseException("Inserting a new forward swap to the database failed.", e);
         }
 
         this.log.Debug($"$={result}");
