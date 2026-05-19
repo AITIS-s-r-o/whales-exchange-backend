@@ -125,6 +125,11 @@ internal class ApplicationDbContext : DbContext
             .IsRequired();
 
         _ = entity
+            .Property(q => q.Capabilities)
+            .IsRequired()
+            .HasMaxLength(256);
+
+        _ = entity
             .HasIndex(q => q.Pubkey);
 
         _ = entity
@@ -175,7 +180,7 @@ internal class ApplicationDbContext : DbContext
         _ = entity
             .Property(q => q.ClientAddress)
             .IsUnicode()
-            .IsRequired(true)
+            .IsRequired(false)
             .HasMaxLength(100);
 
         _ = entity
@@ -234,6 +239,16 @@ internal class ApplicationDbContext : DbContext
             .HasMaxLength(66);
 
         _ = entity
+            .Property(q => q.PaymentHashHex)
+            .IsRequired(false)
+            .HasMaxLength(66);
+
+        _ = entity
+            .Property(q => q.RedeemScriptHex)
+            .IsRequired(false)
+            .HasMaxLength(512);
+
+        _ = entity
             .HasOne(q => q.Provider)
             .WithMany()
             .HasForeignKey(q => q.ProviderPubkey)
@@ -256,6 +271,9 @@ internal class ApplicationDbContext : DbContext
 
         _ = entity
             .HasIndex(q => q.ClaimPublicKey);
+
+        _ = entity
+            .HasIndex(q => q.PaymentHashHex);
 
         this.log.Debug("$");
     }

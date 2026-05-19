@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
 using WhalesExchangeBackend.SharedLib.Data;
 
@@ -54,6 +56,11 @@ internal class RestSwapProvider
     [JsonPropertyName("revMining")]
     public long MiningFeeReverseSat { get; }
 
+    /// <summary>Set of provider's capabilities.</summary>
+    /// <remarks>The setter is needed for the serializer.</remarks>
+    [JsonPropertyName("capabilities")]
+    public IReadOnlySet<string> Capabilities { get; set; }
+
     /// <summary>
     /// Creates a new instance of the object.
     /// </summary>
@@ -68,9 +75,10 @@ internal class RestSwapProvider
     /// <param name="maxAmountReverseSat">Maximum amount for a reverse swap in satoshis.</param>
     /// <param name="miningFeeForwardSat">Mining fee for forward swaps in satoshis.</param>
     /// <param name="miningFeeReverseSat">Mining fee for reverse swaps in satoshis.</param>
+    /// <param name="capabilities">Set of provider's capabilities.</param>
     [JsonConstructor]
     public RestSwapProvider(string pubkey, DateTime lastSeen, int poWBits, decimal percentageFeeForward, decimal percentageFeeReverse, long minAmountForwardSat,
-        long minAmountReverseSat, long maxAmountForwardSat, long maxAmountReverseSat, long miningFeeForwardSat, long miningFeeReverseSat)
+        long minAmountReverseSat, long maxAmountForwardSat, long maxAmountReverseSat, long miningFeeForwardSat, long miningFeeReverseSat, IReadOnlySet<string> capabilities)
     {
         this.Pubkey = pubkey;
         this.LastSeen = lastSeen;
@@ -83,6 +91,7 @@ internal class RestSwapProvider
         this.MaxAmountReverseSat = maxAmountReverseSat;
         this.MiningFeeForwardSat = miningFeeForwardSat;
         this.MiningFeeReverseSat = miningFeeReverseSat;
+        this.Capabilities = capabilities;
     }
 
     /// <summary>
@@ -92,6 +101,10 @@ internal class RestSwapProvider
     /// <returns>REST swap provider description.</returns>
     public static RestSwapProvider FromDbSwapProvider(DbSwapProvider dbRecord)
     {
+        HashSet<string> capabilities = dbRecord.Capabilities
+            .Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         return new
         (
             dbRecord.Pubkey,
@@ -104,7 +117,8 @@ internal class RestSwapProvider
             maxAmountForwardSat: dbRecord.MaxAmountForwardSat,
             maxAmountReverseSat: dbRecord.MaxAmountReverseSat,
             miningFeeForwardSat: dbRecord.MiningFeeForwardSat,
-            miningFeeReverseSat: dbRecord.MiningFeeReverseSat
+            miningFeeReverseSat: dbRecord.MiningFeeReverseSat,
+            capabilities: capabilities
         );
     }
 }

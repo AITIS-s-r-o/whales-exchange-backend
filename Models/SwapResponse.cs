@@ -20,13 +20,13 @@ public class SwapResponse
     [JsonPropertyName("asset")]
     public string Asset { get; }
 
-    /// <summary>Lightning invoice for the swap.</summary>
+    /// <summary>Lightning invoice for the swap, or <c>null</c> for forward swaps.</summary>
     [JsonPropertyName("invoice")]
-    public string Invoice { get; }
+    public string? Invoice { get; }
 
-    /// <summary>Lightning invoice for the provider's fees.</summary>
+    /// <summary>Lightning invoice for the provider's fees, or <c>null</c> if not set.</summary>
     [JsonPropertyName("feeInvoice")]
-    public string FeeInvoice { get; }
+    public string? FeeInvoice { get; }
 
     /// <summary>Block height after which the swap times out and refund becomes possible.</summary>
     [JsonPropertyName("timeoutBlockHeight")]
@@ -48,22 +48,6 @@ public class SwapResponse
     [JsonPropertyName("expectedAmount")]
     public long? ExpectedAmountSats { get; }
 
-    /// <summary>BIP21 URI for on-chain payment, or <c>null</c> if not set.</summary>
-    [JsonPropertyName("bip21")]
-    public string? Bip21 { get; }
-
-    /// <summary>On-chain address for the swap, or <c>null</c> if not set.</summary>
-    [JsonPropertyName("address")]
-    public string? Address { get; }
-
-    /// <summary>Preimage for claiming or refunding, or <c>null</c> if not set.</summary>
-    [JsonPropertyName("preimage")]
-    public string? Preimage { get; }
-
-    /// <summary>Private key for refund or claim, or <c>null</c> if not set.</summary>
-    [JsonPropertyName("privateKey")]
-    public string? PrivateKey { get; }
-
     /// <summary>Redeem script (hex) of the HTLC, or <c>null</c> if not set.</summary>
     [JsonPropertyName("redeemScript")]
     public string? RedeemScript { get; }
@@ -78,23 +62,18 @@ public class SwapResponse
     /// <param name="id">Unique identifier for the swap.</param>
     /// <param name="reverse"><c>true</c> if this is a reverse swap (LN → BTC), <c>false</c> if submarine (BTC -> LN).</param>
     /// <param name="asset">Asset being used.</param>
-    /// <param name="invoice">Lightning invoice for the swap.</param>
-    /// <param name="feeInvoice">Lightning invoice for the provider's fees.</param>
+    /// <param name="invoice">Lightning invoice for the swap, or <c>null</c> for forward swaps.</param>
+    /// <param name="feeInvoice">Lightning invoice for the provider's fees, or <c>null</c> if not set.</param>
     /// <param name="timeoutBlockHeight">Block height after which the swap times out and refund becomes possible.</param>
     /// <param name="sendAmountSats">Amount the user is sending in satoshis.</param>
     /// <param name="receiveAmountSats">Amount the user is receiving in satoshis.</param>
     /// <param name="onChainAmountSats">Actual amount that will be locked on-chain (may differ slightly from <see cref="ReceiveAmountSats"/> due to fees) in satoshis, or
     /// <c>null</c> if not set.</param>
     /// <param name="expectedAmountSats">Expected amount in satoshis, or <c>null</c> if not set.</param>
-    /// <param name="bip21">BIP21 URI for on-chain payment, or <c>null</c> if not set.</param>
-    /// <param name="address">On-chain address for the swap, or <c>null</c> if not set.</param>
-    /// <param name="preimage">Preimage for claiming or refunding, or <c>null</c> if not set.</param>
-    /// <param name="privateKey">Private key for refund or claim, or <c>null</c> if not set.</param>
     /// <param name="redeemScript">Redeem script (hex) of the HTLC, or <c>null</c> if not set.</param>
     /// <param name="lockupAddress">On-chain lockup address (P2WSH), or <c>null</c> if not set.</param>
-    public SwapResponse(string id, bool reverse, string asset, string invoice, string feeInvoice, long timeoutBlockHeight, long sendAmountSats, long receiveAmountSats,
-        long? onChainAmountSats = null, long? expectedAmountSats = null, string? bip21 = null, string? address = null, string? preimage = null, string? privateKey = null,
-        string? redeemScript = null, string? lockupAddress = null)
+    public SwapResponse(string id, bool reverse, string asset, string? invoice, string? feeInvoice, long timeoutBlockHeight, long sendAmountSats, long receiveAmountSats,
+        long? onChainAmountSats = null, long? expectedAmountSats = null, string? redeemScript = null, string? lockupAddress = null)
     {
         this.Id = id;
         this.Reverse = reverse;
@@ -106,10 +85,6 @@ public class SwapResponse
         this.ReceiveAmountSats = receiveAmountSats;
         this.OnChainAmountSats = onChainAmountSats;
         this.ExpectedAmountSats = expectedAmountSats;
-        this.Bip21 = bip21;
-        this.Address = address;
-        this.Preimage = preimage;
-        this.PrivateKey = privateKey;
         this.RedeemScript = redeemScript;
         this.LockupAddress = lockupAddress;
     }
@@ -117,12 +92,10 @@ public class SwapResponse
     /// <inheritdoc/>
     public override string ToString()
     {
-        string format = "[{0}=`{1}`,{2}={3},{4}=`{5}`,{6}=`{7}`,{8}=`{9}`,{10}={11},{12}={13},{14}={15},{16}={17},{18}={19},{20}=`{21}`,{22}=`{23}`,{24}=`{25}`,{26}=`{27}`,"
-            + "{28}=`{29}`,{30}=`{31}`]";
         return string.Format
         (
             CultureInfo.InvariantCulture,
-            format,
+            "[{0}=`{1}`,{2}={3},{4}=`{5}`,{6}=`{7}`,{8}=`{9}`,{10}={11},{12}={13},{14}={15},{16}={17},{18}={19},{20}=`{21}`,{22}=`{23}`]",
             nameof(this.Id), this.Id,
             nameof(this.Reverse), this.Reverse,
             nameof(this.Asset), this.Asset,
@@ -133,10 +106,6 @@ public class SwapResponse
             nameof(this.ReceiveAmountSats), this.ReceiveAmountSats,
             nameof(this.OnChainAmountSats), this.OnChainAmountSats,
             nameof(this.ExpectedAmountSats), this.ExpectedAmountSats,
-            nameof(this.Bip21), this.Bip21,
-            nameof(this.Address), this.Address,
-            nameof(this.Preimage), this.Preimage,
-            nameof(this.PrivateKey), this.PrivateKey,
             nameof(this.RedeemScript), this.RedeemScript,
             nameof(this.LockupAddress), this.LockupAddress
         );

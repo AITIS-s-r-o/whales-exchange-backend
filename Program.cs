@@ -151,6 +151,7 @@ public static class Program
             _ = builder.Services.AddSingleton<ElectrumRpcClient>();
             _ = builder.Services.AddSingleton<SwapProviderFetcher>();
             _ = builder.Services.AddSingleton<BlockchainDataMonitor>();
+            _ = builder.Services.AddSingleton<ElectrumTransactionProvider>();
 
             // WebSocket services.
             _ = builder.Services.AddSingleton<IProtocolMessageProcessorFactory, ProtocolMessageProcessorFactory>();

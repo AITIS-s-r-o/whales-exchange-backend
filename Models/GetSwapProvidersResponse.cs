@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json.Serialization;
 using WhalesExchangeBackend.Controllers;
 
@@ -28,5 +29,18 @@ internal class GetSwapProvidersResponse : RestResponseBase
     public GetSwapProvidersResponse(string error) :
         base(success: false, data: null, error)
     {
+    }
+
+    /// <inheritdoc/>
+    public override string ToString()
+    {
+        return string.Format
+        (
+            CultureInfo.InvariantCulture,
+            "[{0}={1},|{2}|={3},{4}=`{5}`]",
+            nameof(this.Success), this.Success,
+            nameof(this.Providers), this.Providers.Length,
+            nameof(this.Error), this.Error
+        );
     }
 }

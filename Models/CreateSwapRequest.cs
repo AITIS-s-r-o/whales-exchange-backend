@@ -22,11 +22,14 @@ internal class CreateSwapRequest
     /// <summary>String identifier of the order side for reverse swaps.</summary>
     public const string ReverseSwapOrderSideStr = "buy";
 
+    /// <summary>Pair ID that is supported.</summary>
+    public const string SupportedPairIdStr = "BTC/BTC";
+
     /// <summary>Either <see cref="ForwardSwapTypeStr"/> or <see cref="ReverseSwapTypeStr"/>.</summary>
     [JsonPropertyName("type")]
     public string Type { get; }
 
-    /// <summary>ID of the assets being swapped. This should be set to <c>BTC/BTC</c>.</summary>
+    /// <summary>ID of the assets being swapped. This should be set to <see cref="SupportedPairIdStr"/>.</summary>
     [JsonPropertyName("pairId")]
     public string PairId { get; }
 
@@ -53,11 +56,11 @@ internal class CreateSwapRequest
     [JsonPropertyName("preimageHash")]
     public string PreimageHash { get; }
 
-    /// <summary>Public key that will be used to claim the on-chain funds, or <c>null</c> for forward swaps.</summary>
+    /// <summary>Public key in hex that will be used to claim the on-chain funds, or <c>null</c> for forward swaps.</summary>
     [JsonPropertyName("claimPublicKey")]
     public string? ClaimPublicKey { get; }
 
-    /// <summary>Public key that will be used for the refund of the on-chain funds if a forward swap fails, or <c>null</c> for reverse swaps.</summary>
+    /// <summary>Public key in hex that will be used for the refund of the on-chain funds if a forward swap fails, or <c>null</c> for reverse swaps.</summary>
     [JsonPropertyName("refundPublicKey")]
     public string? RefundPublicKey { get; }
 
