@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WhalesExchangeBackend.Data;
 
@@ -10,9 +11,11 @@ using WhalesExchangeBackend.Data;
 namespace WhalesExchangeBackend.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260427112320_AddCapabilities")]
+    partial class AddCapabilities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
@@ -37,6 +40,7 @@ namespace WhalesExchangeBackend.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ClientAddress")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .IsUnicode(true)
                         .HasColumnType("TEXT");
@@ -82,17 +86,9 @@ namespace WhalesExchangeBackend.Migrations
                     b.Property<int?>("LockupOutputIndex")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("PaymentHashHex")
-                        .HasMaxLength(66)
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("ProviderPubkey")
                         .IsRequired()
                         .HasMaxLength(64)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("RedeemScriptHex")
-                        .HasMaxLength(512)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("SpentTime")
@@ -113,8 +109,6 @@ namespace WhalesExchangeBackend.Migrations
                     b.HasIndex("FrontendId");
 
                     b.HasIndex("IsForward");
-
-                    b.HasIndex("PaymentHashHex");
 
                     b.HasIndex("ProviderPubkey");
 

@@ -67,12 +67,17 @@ internal class DbSwapProvider
     /// <seealso cref="ProviderPresenceCalculator"/>
     public int SlotsMissed { get; set; }
 
+    /// <summary>Comma-separated list of capabilities.</summary>
+    /// <remarks>The setter is needed for the serializer.</remarks>
+    public string Capabilities { get; set; }
+
     /// <summary>
     /// Creates an empty instance of the object.
     /// </summary>
     public DbSwapProvider()
     {
         this.Pubkey = string.Empty;
+        this.Capabilities = string.Empty;
     }
 
     /// <summary>
@@ -92,8 +97,10 @@ internal class DbSwapProvider
     /// <param name="miningFeeReverseSat">Mining fee for reverse swaps in satoshis.</param>
     /// <param name="slotsPresent">Total number of slots that the provider was present.</param>
     /// <param name="slotsMissed">Total number of slots that the provider missed.</param>
+    /// <param name="capabilities">Comma-separated list of capabilities.</param>
     public DbSwapProvider(string pubkey, DateTime firstSeen, DateTime lastSeen, int poWBits, decimal percentageFeeForward, decimal percentageFeeReverse, long minAmountForwardSat,
-        long minAmountReverseSat, long maxAmountForwardSat, long maxAmountReverseSat, long miningFeeForwardSat, long miningFeeReverseSat, int slotsPresent, int slotsMissed)
+        long minAmountReverseSat, long maxAmountForwardSat, long maxAmountReverseSat, long miningFeeForwardSat, long miningFeeReverseSat, int slotsPresent, int slotsMissed,
+        string capabilities)
     {
         this.Pubkey = pubkey;
         this.FirstSeen = firstSeen;
@@ -109,6 +116,7 @@ internal class DbSwapProvider
         this.MiningFeeReverseSat = miningFeeReverseSat;
         this.SlotsPresent = slotsPresent;
         this.SlotsMissed = slotsMissed;
+        this.Capabilities = capabilities;
     }
 
     /// <inheritdoc/>
@@ -117,7 +125,7 @@ internal class DbSwapProvider
         return string.Format
         (
             CultureInfo.InvariantCulture,
-            "[{0}=`{1}`,{2}={3},{4}={5},{6}={7},{8}={9},{10}={11},{12}={13},{14}={15},{16}={17},{18}={19},{20}={21},{22}={23},{24}={25},{26}={27}]",
+            "[{0}=`{1}`,{2}={3},{4}={5},{6}={7},{8}={9},{10}={11},{12}={13},{14}={15},{16}={17},{18}={19},{20}={21},{22}={23},{24}={25},{26}={27},{28}=`{29}`]",
             nameof(this.Pubkey), this.Pubkey,
             nameof(this.FirstSeen), this.FirstSeen,
             nameof(this.LastSeen), this.LastSeen,
@@ -131,7 +139,8 @@ internal class DbSwapProvider
             nameof(this.MiningFeeForwardSat), this.MiningFeeForwardSat,
             nameof(this.MiningFeeReverseSat), this.MiningFeeReverseSat,
             nameof(this.SlotsPresent), this.SlotsPresent,
-            nameof(this.SlotsMissed), this.SlotsMissed
+            nameof(this.SlotsMissed), this.SlotsMissed,
+            nameof(this.Capabilities), this.Capabilities
         );
     }
 }

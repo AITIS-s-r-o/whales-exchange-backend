@@ -114,11 +114,11 @@ internal class ElectrumRpcClient
 
             ElectrumRpcResponse<TResult>? rpcResponse = JsonSerializer.Deserialize<ElectrumRpcResponse<TResult>>(responseJson, this.jsonOptions);
 
+            if ((rpcResponse is not null) && (rpcResponse.Error is not null))
+                throw new ElectrumRpcException(rpcResponse.Error.Code, rpcResponse.Error.Message, rpcResponse.Error.Data);
+
             if ((rpcResponse is null) || (rpcResponse.Result is null))
                 throw new OperationFailedException($"Calling Electrum RPC method '{method}' produced null response.");
-
-            if (rpcResponse.Error is not null)
-                throw new ElectrumRpcException(rpcResponse.Error.Code, rpcResponse.Error.Message, rpcResponse.Error.Data);
 
             result = rpcResponse.Result;
         }
@@ -140,7 +140,7 @@ internal class ElectrumRpcClient
             throw new OperationFailedException($"Calling Electrum RPC method '{method}' failed.", e);
         }
 
-        this.log.Debug($"$={result}");
+        this.log.Debug($"$='{result}'");
         return result;
     }
 
@@ -171,6 +171,36 @@ internal class ElectrumRpcClient
         ElectrumSwapProvider[] result = response.Values.ToArray();
 
         this.log.Debug($"|$|={result.Length}");
+        return result;
+    }
+
+    /// <summary>
+    /// Calls Electrum's <c>wex_forward_swap</c> RPC method.
+    /// </summary>
+    /// <param name="invoice">Lightning invoice in hex format.</param>
+    /// <param name="onchainAmountSat">Amount the client is supposed to send on-chain in satoshis.</param>
+    /// <param name="refundPublicKeyHex">Public key that will be used in the on-chain refund transaction for the swap in hex format.</param>
+    /// <param name="providerPk">Public key of the swap provider.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>Information about the initiated forward swap.</returns>
+    /// <exception cref="ElectrumRpcException">Thrown when the Electrum server responded with an error.</exception>
+    /// <exception cref="OperationFailedException">Thrown when the operation failed except for error returned by the Electrum server.</exception>
+    public async Task<ElectrumSwapData> ForwardSwapAsync(string invoice, long onchainAmountSat, string refundPublicKeyHex, string providerPk, CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(invoice)}='{invoice.ToBoundedString()}',{nameof(onchainAmountSat)}={onchainAmountSat},{nameof(refundPublicKeyHex)}='{refundPublicKeyHex}',{
+            nameof(providerPk)}='{providerPk}'");
+
+        Dictionary<string, object> parameters = new()
+        {
+            { "invoice", invoice },
+            { "onchain_amount_sat", onchainAmountSat },
+            { "refundPublicKey", refundPublicKeyHex },
+            { "provider_pk", providerPk },
+        };
+
+        ElectrumSwapData result = await this.CallAsync<ElectrumSwapData>(method: "wex_forward_swap", parameters, cancellationToken).ConfigureAwait(false);
+
+        this.log.Debug($"$=`{result}`");
         return result;
     }
 
@@ -348,6 +378,46 @@ internal class ElectrumRpcClient
             .ConfigureAwait(false);
 
         this.log.Debug($"|$|={result.Count}");
+        return result;
+    }
+
+    /// <summary>
+    /// Calls Electrum's <c>wex_decode_invoice</c> RPC method.
+    /// </summary>
+    /// <param name="invoice">Lightning invoice in hex format.</param>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>Deserialized invoice.</returns>
+    /// <exception cref="ElectrumRpcException">Thrown when the Electrum server responded with an error.</exception>
+    /// <exception cref="OperationFailedException">Thrown when the operation failed except for error returned by the Electrum server.</exception>
+    public async Task<ElectrumLightningInvoice> DecodeInvoiceAsync(string invoice, CancellationToken cancellationToken)
+    {
+        this.log.Debug($"* {nameof(invoice)}='{invoice.ToBoundedString()}'");
+
+        Dictionary<string, object> parameters = new()
+        {
+            { "invoice", invoice },
+        };
+
+        ElectrumLightningInvoice result = await this.CallAsync<ElectrumLightningInvoice>(method: "wex_decode_invoice", parameters, cancellationToken).ConfigureAwait(false);
+
+        this.log.Debug($"$='{result}'");
+        return result;
+    }
+
+    /// <summary>
+    /// Calls Electrum's <c>getfeerate</c> RPC method.
+    /// </summary>
+    /// <param name="cancellationToken">Cancellation token that allows the caller to cancel the operation.</param>
+    /// <returns>Information about current fee rates.</returns>
+    /// <exception cref="ElectrumRpcException">Thrown when the Electrum server responded with an error.</exception>
+    /// <exception cref="OperationFailedException">Thrown when the operation failed except for error returned by the Electrum server.</exception>
+    public async Task<ElectrumFeeRate> GetFeeRateAsync(CancellationToken cancellationToken)
+    {
+        this.log.Debug("*");
+
+        ElectrumFeeRate result = await this.CallAsync<ElectrumFeeRate>(method: "getfeerate", parameters: null, cancellationToken).ConfigureAwait(false);
+
+        this.log.Debug($"$='{result}'");
         return result;
     }
 }

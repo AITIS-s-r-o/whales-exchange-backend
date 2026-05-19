@@ -53,19 +53,62 @@ internal class SwapUpdate
     {
         string frontendId = swap.FrontendId;
 
-        string status;
         string? failureReason = null;
         SwapStatusTransaction? transaction = null;
 
+        bool hasFundingTx = swap.FundingTxId is not null;
+        string status = FrontendStatusFromSwapStatus(isForward: swap.IsForward, swap.Status, hasFundingTx: hasFundingTx);
+
         if (swap.IsForward)
         {
-            // TODO
-            status = Constants.SwapStatusUnknown;
+            switch (swap.Status)
+            {
+                case SwapStatus.FundingTxCreated:
+                case SwapStatus.FundingTxConfirmed:
+                {
+                    if (swap.FundingTxId is null)
+                        throw new SanityCheckException($"Swap ID {swap.Id} is in {swap.Status} status but its funding TXID is not set.");
+
+                    transaction = new(hex: swap.FundingTxData, id: swap.FundingTxId);
+                    break;
+                }
+
+                case SwapStatus.FundingTxRefunded:
+                {
+                    if (swap.FundingTxId is null)
+                        throw new SanityCheckException($"Swap ID {swap.Id} is in {swap.Status} status but its funding TXID is not set.");
+
+                    transaction = new(hex: swap.FundingTxData, id: swap.FundingTxId, refundTxId: swap.ClientTxId);
+                    break;
+                }
+
+                case SwapStatus.ProviderErrorNotAccepted:
+                {
+                    failureReason = "Client's swap request has not been accepted by the selected swap provider.";
+                    break;
+                }
+
+                case SwapStatus.ClientErrorFundingTxNotCreated:
+                {
+                    failureReason = "Client failed to send the funding on-chain transaction. If you sent the transaction after the swap expiration, refresh this page for refund.";
+                    break;
+                }
+
+                case SwapStatus.ErrorFundingTxNotSpent:
+                {
+                    if (swap.FundingTxId is null)
+                        throw new SanityCheckException($"Swap ID {swap.Id} is in {swap.Status} status but its funding TXID is not set.");
+
+                    transaction = new(hex: swap.FundingTxData, id: swap.FundingTxId);
+
+                    failureReason = "Either the user did not accept the lightning payment, or the provider did not send it, or the provider failed to spend the funding transaction"
+                        + " before expiration.";
+                    break;
+                }
+            }
         }
         else
         {
-            status = FrontendStatusFromSwapStatus(swap.Status);
-
             switch (swap.Status)
             {
                 case SwapStatus.FundingTxCreated:
@@ -86,6 +129,11 @@ internal class SwapUpdate
 
                 case SwapStatus.ClientErrorFundingTxNotSpent:
                 {
+                    if (swap.FundingTxId is null)
+                        throw new SanityCheckException($"Swap ID {swap.Id} is in {swap.Status} status but its funding TXID is not set.");
+
+                    transaction = new(hex: swap.FundingTxData, id: swap.FundingTxId);
+
                     failureReason = "Client failed to claim the funding transaction output.";
                     break;
                 }
@@ -104,20 +152,26 @@ internal class SwapUpdate
     /// <summary>
     /// Converts <see cref="SwapStatus"/> to frontend swap status constant.
     /// </summary>
+    /// <param name="isForward"><c>true</c> if the swap is forward, <c>false</c> if it is reverse.</param>
     /// <param name="status">Swap status to convert.</param>
+    /// <param name="hasFundingTx"><c>true</c> if funding transaction exists, <c>false</c> otherwise.</param>
     /// <returns>Frontend string constant that corresponds to the swap status.</returns>
-    private static string FrontendStatusFromSwapStatus(SwapStatus status)
+    private static string FrontendStatusFromSwapStatus(bool isForward, SwapStatus status, bool hasFundingTx)
     {
         return status switch
         {
-            SwapStatus.Created => Constants.SwapStatusPendingSwapCreated,
-            SwapStatus.Accepted => Constants.SwapStatusPendingSwapCreated,
-            SwapStatus.FundingTxCreated => Constants.SwapStatusPendingTransactionMempool,
-            SwapStatus.FundingTxConfirmed => Constants.SwapStatusPendingTransactionConfirmed,
+            SwapStatus.Created => isForward ? Constants.SwapStatusPendingInvoiceSet : Constants.SwapStatusPendingSwapCreated,
+            SwapStatus.Accepted => isForward ? Constants.SwapStatusPendingInvoiceSet : Constants.SwapStatusPendingSwapCreated,
+            SwapStatus.FundingTxCreated => isForward ? Constants.SwapStatusPendingTransactionServerMempool : Constants.SwapStatusPendingTransactionMempool,
+            SwapStatus.FundingTxConfirmed => isForward ? Constants.SwapStatusPendingTransactionServerConfirmed : Constants.SwapStatusPendingTransactionConfirmed,
             SwapStatus.FundingTxSpent => Constants.SwapStatusSuccessTransactionClaimed,
+            SwapStatus.FundingTxRefunded => Constants.SwapStatusFailedSwapRefunded,
             SwapStatus.ProviderErrorNotAccepted => Constants.SwapStatusFailedSwapRejected,
-            SwapStatus.ClientErrorFundingTxNotSpent => Constants.SwapStatusFailedSwapRefunded,
+            SwapStatus.ClientErrorFundingTxNotCreated => hasFundingTx ? Constants.SwapStatusFailedSwapWaitingForRefund : Constants.SwapStatusFailedSwapExpired,
+            SwapStatus.ClientErrorFundingTxNotSpent => Constants.SwapStatusFailedTransactionRefunded,
+            SwapStatus.ClientCancelled => Constants.SwapStatusFailedSwapCancelled,
             SwapStatus.ErrorFundingTxNotCreated => Constants.SwapStatusFailedTransactionLockupFailed,
+            SwapStatus.ErrorFundingTxNotSpent => Constants.SwapStatusFailedInvoiceFailedToPay,
             _ => Constants.SwapStatusUnknown,
         };
     }
