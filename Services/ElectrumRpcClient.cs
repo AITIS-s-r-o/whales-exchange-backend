@@ -130,6 +130,33 @@ internal class ElectrumRpcClient
         catch (ElectrumRpcException e)
         {
             this.log.Debug($"JSON RPC request for method '{method}' failed with exception: {e}");
+
+            try
+            {
+                if (e.Message.EndsWith("internal error while executing RPC", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (e.Details is not null)
+                    {
+                        JsonElement element = JsonSerializer.SerializeToElement(e.Details);
+                        ElectrumRpcErrorDataException? exceptionData = JsonSerializer.Deserialize<ElectrumRpcErrorDataException>(element, this.jsonOptions);
+                        if (exceptionData is not null)
+                        {
+                            this.log.Debug("$<EXCEPTION_ELECTRUM_DETAILED>");
+                            throw new ElectrumRpcException(e.Code, exceptionData.Exception, details: null);
+                        }
+                    }
+                }
+            }
+            catch (ElectrumRpcException)
+            {
+                this.log.Debug("$<EXCEPTION_ELECTRUM_DETAILED>");
+                throw;
+            }
+            catch
+            {
+                // All other exceptions we ignore as they come from deserialization attempt.
+            }
+
             this.log.Debug("$<EXCEPTION_ELECTRUM>");
             throw;
         }
